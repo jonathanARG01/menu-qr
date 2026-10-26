@@ -1,5 +1,5 @@
 import QRCode from "qrcode";
-import type { Mesa, Restaurante } from "@/lib/types";
+import type { Mesa, Restaurante, Sucursal } from "@/lib/types";
 import { urlCarta } from "@/lib/utils";
 
 const MARGEN = 2;
@@ -160,7 +160,12 @@ function hexARgb(hex: string): [number, number, number] {
 }
 
 // Hoja A4 con 6 tarjetas de mesa (2 × 3) listas para recortar o mandar a imprimir como stickers.
-export async function generarPdf(restaurante: Restaurante, mesas: (Mesa | null)[], estilo: EstiloQR = ESTILO_BASE) {
+export async function generarPdf(
+  restaurante: Restaurante,
+  mesas: (Mesa | null)[],
+  estilo: EstiloQR = ESTILO_BASE,
+  sucursal?: Sucursal,
+) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
   const logo = restaurante.logo_url ? await imagenAPng(restaurante.logo_url) : null;
@@ -203,7 +208,7 @@ export async function generarPdf(restaurante: Restaurante, mesas: (Mesa | null)[
 
     // QR dibujado como vectores: nítido al imprimir y el PDF pesa poco.
     const lado = 52;
-    const m = matriz(urlCarta(restaurante.slug, mesa?.numero), !!estilo.logo);
+    const m = matriz(urlCarta(restaurante.slug, mesa?.numero, undefined, sucursal?.slug), !!estilo.logo);
     const celda = lado / m.total;
     const qx = cx - lado / 2;
     const qy = y + 25;
@@ -224,8 +229,15 @@ export async function generarPdf(restaurante: Restaurante, mesas: (Mesa | null)[
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(110);
-    doc.text("Escanea con la cámara para ver la carta", cx, y + 89, { align: "center" });
+    doc.text(
+      sucursal ? `${sucursal.nombre} · Escanea para ver la carta` : "Escanea con la cámara para ver la carta",
+      cx,
+      y + 89,
+      {
+        align: "center",
+      },
+    );
   }
 
-  doc.save(`qr-${restaurante.slug}.pdf`);
+  doc.save(`qr-${restaurante.slug}${sucursal ? `-${sucursal.slug}` : ""}.pdf`);
 }

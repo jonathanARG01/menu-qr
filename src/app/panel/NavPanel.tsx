@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation";
 const ENLACES = [
   { href: "/panel", texto: "Carta", icono: "☰" },
   { href: "/panel/marca", texto: "Marca", icono: "◐" },
-  { href: "/panel/qr", texto: "Códigos QR", icono: "▣" },
+  { href: "/panel/qr", texto: "QR", icono: "▣" },
+  { href: "/panel/sucursales", texto: "Sucursales", icono: "⌂" },
   { href: "/panel/estadisticas", texto: "Estadísticas", icono: "▥" },
 ];
 

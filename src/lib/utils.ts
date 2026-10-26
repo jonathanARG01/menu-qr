@@ -44,9 +44,13 @@ export function urlSitio() {
   return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
 }
 
-export function urlCarta(slug: string, mesa?: string, base = urlSitio()) {
-  const url = `${base}/${slug}`;
-  return mesa ? `${url}?mesa=${encodeURIComponent(mesa)}` : url;
+// Dirección de la carta; con sucursal y mesa queda así: /cafe?s=centro&mesa=4
+export function urlCarta(slug: string, mesa?: string, base = urlSitio(), sucursal?: string) {
+  const params = new URLSearchParams();
+  if (sucursal) params.set("s", sucursal);
+  if (mesa) params.set("mesa", mesa);
+  const consulta = params.toString();
+  return `${base}/${slug}${consulta ? `?${consulta}` : ""}`;
 }
 
 // Reduce la foto en el navegador a WebP de hasta 1200 px antes de subirla.

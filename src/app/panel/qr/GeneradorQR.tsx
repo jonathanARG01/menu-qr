@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Mesa, Restaurante } from "@/lib/types";
+import type { Mesa, Restaurante, Sucursal } from "@/lib/types";
 import { mensajeError, urlCarta } from "@/lib/utils";
 import {
   colorLegibleQR,
@@ -19,11 +19,28 @@ import {
 import { useToast } from "@/components/Toast";
 import { useUrlSitio } from "@/lib/useUrlSitio";
 
-export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Restaurante; mesasIniciales: Mesa[] }) {
+export function GeneradorQR({
+  restaurante,
+  mesasIniciales,
+  sucursales,
+  sucursalInicial,
+}: {
+  restaurante: Restaurante;
+  mesasIniciales: Mesa[];
+  sucursales: Sucursal[];
+  sucursalInicial?: string;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
   const sitio = useUrlSitio();
-  const [mesas, setMesas] = useState(() => ordenarMesas(mesasIniciales));
+  const [todas, setMesas] = useState(() => ordenarMesas(mesasIniciales));
+  // Con sucursales, cada una tiene sus mesas y sus QR llevan ?s=<sucursal>.
+  const [sucursalId, setSucursalId] = useState<string>(
+    sucursales.find((s) => s.id === sucursalInicial)?.id ?? sucursales[0]?.id ?? "",
+  );
+  const sucursal = sucursales.find((s) => s.id === sucursalId);
+  const mesas = todas.filter((m) => (m.sucursal_id ?? "") === sucursalId);
+  const url = (mesa?: string) => urlCarta(restaurante.slug, mesa, sitio, sucursal?.slug);
   const [desde, setDesde] = useState("1");
   const [hasta, setHasta] = useState("10");
   const [nombreMesa, setNombreMesa] = useState("");
@@ -66,7 +83,9 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
     if (nuevos.length === 0) return avisar("Esas mesas ya existen");
     const { data, error } = await supabase
       .from("mesas")
-      .insert(nuevos.map((numero) => ({ restaurante_id: restaurante.id, numero })))
+      .insert(
+        nuevos.map((numero) => ({ restaurante_id: restaurante.id, numero, ...(sucursal ? { sucursal_id: sucursal.id } : {}) })),
+      )
       .select();
     if (error) return avisar(mensajeError(error), "error");
     setMesas((m) => ordenarMesas([...m, ...(data as Mesa[])]));
@@ -97,7 +116,7 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
   async function pdf(lista: (Mesa | null)[]) {
     setGenerando(true);
     try {
-      await generarPdf(restaurante, lista, estilo);
+      await generarPdf(restaurante, lista, estilo, sucursal);
     } catch (err) {
       avisar(mensajeError(err), "error");
     } finally {
@@ -154,21 +173,36 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
         )}
       </section>
 
+      {sucursales.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Sucursal">
+          <span className="text-sm font-medium">Sucursal:</span>
+          {[...sucursales.map((s) => ({ id: s.id, nombre: s.nombre })), { id: "", nombre: "Sin sucursal" }].map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              aria-pressed={s.id === sucursalId}
+              onClick={() => setSucursalId(s.id)}
+              className={`rounded-full border px-3 py-1 text-sm ${
+                s.id === sucursalId
+                  ? "border-marca bg-marca text-white"
+                  : "border-borde bg-white text-suave hover:border-stone-400"
+              }`}
+            >
+              {s.nombre}
+            </button>
+          ))}
+        </div>
+      )}
+
       <section className="tarjeta flex flex-col items-center gap-5 p-5 sm:flex-row sm:items-start">
-        <TarjetaQR url={urlCarta(restaurante.slug, undefined, sitio)} estilo={estilo} grande />
+        <TarjetaQR url={url()} estilo={estilo} grande />
         <div className="min-w-0 flex-1 space-y-3 text-center sm:text-left">
           <div>
-            <h2 className="font-semibold">QR general de la carta</h2>
+            <h2 className="font-semibold">QR general{sucursal ? ` de ${sucursal.nombre}` : " de la carta"}</h2>
             <p className="text-sm text-suave">Para la puerta, el mostrador, Instagram o la carta impresa.</p>
           </div>
-          <p className="break-all rounded-lg bg-stone-50 px-3 py-2 font-mono text-xs text-suave">
-            {urlCarta(restaurante.slug, undefined, sitio)}
-          </p>
-          <BotonesDescarga
-            url={urlCarta(restaurante.slug, undefined, sitio)}
-            estilo={estilo}
-            archivo={`qr-${restaurante.slug}`}
-          />
+          <p className="break-all rounded-lg bg-stone-50 px-3 py-2 font-mono text-xs text-suave">{url()}</p>
+          <BotonesDescarga url={url()} estilo={estilo} archivo={`qr-${restaurante.slug}${sucursal ? `-${sucursal.slug}` : ""}`} />
           <p className="text-xs text-suave">
             El QR apunta a la dirección de tu carta, no a un archivo: puedes cambiar platos y precios sin volver a imprimir.
           </p>
@@ -227,13 +261,13 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {mesas.map((mesa) => (
               <li key={mesa.id} className="rounded-xl border border-borde p-3 text-center">
-                <TarjetaQR url={urlCarta(restaurante.slug, mesa.numero, sitio)} estilo={estilo} />
+                <TarjetaQR url={url(mesa.numero)} estilo={estilo} />
                 <p className="mt-2 font-semibold">Mesa {mesa.numero}</p>
                 <div className="mt-1 flex justify-center gap-3 text-xs">
                   <BotonPng
-                    url={urlCarta(restaurante.slug, mesa.numero, sitio)}
+                    url={url(mesa.numero)}
                     estilo={estilo}
-                    archivo={`qr-${restaurante.slug}-mesa-${mesa.numero}`}
+                    archivo={`qr-${restaurante.slug}${sucursal ? `-${sucursal.slug}` : ""}-mesa-${mesa.numero}`}
                   />
                   <button type="button" onClick={() => borrar(mesa)} className="text-suave hover:text-red-600">
                     Borrar
