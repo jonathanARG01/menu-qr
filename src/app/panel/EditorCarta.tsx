@@ -25,6 +25,7 @@ import { useToast } from "@/components/Toast";
 import { Interruptor } from "@/components/Interruptor";
 import { revalidarCarta } from "./actions";
 import { PlatoModal } from "./PlatoModal";
+import { IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
 
 type Props = {
   restaurante: Restaurante;
@@ -42,6 +43,8 @@ export function EditorCarta({ restaurante, categoriasIniciales, platosIniciales 
   const [modal, setModal] = useState<ModalEstado>(null);
   const [nuevaCategoria, setNuevaCategoria] = useState("");
   const [cerradas, setCerradas] = useState<Set<string>>(new Set());
+  const [traduciendo, setTraduciendo] = useState<Categoria | null>(null);
+  const idiomas = IDIOMAS_EXTRA.filter((i) => restaurante.idiomas?.includes(i));
 
   const sensores = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -169,7 +172,7 @@ export function EditorCarta({ restaurante, categoriasIniciales, platosIniciales 
         </div>
       )}
 
-      <DndContext sensors={sensores} collisionDetection={closestCenter} onDragEnd={alSoltarCategoria}>
+      <DndContext id="categorias" sensors={sensores} collisionDetection={closestCenter} onDragEnd={alSoltarCategoria}>
         <SortableContext items={categorias.map((c) => c.id)} strategy={verticalListSortingStrategy}>
           {categorias.map((cat) => {
             const deCategoria = platos.filter((p) => p.categoria_id === cat.id);
@@ -181,10 +184,16 @@ export function EditorCarta({ restaurante, categoriasIniciales, platosIniciales 
                 cerrada={cerradas.has(cat.id)}
                 onAlternar={() => alternar(cat.id)}
                 onRenombrar={(nombre) => actualizarCategoria(cat.id, { nombre })}
+                onTraducir={idiomas.length ? () => setTraduciendo(cat) : undefined}
                 onVisible={(visible) => actualizarCategoria(cat.id, { visible })}
                 onBorrar={() => borrarCategoria(cat)}
               >
-                <DndContext sensors={sensores} collisionDetection={closestCenter} onDragEnd={alSoltarPlato(cat.id)}>
+                <DndContext
+                  id={`platos-${cat.id}`}
+                  sensors={sensores}
+                  collisionDetection={closestCenter}
+                  onDragEnd={alSoltarPlato(cat.id)}
+                >
                   <SortableContext items={deCategoria.map((p) => p.id)} strategy={verticalListSortingStrategy}>
                     <ul className="divide-y divide-borde">
                       {deCategoria.map((plato) => (
@@ -229,6 +238,18 @@ export function EditorCarta({ restaurante, categoriasIniciales, platosIniciales 
         </button>
       </form>
 
+      {traduciendo && (
+        <TraducirCategoria
+          categoria={traduciendo}
+          idiomas={idiomas}
+          onCerrar={() => setTraduciendo(null)}
+          onGuardar={(traducciones) => {
+            actualizarCategoria(traduciendo.id, { traducciones });
+            setTraduciendo(null);
+          }}
+        />
+      )}
+
       {modal && (
         <PlatoModal
           restaurante={restaurante}
@@ -271,6 +292,7 @@ function BloqueCategoria({
   cerrada,
   onAlternar,
   onRenombrar,
+  onTraducir,
   onVisible,
   onBorrar,
   children,
@@ -280,6 +302,7 @@ function BloqueCategoria({
   cerrada: boolean;
   onAlternar: () => void;
   onRenombrar: (nombre: string) => void;
+  onTraducir?: () => void;
   onVisible: (visible: boolean) => void;
   onBorrar: () => void;
   children: React.ReactNode;
@@ -331,6 +354,7 @@ function BloqueCategoria({
         <Menu
           opciones={[
             { texto: "Cambiar nombre", accion: () => setEditando(true) },
+            ...(onTraducir ? [{ texto: "Traducir nombre", accion: onTraducir }] : []),
             {
               texto: categoria.visible ? "Ocultar de la carta" : "Mostrar en la carta",
               accion: () => onVisible(!categoria.visible),
@@ -441,6 +465,65 @@ function Menu({ opciones }: { opciones: { texto: string; accion: () => void; pel
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function TraducirCategoria({
+  categoria,
+  idiomas,
+  onCerrar,
+  onGuardar,
+}: {
+  categoria: Categoria;
+  idiomas: string[];
+  onCerrar: () => void;
+  onGuardar: (traducciones: NonNullable<Categoria["traducciones"]>) => void;
+}) {
+  const [valores, setValores] = useState<Record<string, string>>(() =>
+    Object.fromEntries(idiomas.map((i) => [i, categoria.traducciones?.[i]?.nombre ?? ""])),
+  );
+
+  function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    onGuardar({
+      ...categoria.traducciones,
+      ...Object.fromEntries(idiomas.map((i) => [i, { ...categoria.traducciones?.[i], nombre: valores[i].trim() || undefined }])),
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onCerrar}>
+      <form
+        onSubmit={guardar}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Traducir ${categoria.nombre}`}
+        className="w-full max-w-sm space-y-4 rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl"
+      >
+        <h2 className="text-lg font-semibold">Traducir “{categoria.nombre}”</h2>
+        {idiomas.map((i) => (
+          <label key={i} className="block">
+            <span className="etiqueta-campo">{IDIOMA_EN_ESPANOL[i as keyof typeof IDIOMA_EN_ESPANOL]}</span>
+            <input
+              value={valores[i]}
+              maxLength={60}
+              onChange={(e) => setValores((v) => ({ ...v, [i]: e.target.value }))}
+              placeholder={categoria.nombre}
+              className="campo"
+            />
+          </label>
+        ))}
+        <div className="flex justify-end gap-3">
+          <button type="button" onClick={onCerrar} className="boton-secundario">
+            Cancelar
+          </button>
+          <button type="submit" className="boton">
+            Guardar
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

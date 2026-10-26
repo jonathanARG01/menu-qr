@@ -6,6 +6,7 @@ import { borrarFoto, subirFoto } from "@/lib/fotos";
 import type { Categoria, Plato, Restaurante } from "@/lib/types";
 import { ETIQUETAS, mensajeError } from "@/lib/utils";
 import { Interruptor } from "@/components/Interruptor";
+import { IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
 
 type Props = {
   restaurante: Restaurante;
@@ -37,6 +38,15 @@ export function PlatoModal({
   const [etiquetas, setEtiquetas] = useState<string[]>(plato?.etiquetas ?? []);
   const [disponible, setDisponible] = useState(plato?.disponible ?? true);
   const [fotoUrl, setFotoUrl] = useState<string | null>(plato?.foto_url ?? null);
+  const idiomas = IDIOMAS_EXTRA.filter((i) => restaurante.idiomas?.includes(i));
+  const [traducciones, setTraducciones] = useState<Record<string, { nombre: string; descripcion: string }>>(() =>
+    Object.fromEntries(
+      IDIOMAS_EXTRA.map((i) => [
+        i,
+        { nombre: plato?.traducciones?.[i]?.nombre ?? "", descripcion: plato?.traducciones?.[i]?.descripcion ?? "" },
+      ]),
+    ),
+  );
   const [subiendo, setSubiendo] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +105,23 @@ export function PlatoModal({
       etiquetas,
       disponible,
       foto_url: fotoUrl,
+      // Solo si ya existe la columna (migración 0003).
+      ...("idiomas" in restaurante
+        ? {
+            traducciones: {
+              ...plato?.traducciones,
+              ...Object.fromEntries(
+                IDIOMAS_EXTRA.map((i) => [
+                  i,
+                  {
+                    nombre: traducciones[i].nombre.trim() || undefined,
+                    descripcion: traducciones[i].descripcion.trim() || undefined,
+                  },
+                ]),
+              ),
+            },
+          }
+        : {}),
       ...(esNuevo || categoria !== plato.categoria_id ? { orden: contarPlatos(categoria) } : {}),
     };
 
@@ -273,6 +300,34 @@ export function PlatoModal({
               })}
             </div>
           </fieldset>
+
+          {idiomas.length > 0 && (
+            <fieldset className="space-y-3 rounded-xl border border-borde p-3">
+              <legend className="px-1 text-sm font-medium">Traducciones</legend>
+              {idiomas.map((i) => (
+                <div key={i} className="space-y-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-suave">{IDIOMA_EN_ESPANOL[i]}</p>
+                  <input
+                    aria-label={`Nombre en ${IDIOMA_EN_ESPANOL[i]}`}
+                    maxLength={80}
+                    value={traducciones[i].nombre}
+                    onChange={(e) => setTraducciones((t) => ({ ...t, [i]: { ...t[i], nombre: e.target.value } }))}
+                    placeholder={nombre || "Nombre"}
+                    className="campo py-2"
+                  />
+                  <input
+                    aria-label={`Descripción en ${IDIOMA_EN_ESPANOL[i]}`}
+                    maxLength={300}
+                    value={traducciones[i].descripcion}
+                    onChange={(e) => setTraducciones((t) => ({ ...t, [i]: { ...t[i], descripcion: e.target.value } }))}
+                    placeholder={descripcion || "Descripción"}
+                    className="campo py-2"
+                  />
+                </div>
+              ))}
+              <p className="text-xs text-suave">Si dejas un campo vacío, se muestra en español.</p>
+            </fieldset>
+          )}
 
           <label className="flex items-center justify-between rounded-xl bg-stone-50 px-4 py-3">
             <span>

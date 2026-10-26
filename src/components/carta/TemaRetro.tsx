@@ -1,6 +1,9 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
+import { Agregar } from "./Agregar";
+import { useCarta } from "./contexto";
 import { NavCategorias } from "./NavCategorias";
+import { SelectorIdioma } from "./SelectorIdioma";
 
 const CAFE = "#3a2c25";
 const CREMA = "#f4ecdc";
@@ -9,6 +12,7 @@ const CREMA = "#f4ecdc";
 export function TemaRetro({ restaurante, secciones, vistaPrevia, pie }: PropsTema) {
   const acento = restaurante.color_primario;
   const portada = secciones.flatMap((s) => s.platos).find((p) => p.foto_url);
+  const { idiomas } = useCarta();
 
   return (
     <div
@@ -34,7 +38,11 @@ export function TemaRetro({ restaurante, secciones, vistaPrevia, pie }: PropsTem
         <div className="flex items-center justify-between px-5 pt-5">
           <span className="h-9 w-9 rounded-full" style={{ background: acento }} />
           <Logo restaurante={restaurante} className="h-14 w-14 rounded-full object-cover" />
-          <span className="h-9 w-9 rounded-full" style={{ background: acento }} />
+          {idiomas.length > 1 ? (
+            <SelectorIdioma className="relative" style={{ background: acento, color: textoSobre(acento) }} />
+          ) : (
+            <span className="h-9 w-9 rounded-full" style={{ background: acento }} />
+          )}
         </div>
         <h1 className="f-oswald mt-3 px-5 text-4xl font-semibold uppercase leading-none tracking-wide" style={{ color: acento }}>
           {restaurante.nombre}
@@ -90,7 +98,10 @@ export function TemaRetro({ restaurante, secciones, vistaPrevia, pie }: PropsTem
                         </span>
                       </div>
                       {plato.descripcion && <p className="text-[13px] leading-snug opacity-70">{plato.descripcion}</p>}
-                      <Etiquetas plato={plato} className="mt-0.5 opacity-70" />
+                      <div className="flex items-center justify-between gap-3">
+                        <Etiquetas plato={plato} className="mt-0.5 opacity-70" />
+                        <Agregar plato={plato} className="ml-auto mt-1" />
+                      </div>
                     </div>
                   </li>
                 ))}

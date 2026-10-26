@@ -1,6 +1,8 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
+import { Agregar } from "./Agregar";
 import { NavCategorias } from "./NavCategorias";
+import { SelectorIdioma } from "./SelectorIdioma";
 
 // Colores de las etiquetas de categoría: la primera usa el color del restaurante.
 const OTROS = ["#e63946", "#8ac926", "#fb8500", "#3a86ff"];
@@ -30,7 +32,8 @@ export function TemaStreet({ restaurante, secciones, vistaPrevia, pie }: PropsTe
         } as React.CSSProperties
       }
     >
-      <header className="relative overflow-hidden px-6 pb-10 pt-12 text-center">
+      <header className="relative px-6 pb-10 pt-12 text-center">
+        <SelectorIdioma className="absolute right-4 top-4" style={{ background: "rgba(255,255,255,0.1)" }} />
         <Logo restaurante={restaurante} className="mx-auto mb-4 h-20 w-20 rounded-full border-4 border-white object-cover" />
         <h1
           className="f-pacifico text-5xl leading-tight @md:text-6xl"
@@ -83,7 +86,10 @@ export function TemaStreet({ restaurante, secciones, vistaPrevia, pie }: PropsTe
                       </span>
                     </div>
                     {plato.descripcion && <p className="text-[13px] text-white/60">{plato.descripcion}</p>}
-                    <Etiquetas plato={plato} className="mt-0.5 text-white/60" />
+                    <div className="flex items-center justify-between gap-3">
+                      <Etiquetas plato={plato} className="mt-0.5 text-white/60" />
+                      <Agregar plato={plato} className="ml-auto mt-1" />
+                    </div>
                   </li>
                 ))}
               </ul>

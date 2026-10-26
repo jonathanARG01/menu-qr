@@ -5,7 +5,17 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Mesa, Restaurante } from "@/lib/types";
 import { mensajeError, urlCarta } from "@/lib/utils";
-import { colorLegibleQR, descargar, ESTILO_BASE, generarPdf, ordenarMesas, prepararLogoQR, qrPng, qrSvg, type EstiloQR } from "@/lib/qr";
+import {
+  colorLegibleQR,
+  descargar,
+  ESTILO_BASE,
+  generarPdf,
+  ordenarMesas,
+  prepararLogoQR,
+  qrPng,
+  qrSvg,
+  type EstiloQR,
+} from "@/lib/qr";
 import { useToast } from "@/components/Toast";
 import { useUrlSitio } from "@/lib/useUrlSitio";
 
@@ -154,7 +164,11 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
           <p className="break-all rounded-lg bg-stone-50 px-3 py-2 font-mono text-xs text-suave">
             {urlCarta(restaurante.slug, undefined, sitio)}
           </p>
-          <BotonesDescarga url={urlCarta(restaurante.slug, undefined, sitio)} estilo={estilo} archivo={`qr-${restaurante.slug}`} />
+          <BotonesDescarga
+            url={urlCarta(restaurante.slug, undefined, sitio)}
+            estilo={estilo}
+            archivo={`qr-${restaurante.slug}`}
+          />
           <p className="text-xs text-suave">
             El QR apunta a la dirección de tu carta, no a un archivo: puedes cambiar platos y precios sin volver a imprimir.
           </p>

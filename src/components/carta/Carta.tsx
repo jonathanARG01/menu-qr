@@ -1,6 +1,12 @@
+"use client";
+
 import "./fuentes.css";
-import type { Tema } from "@/lib/types";
+import { useMemo } from "react";
+import { traducir } from "@/lib/i18n";
+import type { Restaurante, Seccion, Sucursal, Tema } from "@/lib/types";
 import type { PropsTema } from "./comun";
+import { ProveedorCarta, useCarta } from "./contexto";
+import { PieCarta } from "./PieCarta";
 import { TemaClasico } from "./TemaClasico";
 import { TemaEsmeralda } from "./TemaEsmeralda";
 import { TemaNoir } from "./TemaNoir";
@@ -15,13 +21,52 @@ const TEMAS: Record<Tema, (props: PropsTema) => React.ReactNode> = {
   retro: TemaRetro,
 };
 
-// Dibuja la carta con el diseño elegido por el restaurante.
-export function Carta(props: PropsTema & { tema?: Tema }) {
-  const Componente = TEMAS[props.tema ?? props.restaurante.tema ?? "clasico"] ?? TemaClasico;
+type Props = {
+  restaurante: Restaurante;
+  secciones: Seccion[];
+  sucursales?: Sucursal[];
+  vistaPrevia?: boolean;
+  tema?: Tema;
+};
+
+// Dibuja la carta con el diseño elegido por el restaurante, en el idioma que elija el cliente.
+export function Carta(props: Props) {
+  return (
+    <ProveedorCarta
+      restaurante={props.restaurante}
+      secciones={props.secciones}
+      sucursales={props.sucursales}
+      vistaPrevia={props.vistaPrevia}
+    >
+      <CartaTraducida {...props} />
+    </ProveedorCarta>
+  );
+}
+
+function CartaTraducida({ restaurante, secciones, vistaPrevia, tema }: Props) {
+  const { idioma } = useCarta();
+  const Componente = TEMAS[tema ?? restaurante.tema ?? "clasico"] ?? TemaClasico;
+
+  const traducido = useMemo(
+    () => ({
+      restaurante: traducir(restaurante, idioma, ["descripcion"]),
+      secciones: secciones.map((s) => ({
+        ...traducir(s, idioma, ["nombre"]),
+        platos: s.platos.map((p) => traducir(p, idioma, ["nombre", "descripcion"])),
+      })),
+    }),
+    [restaurante, secciones, idioma],
+  );
+
   // Contenedor con consultas de tamaño: el diseño se adapta al ancho de la carta, también en la vista previa del panel.
   return (
-    <div className="@container">
-      <Componente {...props} />
+    <div className="@container relative">
+      <Componente
+        restaurante={traducido.restaurante}
+        secciones={traducido.secciones}
+        vistaPrevia={vistaPrevia}
+        pie={vistaPrevia ? null : <PieCarta restaurante={restaurante} />}
+      />
     </div>
   );
 }

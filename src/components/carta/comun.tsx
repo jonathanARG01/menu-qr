@@ -1,12 +1,13 @@
 import type { Plato, Restaurante, Seccion, Tema } from "@/lib/types";
 import { formatoPrecio } from "@/lib/utils";
+import { useCarta } from "./contexto";
 
 export type PropsTema = {
   restaurante: Restaurante;
   secciones: Seccion[];
   // En el panel la carta se muestra dentro de un marco de teléfono.
   vistaPrevia?: boolean;
-  // Barra inferior (mesa y WhatsApp); va dentro del diseño para heredar sus colores.
+  // Barra inferior (mesa, WhatsApp y pedido); va dentro del diseño para heredar sus colores.
   pie?: React.ReactNode;
 };
 
@@ -32,12 +33,13 @@ export const precio = (plato: Plato, restaurante: Restaurante) => formatoPrecio(
 export const idSeccion = (id: string) => `c-${id}`;
 
 export function Etiquetas({ plato, className = "" }: { plato: Plato; className?: string }) {
+  const { t } = useCarta();
   if (plato.etiquetas.length === 0) return null;
   return (
     <span className={`flex flex-wrap gap-x-3 gap-y-1 text-xs ${className}`}>
       {plato.etiquetas.map((et) => (
         <span key={et}>
-          {ICONOS[et] ?? "•"} {et}
+          {ICONOS[et] ?? "•"} {t(et as Parameters<typeof t>[0])}
         </span>
       ))}
     </span>
@@ -65,5 +67,6 @@ export function Logo({
 }
 
 export function CartaVacia({ className = "" }: { className?: string }) {
-  return <p className={`py-16 text-center opacity-70 ${className}`}>La carta se está preparando. Vuelve pronto.</p>;
+  const { t } = useCarta();
+  return <p className={`py-16 text-center opacity-70 ${className}`}>{t("vacia")}</p>;
 }

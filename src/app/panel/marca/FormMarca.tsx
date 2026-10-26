@@ -11,6 +11,8 @@ import { useUrlSitio } from "@/lib/useUrlSitio";
 import { Carta } from "@/components/carta/Carta";
 import { TEMA_INFO } from "@/components/carta/comun";
 import { SECCIONES_EJEMPLO } from "@/components/carta/ejemplo";
+import { Interruptor } from "@/components/Interruptor";
+import { IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
 import { revalidarCarta } from "../actions";
 
 const PALETAS = [
@@ -47,6 +49,13 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
   const [moneda, setMoneda] = useState(restaurante.moneda);
   const [tema, setTema] = useState<Tema>(restaurante.tema ?? "clasico");
   const [whatsapp, setWhatsapp] = useState(restaurante.whatsapp ?? "");
+  const [idiomas, setIdiomas] = useState<string[]>(restaurante.idiomas ?? []);
+  const [descTraducida, setDescTraducida] = useState<Record<string, string>>(() =>
+    Object.fromEntries(IDIOMAS_EXTRA.map((i) => [i, restaurante.traducciones?.[i]?.descripcion ?? ""])),
+  );
+  const [pedidos, setPedidos] = useState(restaurante.pedidos_whatsapp ?? false);
+  // Las columnas nuevas solo se guardan si ya se ejecutó la migración 0003.
+  const tieneExtras = "idiomas" in restaurante;
   const [subiendo, setSubiendo] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const inputLogo = useRef<HTMLInputElement>(null);
@@ -65,6 +74,13 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
     }
   }
 
+  const traducciones = {
+    ...restaurante.traducciones,
+    ...Object.fromEntries(
+      IDIOMAS_EXTRA.map((i) => [i, { ...restaurante.traducciones?.[i], descripcion: descTraducida[i].trim() || undefined }]),
+    ),
+  };
+
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
     setGuardando(true);
@@ -80,6 +96,7 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
         moneda,
         whatsapp: telefono || null,
         tema,
+        ...(tieneExtras ? { idiomas, traducciones, pedidos_whatsapp: pedidos } : {}),
       })
       .eq("id", restaurante.id);
     setGuardando(false);
@@ -112,6 +129,9 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
     color_fondo: fondo,
     moneda,
     tema,
+    idiomas,
+    traducciones,
+    pedidos_whatsapp: pedidos,
   };
 
   return (
@@ -245,6 +265,75 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
         </div>
 
         <div className="tarjeta space-y-4 p-5">
+          <div>
+            <h2 className="font-semibold">Idiomas</h2>
+            <p className="text-sm text-suave">
+              La carta se escribe en español. Si activas otros idiomas, el cliente verá un botón para cambiarlo y la carta se abre
+              sola en el idioma de su teléfono.
+            </p>
+          </div>
+          {!tieneExtras && <AvisoMigracion />}
+          <div className="flex flex-wrap gap-2">
+            {IDIOMAS_EXTRA.map((i) => {
+              const activo = idiomas.includes(i);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  aria-pressed={activo}
+                  disabled={!tieneExtras}
+                  onClick={() => setIdiomas((a) => (activo ? a.filter((x) => x !== i) : [...a, i]))}
+                  className={`rounded-full border px-3 py-1 text-sm transition ${
+                    activo ? "border-marca bg-marca text-white" : "border-borde text-suave hover:border-stone-400"
+                  }`}
+                >
+                  {IDIOMA_EN_ESPANOL[i]}
+                </button>
+              );
+            })}
+          </div>
+          {IDIOMAS_EXTRA.filter((i) => idiomas.includes(i)).map((i) => (
+            <div key={i}>
+              <label htmlFor={`desc-${i}`} className="etiqueta-campo">
+                Descripción en {IDIOMA_EN_ESPANOL[i].toLowerCase()}
+              </label>
+              <input
+                id={`desc-${i}`}
+                maxLength={300}
+                value={descTraducida[i]}
+                onChange={(e) => setDescTraducida((d) => ({ ...d, [i]: e.target.value }))}
+                placeholder={descripcion || "Opcional"}
+                className="campo"
+              />
+            </div>
+          ))}
+          {idiomas.length > 0 && (
+            <p className="text-xs text-suave">
+              Los nombres y descripciones de cada plato se traducen desde Carta, al editar el plato. Lo que no traduzcas se
+              muestra en español.
+            </p>
+          )}
+        </div>
+
+        <div className="tarjeta space-y-3 p-5">
+          <label className="flex items-center justify-between gap-4">
+            <span>
+              <span className="block font-semibold">Pedidos por WhatsApp</span>
+              <span className="block text-sm text-suave">
+                Los clientes arman su pedido en la carta y te lo envían por WhatsApp con la mesa, el total y sus notas.
+              </span>
+            </span>
+            <Interruptor activo={pedidos} onChange={setPedidos} etiqueta="Pedidos por WhatsApp" />
+          </label>
+          {!tieneExtras && <AvisoMigracion />}
+          {pedidos && !whatsapp.replace(/\D/g, "") && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Escribe tu número de WhatsApp arriba (o el de cada sucursal) para recibir los pedidos.
+            </p>
+          )}
+        </div>
+
+        <div className="tarjeta space-y-4 p-5">
           <h2 className="font-semibold">Colores</h2>
           {tema === "clasico" ? (
             <>
@@ -330,5 +419,13 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
         </div>
       </aside>
     </form>
+  );
+}
+
+function AvisoMigracion() {
+  return (
+    <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+      Para usar esto falta ejecutar el SQL 0003_idiomas_pedidos_sucursales.sql en Supabase.
+    </p>
   );
 }

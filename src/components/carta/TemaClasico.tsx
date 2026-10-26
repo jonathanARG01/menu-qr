@@ -1,6 +1,8 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
+import { Agregar } from "./Agregar";
 import { NavCategorias } from "./NavCategorias";
+import { SelectorIdioma } from "./SelectorIdioma";
 
 // Claro, con los dos colores del restaurante. Es el diseño original.
 export function TemaClasico({ restaurante, secciones, vistaPrevia, pie }: PropsTema) {
@@ -27,7 +29,8 @@ export function TemaClasico({ restaurante, secciones, vistaPrevia, pie }: PropsT
         } as React.CSSProperties
       }
     >
-      <header className="px-5 pb-8 pt-10 text-center" style={{ background: primario, color: textoSobre(primario) }}>
+      <header className="relative px-5 pb-8 pt-10 text-center" style={{ background: primario, color: textoSobre(primario) }}>
+        <SelectorIdioma className="absolute right-3 top-3" />
         <Logo
           restaurante={restaurante}
           className="mx-auto mb-3 h-20 w-20 rounded-full border-4 border-white/80 object-cover shadow-md"
@@ -56,6 +59,7 @@ export function TemaClasico({ restaurante, secciones, vistaPrevia, pie }: PropsT
                         {precio(plato, restaurante)}
                       </span>
                       <Etiquetas plato={plato} className="text-stone-600" />
+                      <Agregar plato={plato} className="ml-auto" />
                     </div>
                   </div>
                   <Foto plato={plato} className="h-24 w-24 shrink-0 rounded-xl object-cover" />

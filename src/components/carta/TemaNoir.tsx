@@ -1,10 +1,14 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
+import { Agregar } from "./Agregar";
+import { useCarta } from "./contexto";
 import { NavCategorias } from "./NavCategorias";
+import { SelectorIdioma } from "./SelectorIdioma";
 
 // Fondo casi negro, fotos grandes y acentos cálidos.
 export function TemaNoir({ restaurante, secciones, vistaPrevia, pie }: PropsTema) {
   const acento = restaurante.color_primario;
+  const { t } = useCarta();
 
   return (
     <div
@@ -25,14 +29,15 @@ export function TemaNoir({ restaurante, secciones, vistaPrevia, pie }: PropsTema
         } as React.CSSProperties
       }
     >
-      <header className="px-6 pb-10 pt-14 text-center">
+      <header className="relative px-6 pb-10 pt-14 text-center">
+        <SelectorIdioma className="absolute right-4 top-4" style={{ background: "rgba(255,255,255,0.08)" }} />
         <Logo
           restaurante={restaurante}
           className="mx-auto mb-5 h-20 w-20 rounded-full object-cover"
           style={{ boxShadow: `0 0 0 4px #1b1918, 0 0 0 6px ${acento}` }}
         />
         <p className="text-[11px] font-semibold uppercase tracking-[0.45em]" style={{ color: acento }}>
-          Carta
+          {t("carta")}
         </p>
         <h1 className="f-playfair mt-3 text-4xl font-semibold leading-tight @md:text-5xl">{restaurante.nombre}</h1>
         {restaurante.descripcion && <p className="mx-auto mt-3 max-w-md text-sm text-stone-400">{restaurante.descripcion}</p>}
@@ -68,7 +73,10 @@ export function TemaNoir({ restaurante, secciones, vistaPrevia, pie }: PropsTema
                         </span>
                       </div>
                       {plato.descripcion && <p className="mt-1 text-sm leading-relaxed text-stone-400">{plato.descripcion}</p>}
-                      <Etiquetas plato={plato} className="mt-2 text-stone-400" />
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <Etiquetas plato={plato} className="text-stone-400" />
+                        <Agregar plato={plato} className="ml-auto" />
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -86,7 +94,10 @@ export function TemaNoir({ restaurante, secciones, vistaPrevia, pie }: PropsTema
                         </span>
                       </div>
                       {plato.descripcion && <p className="mt-1 text-sm text-stone-400">{plato.descripcion}</p>}
-                      <Etiquetas plato={plato} className="mt-1 text-stone-400" />
+                      <div className="mt-1 flex items-center justify-between gap-3">
+                        <Etiquetas plato={plato} className="text-stone-400" />
+                        <Agregar plato={plato} className="ml-auto" />
+                      </div>
                     </li>
                   ))}
                 </ul>

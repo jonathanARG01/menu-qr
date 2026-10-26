@@ -1,12 +1,16 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
+import { Agregar } from "./Agregar";
+import { useCarta } from "./contexto";
 import { NavCategorias } from "./NavCategorias";
+import { SelectorIdioma } from "./SelectorIdioma";
 
 const CREMA = "#f1e6cf";
 
 // Verde profundo, letras crema e itálicas, fotos en platos redondos unidas por un hilo dorado.
 export function TemaEsmeralda({ restaurante, secciones, vistaPrevia, pie }: PropsTema) {
   const acento = restaurante.color_primario;
+  const { t } = useCarta();
 
   return (
     <div
@@ -28,11 +32,12 @@ export function TemaEsmeralda({ restaurante, secciones, vistaPrevia, pie }: Prop
         } as React.CSSProperties
       }
     >
-      <header className="px-6 pb-10 pt-14 text-center">
+      <header className="relative px-6 pb-10 pt-14 text-center">
+        <SelectorIdioma className="absolute right-4 top-4" style={{ background: "rgba(241,230,207,0.1)", color: CREMA }} />
         <Logo restaurante={restaurante} className="mx-auto mb-5 h-20 w-20 rounded-full object-cover shadow-lg" />
         <h1 className="f-cormorant text-5xl font-semibold leading-none">{restaurante.nombre}</h1>
         <p className="mt-4 text-[11px] font-medium uppercase tracking-[0.6em]" style={{ color: acento }}>
-          Menú
+          {t("menu")}
         </p>
         {restaurante.descripcion && <p className="mx-auto mt-4 max-w-sm text-sm opacity-75">{restaurante.descripcion}</p>}
       </header>
@@ -99,6 +104,9 @@ function TextoPlato({
         {precio(plato, restaurante)}
       </p>
       <Etiquetas plato={plato} className={`mt-1 opacity-70 ${justificar}`} />
+      <div className={`mt-2 flex ${justificar}`}>
+        <Agregar plato={plato} />
+      </div>
     </div>
   );
 }
