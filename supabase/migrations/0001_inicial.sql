@@ -142,6 +142,14 @@ grant execute on function public.crear_restaurante(text, text) to authenticated;
 -- Seguridad por fila (RLS)
 -- ─────────────────────────────────────────────
 
+-- Permisos explícitos (por si el proyecto no expone tablas nuevas automáticamente).
+-- Quién ve qué fila lo deciden las políticas RLS de abajo.
+grant usage on schema public to anon, authenticated;
+grant select on public.restaurantes, public.categorias, public.platos to anon;
+grant select on public.restaurantes, public.usuarios to authenticated;
+grant select, insert, update, delete on public.categorias, public.platos, public.mesas to authenticated;
+grant execute on function public.es_miembro(uuid) to anon, authenticated;
+
 alter table public.restaurantes enable row level security;
 alter table public.usuarios     enable row level security;
 alter table public.categorias   enable row level security;
