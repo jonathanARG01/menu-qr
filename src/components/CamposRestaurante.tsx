@@ -46,7 +46,7 @@ export function CamposRestaurante({ nombreInicial = "", slugInicial = "" }: { no
             setSlug(slugify(e.target.value));
           }}
         />
-        <p className="mt-1 break-all text-xs text-suave">
+        <p className="mt-1 text-xs text-suave [overflow-wrap:anywhere]">
           {urlSitio().replace(/^https?:\/\//, "")}/{slug || "tu-restaurante"} · No podrás cambiarla después porque los QR apuntan
           aquí.
         </p>
