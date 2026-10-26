@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Mesa, Restaurante } from "@/lib/types";
 import { mensajeError, urlCarta } from "@/lib/utils";
-import { descargar, generarPdf, ordenarMesas, qrPng, qrSvg } from "@/lib/qr";
+import { colorLegibleQR, descargar, ESTILO_BASE, generarPdf, ordenarMesas, prepararLogoQR, qrPng, qrSvg, type EstiloQR } from "@/lib/qr";
 import { useToast } from "@/components/Toast";
 import { useUrlSitio } from "@/lib/useUrlSitio";
 
@@ -17,6 +18,38 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
   const [hasta, setHasta] = useState("10");
   const [nombreMesa, setNombreMesa] = useState("");
   const [generando, setGenerando] = useState(false);
+  const [conLogo, setConLogo] = useState(!!restaurante.logo_url);
+  const [imagenPropia, setImagenPropia] = useState<string | null>(null);
+  const [conColor, setConColor] = useState(false);
+  const [logoQr, setLogoQr] = useState<string | null>(null);
+
+  // La imagen del centro se prepara una vez (placa blanca + logo) y se reutiliza en todos los QR.
+  const origenLogo = imagenPropia ?? restaurante.logo_url;
+  useEffect(() => {
+    if (!conLogo || !origenLogo) return setLogoQr(null);
+    let vigente = true;
+    prepararLogoQR(origenLogo).then((png) => {
+      if (!vigente) return;
+      if (!png) avisar("No se pudo usar esa imagen en el QR", "error");
+      setLogoQr(png);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [conLogo, origenLogo, avisar]);
+
+  const estilo: EstiloQR = useMemo(
+    () => ({ logo: conLogo ? logoQr : null, color: conColor ? colorLegibleQR(restaurante.color_primario) : ESTILO_BASE.color }),
+    [conLogo, logoQr, conColor, restaurante.color_primario],
+  );
+
+  function elegirImagen(e: React.ChangeEvent<HTMLInputElement>) {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+    if (imagenPropia) URL.revokeObjectURL(imagenPropia);
+    setImagenPropia(URL.createObjectURL(archivo));
+    setConLogo(true);
+  }
 
   async function insertar(numeros: string[]) {
     const nuevos = numeros.map((n) => n.trim()).filter((n) => n && !mesas.some((m) => m.numero === n));
@@ -54,7 +87,7 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
   async function pdf(lista: (Mesa | null)[]) {
     setGenerando(true);
     try {
-      await generarPdf(restaurante, lista);
+      await generarPdf(restaurante, lista, estilo);
     } catch (err) {
       avisar(mensajeError(err), "error");
     } finally {
@@ -64,8 +97,55 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
 
   return (
     <div className="space-y-6">
+      <section className="tarjeta space-y-3 p-5">
+        <div>
+          <h2 className="font-semibold">Diseño del QR</h2>
+          <p className="text-sm text-suave">Se aplica a todos los códigos, al PNG, al SVG y al PDF.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={conLogo}
+              onChange={(e) => setConLogo(e.target.checked)}
+              disabled={!origenLogo}
+              className="h-4 w-4 accent-[var(--color-marca)]"
+            />
+            Logo al centro
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={conColor}
+              onChange={(e) => setConColor(e.target.checked)}
+              className="h-4 w-4 accent-[var(--color-marca)]"
+            />
+            Color de la marca
+            <span className="h-4 w-4 rounded" style={{ background: colorLegibleQR(restaurante.color_primario) }} />
+          </label>
+          <label className="boton-secundario cursor-pointer py-1.5 text-sm">
+            {imagenPropia ? "Cambiar imagen" : "Usar otra imagen"}
+            <input type="file" accept="image/*" onChange={elegirImagen} className="sr-only" />
+          </label>
+        </div>
+        {!origenLogo && (
+          <p className="text-xs text-suave">
+            Para poner tu logo al centro, súbelo en{" "}
+            <Link href="/panel/marca" className="text-marca underline">
+              Marca
+            </Link>{" "}
+            o elige una imagen aquí.
+          </p>
+        )}
+        {conLogo && origenLogo && (
+          <p className="text-xs text-suave">
+            Con logo el código usa corrección de errores alta, así se sigue leyendo bien. Prueba escanearlo antes de imprimir.
+          </p>
+        )}
+      </section>
+
       <section className="tarjeta flex flex-col items-center gap-5 p-5 sm:flex-row sm:items-start">
-        <TarjetaQR url={urlCarta(restaurante.slug, undefined, sitio)} grande />
+        <TarjetaQR url={urlCarta(restaurante.slug, undefined, sitio)} estilo={estilo} grande />
         <div className="min-w-0 flex-1 space-y-3 text-center sm:text-left">
           <div>
             <h2 className="font-semibold">QR general de la carta</h2>
@@ -74,7 +154,7 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
           <p className="break-all rounded-lg bg-stone-50 px-3 py-2 font-mono text-xs text-suave">
             {urlCarta(restaurante.slug, undefined, sitio)}
           </p>
-          <BotonesDescarga url={urlCarta(restaurante.slug, undefined, sitio)} archivo={`qr-${restaurante.slug}`} />
+          <BotonesDescarga url={urlCarta(restaurante.slug, undefined, sitio)} estilo={estilo} archivo={`qr-${restaurante.slug}`} />
           <p className="text-xs text-suave">
             El QR apunta a la dirección de tu carta, no a un archivo: puedes cambiar platos y precios sin volver a imprimir.
           </p>
@@ -133,11 +213,12 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {mesas.map((mesa) => (
               <li key={mesa.id} className="rounded-xl border border-borde p-3 text-center">
-                <TarjetaQR url={urlCarta(restaurante.slug, mesa.numero, sitio)} />
+                <TarjetaQR url={urlCarta(restaurante.slug, mesa.numero, sitio)} estilo={estilo} />
                 <p className="mt-2 font-semibold">Mesa {mesa.numero}</p>
                 <div className="mt-1 flex justify-center gap-3 text-xs">
                   <BotonPng
                     url={urlCarta(restaurante.slug, mesa.numero, sitio)}
+                    estilo={estilo}
                     archivo={`qr-${restaurante.slug}-mesa-${mesa.numero}`}
                   />
                   <button type="button" onClick={() => borrar(mesa)} className="text-suave hover:text-red-600">
@@ -153,11 +234,11 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
   );
 }
 
-function TarjetaQR({ url, grande = false }: { url: string; grande?: boolean }) {
+function TarjetaQR({ url, estilo, grande = false }: { url: string; estilo: EstiloQR; grande?: boolean }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
-    qrPng(url, grande ? 480 : 300).then(setSrc);
-  }, [url, grande]);
+    qrPng(url, grande ? 480 : 300, estilo).then(setSrc);
+  }, [url, grande, estilo]);
   const tam = grande ? "h-44 w-44" : "aspect-square w-full";
   return src ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -167,11 +248,11 @@ function TarjetaQR({ url, grande = false }: { url: string; grande?: boolean }) {
   );
 }
 
-function BotonPng({ url, archivo }: { url: string; archivo: string }) {
+function BotonPng({ url, estilo, archivo }: { url: string; estilo: EstiloQR; archivo: string }) {
   return (
     <button
       type="button"
-      onClick={async () => descargar(await qrPng(url, 1200), `${archivo}.png`)}
+      onClick={async () => descargar(await qrPng(url, 1200, estilo), `${archivo}.png`)}
       className="text-marca hover:underline"
     >
       PNG
@@ -179,9 +260,9 @@ function BotonPng({ url, archivo }: { url: string; archivo: string }) {
   );
 }
 
-function BotonesDescarga({ url, archivo }: { url: string; archivo: string }) {
-  async function svg() {
-    const contenido = await qrSvg(url);
+function BotonesDescarga({ url, estilo, archivo }: { url: string; estilo: EstiloQR; archivo: string }) {
+  function svg() {
+    const contenido = qrSvg(url, estilo);
     const href = URL.createObjectURL(new Blob([contenido], { type: "image/svg+xml" }));
     descargar(href, `${archivo}.svg`);
     setTimeout(() => URL.revokeObjectURL(href), 1000);
@@ -191,7 +272,7 @@ function BotonesDescarga({ url, archivo }: { url: string; archivo: string }) {
       <button
         type="button"
         className="boton-secundario py-2"
-        onClick={async () => descargar(await qrPng(url, 1200), `${archivo}.png`)}
+        onClick={async () => descargar(await qrPng(url, 1200, estilo), `${archivo}.png`)}
       >
         Descargar PNG
       </button>

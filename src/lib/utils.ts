@@ -2,10 +2,21 @@ export const ETIQUETAS = ["vegetariano", "vegano", "sin gluten", "picante", "nue
 
 export const MONEDAS = ["USD", "EUR", "MXN", "ARS", "COP", "CLP", "PEN", "UYU", "BOB", "PYG", "GTQ", "CRC", "DOP"];
 
+// Formato local de cada moneda ($ 2.800 en Argentina, $2,800 en México); el resto usa español de Latinoamérica.
+const LOCALES: Record<string, string> = {
+  EUR: "es-ES",
+  ARS: "es-AR",
+  CLP: "es-CL",
+  COP: "es-CO",
+  UYU: "es-UY",
+  PYG: "es-PY",
+  BOB: "es-BO",
+  CRC: "es-CR",
+};
+
 export function formatoPrecio(valor: number, moneda: string) {
   try {
-    // Español de Latinoamérica ($1,234.50) salvo el euro (1234,50 €).
-    return new Intl.NumberFormat(moneda === "EUR" ? "es-ES" : "es-419", {
+    return new Intl.NumberFormat(LOCALES[moneda] ?? "es-419", {
       style: "currency",
       currency: moneda,
       currencyDisplay: "narrowSymbol",
