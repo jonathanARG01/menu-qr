@@ -7,6 +7,7 @@ const ENLACES = [
   { href: "/panel", texto: "Carta", icono: "☰" },
   { href: "/panel/marca", texto: "Marca", icono: "◐" },
   { href: "/panel/qr", texto: "Códigos QR", icono: "▣" },
+  { href: "/panel/estadisticas", texto: "Estadísticas", icono: "▥" },
 ];
 
 function useClase() {
