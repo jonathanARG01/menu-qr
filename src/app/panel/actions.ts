@@ -1,0 +1,40 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { mensajeError } from "@/lib/utils";
+
+// Tras guardar en el panel: regenera la carta pública para que el cambio se vea al momento.
+export async function revalidarCarta() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data } = await supabase.from("usuarios").select("restaurantes(slug)").eq("user_id", user.id);
+  for (const fila of data ?? []) {
+    const slug = (fila.restaurantes as unknown as { slug: string } | null)?.slug;
+    if (slug) revalidatePath(`/${slug}`);
+  }
+}
+
+export async function crearRestaurante(_prev: string | null, formData: FormData): Promise<string | null> {
+  const supabase = await createClient();
+  const slug = String(formData.get("slug") ?? "");
+  const { error } = await supabase.rpc("crear_restaurante", {
+    p_nombre: String(formData.get("nombre") ?? ""),
+    p_slug: slug,
+  });
+  if (error) return mensajeError(error);
+  revalidatePath(`/${slug}`);
+  revalidatePath("/panel", "layout");
+  redirect("/panel");
+}
+
+export async function cerrarSesion() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/login");
+}

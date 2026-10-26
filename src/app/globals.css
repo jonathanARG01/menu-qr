@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  --color-marca: #b45309;
+  --color-marca-oscuro: #92400e;
+  --color-tinta: #1c1917;
+  --color-suave: #78716c;
+  --color-borde: #e7e5e4;
+  --color-fondo: #fafaf9;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-fondo);
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+}
+
+.campo {
+  @apply w-full rounded-lg border border-borde bg-white px-3 py-2.5 text-base outline-none transition focus:border-marca focus:ring-2 focus:ring-marca/20;
+}
+
+.etiqueta-campo {
+  @apply mb-1 block text-sm font-medium text-tinta;
+}
+
+.boton {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-marca px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.boton-secundario {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-borde bg-white px-4 py-2.5 text-sm font-medium text-tinta transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.tarjeta {
+  @apply rounded-2xl border border-borde bg-white;
 }
