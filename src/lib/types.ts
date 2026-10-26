@@ -1,3 +1,6 @@
+export const TEMAS = ["clasico", "noir", "esmeralda", "street", "retro"] as const;
+export type Tema = (typeof TEMAS)[number];
+
 export type Restaurante = {
   id: string;
   slug: string;
@@ -9,6 +12,8 @@ export type Restaurante = {
   moneda: string;
   whatsapp: string | null;
   plan: "free" | "carta" | "pro" | "grupo";
+  // Puede faltar si aún no se ejecutó la migración 0002.
+  tema?: Tema;
   activo: boolean;
 };
 
@@ -38,3 +43,5 @@ export type Mesa = {
   restaurante_id: string;
   numero: string;
 };
+
+export type Seccion = Categoria & { platos: Plato[] };

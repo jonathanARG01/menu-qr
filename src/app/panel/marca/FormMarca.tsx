@@ -4,10 +4,13 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { borrarFoto, subirFoto } from "@/lib/fotos";
-import type { Restaurante } from "@/lib/types";
-import { MONEDAS, formatoPrecio, mensajeError, textoSobre, urlCarta } from "@/lib/utils";
+import { TEMAS, type Restaurante, type Seccion, type Tema } from "@/lib/types";
+import { MONEDAS, mensajeError, urlCarta } from "@/lib/utils";
 import { useToast } from "@/components/Toast";
 import { useUrlSitio } from "@/lib/useUrlSitio";
+import { Carta } from "@/components/carta/Carta";
+import { TEMA_INFO } from "@/components/carta/comun";
+import { SECCIONES_EJEMPLO } from "@/components/carta/ejemplo";
 import { revalidarCarta } from "../actions";
 
 const PALETAS = [
@@ -19,7 +22,19 @@ const PALETAS = [
   { primario: "#1c1917", fondo: "#ffffff" },
 ];
 
-export function FormMarca({ restaurante }: { restaurante: Restaurante }) {
+// Acentos sugeridos para los diseños oscuros.
+const ACENTOS = ["#e8a33d", "#d4af6a", "#ffc300", "#f2b134", "#e63946", "#8ac926", "#38bdf8", "#f5f5f4"];
+
+// Muestra en miniatura de cada diseño, para el selector.
+const MUESTRA_FUENTE: Record<Tema, string> = {
+  clasico: "font-serif",
+  noir: "f-playfair",
+  esmeralda: "f-cormorant",
+  street: "f-pacifico",
+  retro: "f-oswald uppercase",
+};
+
+export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante; secciones: Seccion[] }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const avisar = useToast();
@@ -30,6 +45,7 @@ export function FormMarca({ restaurante }: { restaurante: Restaurante }) {
   const [primario, setPrimario] = useState(restaurante.color_primario);
   const [fondo, setFondo] = useState(restaurante.color_fondo);
   const [moneda, setMoneda] = useState(restaurante.moneda);
+  const [tema, setTema] = useState<Tema>(restaurante.tema ?? "clasico");
   const [whatsapp, setWhatsapp] = useState(restaurante.whatsapp ?? "");
   const [subiendo, setSubiendo] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -63,19 +79,82 @@ export function FormMarca({ restaurante }: { restaurante: Restaurante }) {
         color_fondo: fondo,
         moneda,
         whatsapp: telefono || null,
+        tema,
       })
       .eq("id", restaurante.id);
     setGuardando(false);
-    if (error) return avisar(mensajeError(error), "error");
+    if (error) {
+      const falta = error.message.includes("tema");
+      return avisar(
+        falta ? "Falta ejecutar el SQL 0002_temas.sql en Supabase para guardar el diseño." : mensajeError(error),
+        "error",
+      );
+    }
     if (restaurante.logo_url && restaurante.logo_url !== logo) borrarFoto(supabase, restaurante.logo_url);
     avisar("Cambios guardados");
     await revalidarCarta();
     router.refresh();
   }
 
+  function elegirTema(t: Tema) {
+    setTema(t);
+    // Cada diseño trae su color de acento sugerido; se puede cambiar después.
+    setPrimario(TEMA_INFO[t].acento);
+    if (t === "clasico") setFondo(TEMA_INFO.clasico.fondo);
+  }
+
+  const vista: Restaurante = {
+    ...restaurante,
+    nombre: nombre || "Tu restaurante",
+    descripcion: descripcion || null,
+    logo_url: logo,
+    color_primario: primario,
+    color_fondo: fondo,
+    moneda,
+    tema,
+  };
+
   return (
-    <form onSubmit={guardar} className="grid gap-6 md:grid-cols-[1fr_260px]">
+    <form onSubmit={guardar} className="grid gap-6 md:grid-cols-[1fr_320px]">
       <div className="space-y-5">
+        <div className="tarjeta space-y-4 p-5">
+          <div>
+            <h2 className="font-semibold">Diseño de la carta</h2>
+            <p className="text-sm text-suave">Elige cómo ven tu carta los clientes. Puedes cambiarlo cuando quieras.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {TEMAS.map((t) => {
+              const info = TEMA_INFO[t];
+              const activo = tema === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => elegirTema(t)}
+                  aria-pressed={activo}
+                  className={`overflow-hidden rounded-xl border-2 text-left transition ${
+                    activo ? "border-marca ring-2 ring-marca/20" : "border-borde hover:border-stone-400"
+                  }`}
+                >
+                  <span
+                    className="flex h-20 flex-col items-center justify-center gap-1.5"
+                    style={{ background: t === "clasico" ? "#fffbf5" : info.fondo }}
+                  >
+                    <span className={`text-lg leading-none ${MUESTRA_FUENTE[t]}`} style={{ color: info.acento }}>
+                      Menú
+                    </span>
+                    <span className="h-1 w-10 rounded-full" style={{ background: info.acento }} />
+                  </span>
+                  <span className="block px-3 py-2">
+                    <span className="block text-sm font-semibold">{info.nombre}</span>
+                    <span className="block text-xs leading-snug text-suave">{info.descripcion}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="tarjeta space-y-4 p-5">
           <h2 className="font-semibold">Datos del restaurante</h2>
           <div className="flex items-center gap-4">
@@ -167,36 +246,70 @@ export function FormMarca({ restaurante }: { restaurante: Restaurante }) {
 
         <div className="tarjeta space-y-4 p-5">
           <h2 className="font-semibold">Colores</h2>
-          <div className="flex flex-wrap gap-2">
-            {PALETAS.map((p) => (
-              <button
-                key={p.primario}
-                type="button"
-                onClick={() => {
-                  setPrimario(p.primario);
-                  setFondo(p.fondo);
-                }}
-                aria-label={`Paleta ${p.primario}`}
-                className={`h-10 w-10 rounded-full border-4 ${primario === p.primario ? "border-tinta" : "border-white"} shadow`}
-                style={{ background: `linear-gradient(135deg, ${p.primario} 50%, ${p.fondo} 50%)` }}
-              />
-            ))}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex items-center gap-3 rounded-lg border border-borde px-3 py-2">
-              <input
-                type="color"
-                value={primario}
-                onChange={(e) => setPrimario(e.target.value)}
-                className="h-8 w-8 cursor-pointer"
-              />
-              <span className="text-sm">Principal</span>
-            </label>
-            <label className="flex items-center gap-3 rounded-lg border border-borde px-3 py-2">
-              <input type="color" value={fondo} onChange={(e) => setFondo(e.target.value)} className="h-8 w-8 cursor-pointer" />
-              <span className="text-sm">Fondo</span>
-            </label>
-          </div>
+          {tema === "clasico" ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {PALETAS.map((p) => (
+                  <button
+                    key={p.primario}
+                    type="button"
+                    onClick={() => {
+                      setPrimario(p.primario);
+                      setFondo(p.fondo);
+                    }}
+                    aria-label={`Paleta ${p.primario}`}
+                    className={`h-10 w-10 rounded-full border-4 ${primario === p.primario ? "border-tinta" : "border-white"} shadow`}
+                    style={{ background: `linear-gradient(135deg, ${p.primario} 50%, ${p.fondo} 50%)` }}
+                  />
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex items-center gap-3 rounded-lg border border-borde px-3 py-2">
+                  <input
+                    type="color"
+                    value={primario}
+                    onChange={(e) => setPrimario(e.target.value)}
+                    className="h-8 w-8 cursor-pointer"
+                  />
+                  <span className="text-sm">Principal</span>
+                </label>
+                <label className="flex items-center gap-3 rounded-lg border border-borde px-3 py-2">
+                  <input
+                    type="color"
+                    value={fondo}
+                    onChange={(e) => setFondo(e.target.value)}
+                    className="h-8 w-8 cursor-pointer"
+                  />
+                  <span className="text-sm">Fondo</span>
+                </label>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-suave">El fondo lo pone el diseño. Elige el color de acento para precios y detalles.</p>
+              <div className="flex flex-wrap items-center gap-2">
+                {ACENTOS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setPrimario(c)}
+                    aria-label={`Acento ${c}`}
+                    className={`h-10 w-10 rounded-full border-4 ${primario === c ? "border-tinta" : "border-white"} shadow`}
+                    style={{ background: c }}
+                  />
+                ))}
+                <label className="flex items-center gap-2 rounded-lg border border-borde px-3 py-1.5">
+                  <input
+                    type="color"
+                    value={primario}
+                    onChange={(e) => setPrimario(e.target.value)}
+                    className="h-7 w-7 cursor-pointer"
+                  />
+                  <span className="text-sm">Otro</span>
+                </label>
+              </div>
+            </>
+          )}
         </div>
 
         <button type="submit" className="boton w-full sm:w-auto" disabled={guardando || subiendo}>
@@ -204,34 +317,16 @@ export function FormMarca({ restaurante }: { restaurante: Restaurante }) {
         </button>
       </div>
 
-      {/* Vista previa en vivo */}
+      {/* Vista previa en vivo con la carta real */}
       <aside className="order-first md:order-none">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-suave">Vista previa</p>
-        <div className="overflow-hidden rounded-3xl border-8 border-tinta shadow-xl" style={{ background: fondo }}>
-          <div className="px-4 pb-4 pt-6 text-center" style={{ background: primario, color: textoSobre(primario) }}>
-            {logo && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logo} alt="" className="mx-auto mb-2 h-12 w-12 rounded-full border-2 border-white object-cover" />
-            )}
-            <p className="font-serif text-lg font-semibold">{nombre || "Tu restaurante"}</p>
-            {descripcion && <p className="text-xs opacity-80">{descripcion}</p>}
+        <div className="md:sticky md:top-28">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-suave">Vista previa</p>
+          <div className="mx-auto h-[480px] w-full max-w-[320px] overflow-y-auto overscroll-contain rounded-[2.2rem] border-[10px] border-tinta bg-white shadow-xl [scrollbar-width:none] md:h-[620px]">
+            <Carta restaurante={vista} secciones={secciones.length ? secciones : SECCIONES_EJEMPLO} vistaPrevia />
           </div>
-          <div className="space-y-3 p-4">
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: primario }}>
-              Entradas
-            </p>
-            {[
-              ["Empanadas (3)", 8.5],
-              ["Ceviche clásico", 12],
-            ].map(([n, p]) => (
-              <div key={n} className="flex justify-between gap-2 text-sm" style={{ color: textoSobre(fondo) }}>
-                <span>{n}</span>
-                <span className="font-semibold" style={{ color: primario }}>
-                  {formatoPrecio(Number(p), moneda)}
-                </span>
-              </div>
-            ))}
-          </div>
+          {secciones.length === 0 && (
+            <p className="mt-2 text-center text-xs text-suave">Con platos de ejemplo hasta que cargues los tuyos.</p>
+          )}
         </div>
       </aside>
     </form>
