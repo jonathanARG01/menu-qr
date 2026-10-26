@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { COOKIE_RESTAURANTE } from "@/lib/panel";
 import { createClient } from "@/lib/supabase/server";
 import { mensajeError } from "@/lib/utils";
 
@@ -37,4 +39,12 @@ export async function cerrarSesion() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+// Cambia el restaurante que se edita en el panel (para quien administra varios).
+export async function elegirRestaurante(formData: FormData) {
+  const id = String(formData.get("restaurante") ?? "");
+  const almacen = await cookies();
+  almacen.set(COOKIE_RESTAURANTE, id, { path: "/", httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 365 });
+  redirect("/panel");
 }

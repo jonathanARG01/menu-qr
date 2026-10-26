@@ -1,13 +1,15 @@
+import Link from "next/link";
 import { obtenerContexto } from "@/lib/panel";
 import { ToastProvider } from "@/components/Toast";
 import { cerrarSesion } from "./actions";
+import { SelectorRestaurante } from "./SelectorRestaurante";
 import { NavEscritorio, NavMovil } from "./NavPanel";
 import { Onboarding } from "./Onboarding";
 
 export const metadata = { title: "Panel · Menús QR" };
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
-  const { user, restaurante } = await obtenerContexto();
+  const { user, restaurante, restaurantes, esSuperadmin } = await obtenerContexto();
 
   if (!restaurante) {
     const meta = user.user_metadata as { restaurante_nombre?: string; restaurante_slug?: string };
@@ -30,11 +32,20 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </span>
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold leading-tight">{restaurante.nombre}</p>
+            {restaurantes.length > 1 ? (
+              <SelectorRestaurante actual={restaurante.id} restaurantes={restaurantes} />
+            ) : (
+              <p className="truncate font-semibold leading-tight">{restaurante.nombre}</p>
+            )}
             <a href={`/${restaurante.slug}`} target="_blank" className="text-xs text-marca hover:underline">
               Ver carta pública ↗
             </a>
           </div>
+          {esSuperadmin && (
+            <Link href="/admin" className="rounded-lg bg-stone-900 px-2.5 py-1 text-xs font-semibold text-white">
+              Admin
+            </Link>
+          )}
           <form action={cerrarSesion}>
             <button className="text-sm text-suave hover:text-tinta">Salir</button>
           </form>

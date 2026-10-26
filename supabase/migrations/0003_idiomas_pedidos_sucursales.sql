@@ -265,7 +265,7 @@ returns table (
   sucursales bigint,
   visitas_30d bigint,
   pedidos_30d bigint,
-  soy_miembro boolean
+  soy_staff boolean
 )
 language plpgsql
 stable
@@ -284,7 +284,7 @@ begin
     (select count(*) from public.sucursales s where s.restaurante_id = r.id),
     (select count(*) from public.eventos e where e.restaurante_id = r.id and e.tipo = 'visita' and e.created_at > now() - interval '30 days'),
     (select count(*) from public.eventos e where e.restaurante_id = r.id and e.tipo = 'pedido' and e.created_at > now() - interval '30 days'),
-    exists (select 1 from public.usuarios u where u.restaurante_id = r.id and u.user_id = auth.uid())
+    exists (select 1 from public.usuarios u where u.restaurante_id = r.id and u.user_id = auth.uid() and u.rol = 'staff')
   from public.restaurantes r
   order by r.created_at desc;
 end;

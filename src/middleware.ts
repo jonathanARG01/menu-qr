@@ -7,5 +7,5 @@ export async function middleware(request: NextRequest) {
 
 // Solo las rutas que necesitan sesión: la carta pública no pasa por aquí.
 export const config = {
-  matcher: ["/panel/:path*", "/nueva-clave", "/login", "/registro"],
+  matcher: ["/panel/:path*", "/admin/:path*", "/nueva-clave", "/login", "/registro"],
 };

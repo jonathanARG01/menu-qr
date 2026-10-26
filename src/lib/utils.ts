@@ -80,7 +80,8 @@ export function mensajeError(error: unknown) {
   if (msg.includes("slug_formato"))
     return "La dirección solo puede tener letras minúsculas, números y guiones (3 a 50 caracteres).";
   if (msg.includes("slug_reservado")) return "Esa dirección está reservada. Prueba con otra.";
-  if (msg.includes("mesas_restaurante_id_numero_key")) return "Esa mesa ya existe.";
+  if (msg.includes("mesas_restaurante_id_numero_key") || msg.includes("mesas_numero_unico")) return "Esa mesa ya existe.";
+  if (msg.includes("sucursales_restaurante_id_slug_key")) return "Ya tienes una sucursal con ese nombre corto.";
   if (msg.includes("Invalid login credentials")) return "Correo o contraseña incorrectos.";
   if (msg.includes("Email not confirmed")) return "Confirma tu correo antes de entrar. Revisa tu bandeja de entrada.";
   if (msg.includes("User already registered")) return "Ya existe una cuenta con ese correo.";

@@ -27,7 +27,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const ruta = request.nextUrl.pathname;
-  const protegida = ruta.startsWith("/panel") || ruta.startsWith("/nueva-clave");
+  const protegida = ruta.startsWith("/panel") || ruta.startsWith("/admin") || ruta.startsWith("/nueva-clave");
 
   if (!user && protegida) {
     const destino = request.nextUrl.clone();
