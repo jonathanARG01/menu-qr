@@ -6,10 +6,12 @@ import type { Mesa, Restaurante } from "@/lib/types";
 import { mensajeError, urlCarta } from "@/lib/utils";
 import { descargar, generarPdf, ordenarMesas, qrPng, qrSvg } from "@/lib/qr";
 import { useToast } from "@/components/Toast";
+import { useUrlSitio } from "@/lib/useUrlSitio";
 
 export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Restaurante; mesasIniciales: Mesa[] }) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
+  const sitio = useUrlSitio();
   const [mesas, setMesas] = useState(() => ordenarMesas(mesasIniciales));
   const [desde, setDesde] = useState("1");
   const [hasta, setHasta] = useState("10");
@@ -63,14 +65,16 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
   return (
     <div className="space-y-6">
       <section className="tarjeta flex flex-col items-center gap-5 p-5 sm:flex-row sm:items-start">
-        <TarjetaQR url={urlCarta(restaurante.slug)} grande />
+        <TarjetaQR url={urlCarta(restaurante.slug, undefined, sitio)} grande />
         <div className="min-w-0 flex-1 space-y-3 text-center sm:text-left">
           <div>
             <h2 className="font-semibold">QR general de la carta</h2>
             <p className="text-sm text-suave">Para la puerta, el mostrador, Instagram o la carta impresa.</p>
           </div>
-          <p className="break-all rounded-lg bg-stone-50 px-3 py-2 font-mono text-xs text-suave">{urlCarta(restaurante.slug)}</p>
-          <BotonesDescarga url={urlCarta(restaurante.slug)} archivo={`qr-${restaurante.slug}`} />
+          <p className="break-all rounded-lg bg-stone-50 px-3 py-2 font-mono text-xs text-suave">
+            {urlCarta(restaurante.slug, undefined, sitio)}
+          </p>
+          <BotonesDescarga url={urlCarta(restaurante.slug, undefined, sitio)} archivo={`qr-${restaurante.slug}`} />
           <p className="text-xs text-suave">
             El QR apunta a la dirección de tu carta, no a un archivo: puedes cambiar platos y precios sin volver a imprimir.
           </p>
@@ -129,11 +133,11 @@ export function GeneradorQR({ restaurante, mesasIniciales }: { restaurante: Rest
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {mesas.map((mesa) => (
               <li key={mesa.id} className="rounded-xl border border-borde p-3 text-center">
-                <TarjetaQR url={urlCarta(restaurante.slug, mesa.numero)} />
+                <TarjetaQR url={urlCarta(restaurante.slug, mesa.numero, sitio)} />
                 <p className="mt-2 font-semibold">Mesa {mesa.numero}</p>
                 <div className="mt-1 flex justify-center gap-3 text-xs">
                   <BotonPng
-                    url={urlCarta(restaurante.slug, mesa.numero)}
+                    url={urlCarta(restaurante.slug, mesa.numero, sitio)}
                     archivo={`qr-${restaurante.slug}-mesa-${mesa.numero}`}
                   />
                   <button type="button" onClick={() => borrar(mesa)} className="text-suave hover:text-red-600">
@@ -155,8 +159,8 @@ function TarjetaQR({ url, grande = false }: { url: string; grande?: boolean }) {
     qrPng(url, grande ? 480 : 300).then(setSrc);
   }, [url, grande]);
   const tam = grande ? "h-44 w-44" : "aspect-square w-full";
-  // eslint-disable-next-line @next/next/no-img-element
   return src ? (
+    // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt={`Código QR de ${url}`} className={`${tam} shrink-0 rounded-lg`} />
   ) : (
     <div className={`${tam} shrink-0 rounded-lg bg-stone-100`} />

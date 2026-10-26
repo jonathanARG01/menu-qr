@@ -27,15 +27,15 @@ export function slugify(texto: string) {
     .slice(0, 50);
 }
 
+// En el navegador manda la dirección desde la que se abrió la app; NEXT_PUBLIC_SITE_URL solo cubre el servidor.
 export function urlSitio() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
   if (typeof window !== "undefined") return window.location.origin;
-  return "http://localhost:3000";
+  return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
 }
 
-export function urlCarta(slug: string, mesa?: string) {
-  const base = `${urlSitio()}/${slug}`;
-  return mesa ? `${base}?mesa=${encodeURIComponent(mesa)}` : base;
+export function urlCarta(slug: string, mesa?: string, base = urlSitio()) {
+  const url = `${base}/${slug}`;
+  return mesa ? `${url}?mesa=${encodeURIComponent(mesa)}` : url;
 }
 
 // Reduce la foto en el navegador a WebP de hasta 1200 px antes de subirla.

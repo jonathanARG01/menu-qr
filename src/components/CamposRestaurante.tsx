@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { slugify, urlSitio } from "@/lib/utils";
+import { slugify } from "@/lib/utils";
+import { useUrlSitio } from "@/lib/useUrlSitio";
 
 // Nombre del restaurante + dirección de su carta (slug), que se propone a partir del nombre.
 export function CamposRestaurante({ nombreInicial = "", slugInicial = "" }: { nombreInicial?: string; slugInicial?: string }) {
+  const sitio = useUrlSitio();
   const [nombre, setNombre] = useState(nombreInicial);
   const [slug, setSlug] = useState(slugInicial || slugify(nombreInicial));
   const [slugEditado, setSlugEditado] = useState(Boolean(slugInicial));
@@ -47,8 +49,7 @@ export function CamposRestaurante({ nombreInicial = "", slugInicial = "" }: { no
           }}
         />
         <p className="mt-1 text-xs text-suave [overflow-wrap:anywhere]">
-          {urlSitio().replace(/^https?:\/\//, "")}/{slug || "tu-restaurante"} · No podrás cambiarla después porque los QR apuntan
-          aquí.
+          {sitio.replace(/^https?:\/\//, "")}/{slug || "tu-restaurante"} · No podrás cambiarla después porque los QR apuntan aquí.
         </p>
       </div>
     </>

@@ -7,6 +7,7 @@ import { borrarFoto, subirFoto } from "@/lib/fotos";
 import type { Restaurante } from "@/lib/types";
 import { MONEDAS, formatoPrecio, mensajeError, textoSobre, urlCarta } from "@/lib/utils";
 import { useToast } from "@/components/Toast";
+import { useUrlSitio } from "@/lib/useUrlSitio";
 import { revalidarCarta } from "../actions";
 
 const PALETAS = [
@@ -22,6 +23,7 @@ export function FormMarca({ restaurante }: { restaurante: Restaurante }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const avisar = useToast();
+  const sitio = useUrlSitio();
   const [nombre, setNombre] = useState(restaurante.nombre);
   const [descripcion, setDescripcion] = useState(restaurante.descripcion ?? "");
   const [logo, setLogo] = useState(restaurante.logo_url);
@@ -158,7 +160,7 @@ export function FormMarca({ restaurante }: { restaurante: Restaurante }) {
           <div>
             <span className="etiqueta-campo">Dirección de la carta</span>
             <p className="break-all rounded-lg bg-stone-50 px-3 py-2.5 font-mono text-sm text-suave">
-              {urlCarta(restaurante.slug)}
+              {urlCarta(restaurante.slug, undefined, sitio)}
             </p>
           </div>
         </div>

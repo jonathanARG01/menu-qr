@@ -26,7 +26,7 @@ Stack: Next.js 15 (App Router) + Supabase (Postgres, Auth, Storage, RLS) + Verce
 ## Publicar en Vercel
 
 1. Importa el repositorio en Vercel.
-2. Añade las tres variables de `.env.example` en *Settings → Environment Variables*. `NEXT_PUBLIC_SITE_URL` es la dirección que va dentro de los QR: ponla con tu dominio final antes de imprimir.
+2. Añade las tres variables de `.env.example` en *Settings → Environment Variables*. Los QR y los correos usan la dirección desde la que se abre el panel; `NEXT_PUBLIC_SITE_URL` solo se usa en el servidor. Antes de imprimir QR, entra al panel desde el dominio final.
 3. Deploy. Recuerda que el plan gratis de Vercel no permite uso comercial: pasa a Pro al empezar a cobrar.
 
 ## Dar de alta un restaurante
