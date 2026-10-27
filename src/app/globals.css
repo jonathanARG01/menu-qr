@@ -216,6 +216,19 @@ body {
 .tema-oscuro .tema-fijo :is(.bg-stone-700, .bg-stone-800, .bg-stone-900, .bg-stone-950).text-white {
   color: #fff;
 }
+/* Listas desplegables: en Windows el navegador pinta las opciones con fondo blanco aunque el panel sea oscuro,
+   y heredaban el texto claro. Se fijan los colores del tema en cada opción. */
+.tema-oscuro select {
+  color-scheme: dark;
+}
+.tema-oscuro option,
+.tema-oscuro optgroup {
+  background-color: var(--color-superficie);
+  color: var(--color-tinta);
+}
+.tema-oscuro .tema-fijo select {
+  color-scheme: light;
+}
 .tema-oscuro .tema-fijo .bg-tinta {
   background-color: var(--color-tinta);
   box-shadow: none;
