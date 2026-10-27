@@ -1,5 +1,6 @@
 import type { Propina } from "./cuenta";
 import { PAIS_BASE, paisDe, type Region } from "./region";
+import { leerRedes, REDES_VACIAS, type Redes } from "./redes";
 
 // Gestión de salón: roles, secciones del panel, ajustes de cada restaurante y tipos de mesas, pedidos y pagos.
 
@@ -137,6 +138,8 @@ export type Ajustes = {
   };
   // Los platos sin foto muestran una imagen ilustrada según lo que son (archivos en public/defecto).
   imagenes_defecto: boolean;
+  // Redes sociales y sitio web que se muestran al final de la carta (ver lib/redes.ts).
+  redes: Redes;
 };
 
 export const SONIDOS_HOJA = ["papel", "hojas", "diario", "ninguno"] as const;
@@ -170,6 +173,7 @@ export const AJUSTES_BASE: Ajustes = {
   resenas: { pedir: true, google_url: "" },
   cobro_online: { activo: false },
   imagenes_defecto: false,
+  redes: REDES_VACIAS,
 };
 
 // Une lo guardado con los valores por defecto (lo que falte o venga mal se completa).
@@ -195,6 +199,7 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
     estaciones: listaTextos(g.estaciones, AJUSTES_BASE.estaciones),
     alertas: { ...AJUSTES_BASE.alertas, ...(g.alertas ?? {}) },
     imagenes_defecto: g.imagenes_defecto === true,
+    redes: leerRedes(g.redes),
     sonido_hoja: SONIDOS_HOJA.includes(g.sonido_hoja as SonidoHoja) ? (g.sonido_hoja as SonidoHoja) : AJUSTES_BASE.sonido_hoja,
     pais: paisDe(g.pais).codigo,
     zona_horaria: typeof g.zona_horaria === "string" && g.zona_horaria ? g.zona_horaria : paisDe(g.pais).zona,
