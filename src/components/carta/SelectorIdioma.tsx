@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { NOMBRE_IDIOMA } from "@/lib/i18n";
+import { banderaIdioma, NOMBRE_IDIOMA, type Idioma } from "@/lib/i18n";
 import { useCarta } from "./contexto";
 
 // Botón de idioma para la cabecera de cada diseño. No se muestra si la carta está en un solo idioma.
 export function SelectorIdioma({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
-  const { idioma, idiomas, setIdioma, t } = useCarta();
+  const { idioma, idiomas, setIdioma, ajustes, t } = useCarta();
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
 
@@ -30,10 +30,7 @@ export function SelectorIdioma({ className = "", style }: { className?: string; 
         className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide shadow-sm backdrop-blur"
         style={{ background: "rgba(0,0,0,0.35)", color: "#fff", ...style }}
       >
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z" />
-        </svg>
+        <Bandera idioma={idioma} pais={ajustes.pais} />
         {idioma}
       </button>
       {abierto && (
@@ -56,7 +53,10 @@ export function SelectorIdioma({ className = "", style }: { className?: string; 
                   i === idioma ? "font-semibold" : ""
                 }`}
               >
-                {NOMBRE_IDIOMA[i]}
+                <span className="flex items-center gap-2.5">
+                  <Bandera idioma={i} pais={ajustes.pais} />
+                  {NOMBRE_IDIOMA[i]}
+                </span>
                 <span className="text-xs uppercase text-stone-400">{i}</span>
               </button>
             </li>
@@ -64,5 +64,12 @@ export function SelectorIdioma({ className = "", style }: { className?: string; 
         </ul>
       )}
     </div>
+  );
+}
+
+function Bandera({ idioma, pais }: { idioma: Idioma; pais: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={banderaIdioma(idioma, pais)} alt="" width={20} height={14} className="h-3.5 w-5 shrink-0 rounded-[3px] object-cover shadow-[0_0_0_1px_rgba(0,0,0,0.12)]" />
   );
 }

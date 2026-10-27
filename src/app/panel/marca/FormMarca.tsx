@@ -12,7 +12,8 @@ import { Carta } from "@/components/carta/Carta";
 import { GRUPOS_TEMA, TEMA_INFO, type GrupoTema } from "@/components/carta/comun";
 import { SECCIONES_EJEMPLO } from "@/components/carta/ejemplo";
 import { Interruptor } from "@/components/Interruptor";
-import { IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
+import { banderaIdioma, IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
+import { enlaceRed, INFO_RED, REDES, type Redes } from "@/lib/redes";
 import { revalidarCarta } from "../actions";
 import { leerAjustes, SONIDOS_HOJA, type SonidoHoja } from "@/lib/salon";
 
@@ -84,9 +85,14 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
   const tieneAjustes = "ajustes" in restaurante;
   const [sonidoHoja, setSonidoHoja] = useState<SonidoHoja>(leerAjustes(restaurante.ajustes).sonido_hoja);
   const [imagenesDefecto, setImagenesDefecto] = useState(leerAjustes(restaurante.ajustes).imagenes_defecto);
+  const [redes, setRedes] = useState<Redes>(leerAjustes(restaurante.ajustes).redes);
   const ajustesGuardados = leerAjustes(restaurante.ajustes);
-  const ajustesNuevos = { ...ajustesGuardados, sonido_hoja: sonidoHoja, imagenes_defecto: imagenesDefecto };
-  const cambiaronAjustes = sonidoHoja !== ajustesGuardados.sonido_hoja || imagenesDefecto !== ajustesGuardados.imagenes_defecto;
+  const redesLimpias = Object.fromEntries(REDES.map((r) => [r, redes[r].trim()])) as Redes;
+  const ajustesNuevos = { ...ajustesGuardados, sonido_hoja: sonidoHoja, imagenes_defecto: imagenesDefecto, redes: redesLimpias };
+  const cambiaronAjustes =
+    sonidoHoja !== ajustesGuardados.sonido_hoja ||
+    imagenesDefecto !== ajustesGuardados.imagenes_defecto ||
+    REDES.some((r) => redesLimpias[r] !== ajustesGuardados.redes[r]);
   const [grupo, setGrupo] = useState<GrupoTema>(TEMA_INFO[restaurante.tema ?? "clasico"]?.grupo ?? "sencillos");
   const [whatsapp, setWhatsapp] = useState(restaurante.whatsapp ?? "");
   const [idiomas, setIdiomas] = useState<string[]>(restaurante.idiomas ?? []);
@@ -142,6 +148,8 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
       .eq("id", restaurante.id);
     setGuardando(false);
     if (error) {
+      if (error.message.includes("idiomas_check"))
+        return avisar("Falta ejecutar el SQL 0015_idioma_chino.sql en Supabase para ofrecer la carta en chino.", "error");
       const falta = error.message.includes("tema");
       const sql = SQL_TEMA(tema);
       return avisar(falta ? `Falta ejecutar el SQL ${sql} en Supabase para guardar el diseño.` : mensajeError(error), "error");
@@ -395,10 +403,12 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
                   aria-pressed={activo}
                   disabled={!tieneExtras}
                   onClick={() => setIdiomas((a) => (activo ? a.filter((x) => x !== i) : [...a, i]))}
-                  className={`rounded-full border px-3 py-1 text-sm transition ${
+                  className={`flex items-center gap-2 rounded-full border px-3 py-1 text-sm transition ${
                     activo ? "border-marca bg-marca text-white" : "border-borde text-suave hover:border-stone-400"
                   }`}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={banderaIdioma(i)} alt="" className="h-3 w-[18px] rounded-[2px] object-cover" />
                   {IDIOMA_EN_ESPANOL[i]}
                 </button>
               );
@@ -426,6 +436,44 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
             </p>
           )}
         </div>
+
+        {tieneAjustes && (
+          <div className="tarjeta space-y-4 p-5">
+            <div>
+              <h2 className="font-semibold">Redes sociales</h2>
+              <p className="text-sm text-suave">
+                Aparecen al final de la carta para que tus clientes te sigan. Escribe tu usuario (@turestaurante) o pega el
+                enlace. Las que dejes vacías no se muestran.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {REDES.map((r) => {
+                const info = INFO_RED[r];
+                const invalido = redes[r].trim() !== "" && !enlaceRed(r, redes[r]);
+                return (
+                  <div key={r}>
+                    <label htmlFor={`red-${r}`} className="etiqueta-campo flex items-center gap-1.5">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+                        <path d={info.icono} />
+                      </svg>
+                      {info.nombre}
+                    </label>
+                    <input
+                      id={`red-${r}`}
+                      maxLength={200}
+                      value={redes[r]}
+                      onChange={(e) => setRedes((x) => ({ ...x, [r]: e.target.value }))}
+                      placeholder={info.ejemplo}
+                      aria-invalid={invalido}
+                      className="campo"
+                    />
+                    {invalido && <p className="mt-1 text-xs text-red-600">No parece un enlace válido.</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="tarjeta space-y-3 p-5">
           <label className="flex items-center justify-between gap-4">

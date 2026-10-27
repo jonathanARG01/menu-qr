@@ -8,6 +8,7 @@ import { horaPromo } from "@/lib/promos";
 import type { PropsTema } from "./comun";
 import { ProveedorCarta, useCarta } from "./contexto";
 import { PieCarta } from "./PieCarta";
+import { RedesCarta } from "./RedesCarta";
 import { TemaBistro } from "./TemaBistro";
 import { TemaClasico } from "./TemaClasico";
 import { TemaEsmeralda } from "./TemaEsmeralda";
@@ -103,7 +104,12 @@ function CartaTraducida({ restaurante, secciones, vistaPrevia, tema, promos = []
         restaurante={traducido.restaurante}
         secciones={traducido.secciones}
         vistaPrevia={vistaPrevia}
-        pie={vistaPrevia ? null : <PieCarta restaurante={restaurante} />}
+        pie={
+          <>
+            <RedesCarta />
+            {!vistaPrevia && <PieCarta restaurante={restaurante} />}
+          </>
+        }
       />
     </div>
   );
