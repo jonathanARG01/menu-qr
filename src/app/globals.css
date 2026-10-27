@@ -36,3 +36,19 @@ body {
 .tarjeta {
   @apply rounded-2xl border border-borde bg-white;
 }
+
+/* Aviso emergente del pedido en el celular del comensal */
+@keyframes aviso-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+}
+.aviso-entrada {
+  animation: aviso-entrada 0.25s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aviso-entrada {
+    animation: none;
+  }
+}

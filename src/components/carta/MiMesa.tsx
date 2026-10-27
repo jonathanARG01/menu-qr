@@ -1,25 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { montoPropina, partesIguales, totalLineas, type Propina } from "@/lib/cuenta";
 import type { ClaveTexto } from "@/lib/i18n";
-import type { EstadoPedido, SolicitudCuenta } from "@/lib/salon";
+import type { SolicitudCuenta } from "@/lib/salon";
 import type { Restaurante } from "@/lib/types";
 import { formatoPrecio } from "@/lib/utils";
 import { SelectorPropina } from "@/components/SelectorPropina";
 import { useCarta } from "./contexto";
-
-type Linea = { nombre: string; precio: number; cantidad: number; comensal: number | null };
-type Datos = {
-  mesa: string;
-  capacidad: number;
-  cuenta: null | {
-    comensales: number;
-    pagado: number;
-    pedidos: { numero: number; estado: EstadoPedido; items: Linea[] }[];
-  };
-};
+import type { DatosMesa } from "./useMiMesa";
 
 const COLOR: Record<string, string> = {
   pendiente: "bg-stone-100 text-stone-600",
@@ -33,15 +23,18 @@ const COLOR: Record<string, string> = {
 // eligiendo cómo dividirla, la propina y el medio de pago.
 export function MiMesa({
   restaurante,
+  datos,
+  recargar,
   onCerrar,
   onAviso,
 }: {
   restaurante: Restaurante;
+  datos: DatosMesa | null;
+  recargar: () => void;
   onCerrar: () => void;
   onAviso: (texto: string) => void;
 }) {
   const { mesa, sucursal, ajustes, t } = useCarta();
-  const [datos, setDatos] = useState<Datos | null>(null);
   const [paso, setPaso] = useState<"mesa" | "cuenta">("mesa");
   const [modo, setModo] = useState<SolicitudCuenta["modo"]>("junto");
   const [partes, setPartes] = useState(2);
@@ -53,29 +46,21 @@ export function MiMesa({
   const precio = (n: number) => formatoPrecio(n, restaurante.moneda);
   const cobros = ajustes.modulos.cobros;
 
-  const cargar = useCallback(async () => {
-    const { data } = await createClient().rpc("mi_mesa", {
-      p_restaurante: restaurante.id,
-      p_sucursal: sucursal?.id ?? null,
-      p_mesa: mesa,
-    });
-    const d = data as Datos | null;
-    setDatos(d ?? { mesa: mesa ?? "", capacidad: 0, cuenta: null });
-    if (d?.cuenta) setPartes((p) => (p === 2 ? Math.max(2, d.cuenta!.comensales) : p));
-  }, [restaurante.id, sucursal, mesa]);
+  const comensales = datos?.cuenta?.comensales;
+  useEffect(() => {
+    if (comensales) setPartes((p) => (p === 2 ? Math.max(2, comensales) : p));
+  }, [comensales]);
 
   useEffect(() => {
-    cargar();
-    const id = setInterval(cargar, 20000);
+    recargar();
     const alTeclear = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
     window.addEventListener("keydown", alTeclear);
     document.body.style.overflow = "hidden";
     return () => {
-      clearInterval(id);
       window.removeEventListener("keydown", alTeclear);
       document.body.style.overflow = "";
     };
-  }, [cargar, onCerrar]);
+  }, [recargar, onCerrar]);
 
   const lineas = datos?.cuenta?.pedidos.flatMap((p) => p.items) ?? [];
   const total = totalLineas(lineas);
