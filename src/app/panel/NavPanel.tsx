@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Marca } from "@/components/Logo";
 import { Icono } from "@/components/Icono";
 import { NOMBRE_ROL, type InfoSeccion, type Rol } from "@/lib/salon";
 import { cerrarSesion } from "./actions";
@@ -243,7 +244,8 @@ function MenuLateral({
             </button>
           </form>
         </div>
-        <p className="text-center text-[11px] text-suave">
+        <p className="flex items-center justify-center gap-1.5 text-[11px] text-suave">
+          <Marca className="h-4 w-4" />
           <span className="font-semibold">Mesitto</span> · por Brote Digital
         </p>
       </div>
