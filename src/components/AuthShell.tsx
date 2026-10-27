@@ -24,7 +24,7 @@ export function AuthShell({ titulo, children, pie }: { titulo: string; children:
         <Link href="/" className="relative flex items-center gap-3">
           <Marca />
           <span>
-            <span className="block text-lg font-bold leading-tight">Mesaly</span>
+            <span className="block text-lg font-bold leading-tight">Mesitto</span>
             <span className="block text-xs text-amber-200/70">por Brote Digital</span>
           </span>
         </Link>
@@ -65,7 +65,7 @@ export function AuthShell({ titulo, children, pie }: { titulo: string; children:
         <div className="w-full max-w-md">
           <Link href="/" className="mb-8 flex items-center justify-center gap-2.5 lg:hidden">
             <Marca />
-            <span className="text-lg font-bold">Mesaly</span>
+            <span className="text-lg font-bold">Mesitto</span>
           </Link>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{titulo}</h1>
           <div className="mt-6 rounded-2xl border border-borde bg-superficie p-6 shadow-xl shadow-stone-900/5 sm:p-8">

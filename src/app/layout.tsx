@@ -3,11 +3,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Mesaly · Carta digital y gestión para restaurantes",
+    default: "Mesitto · Carta digital y gestión para restaurantes",
     template: "%s",
   },
-  description: "Mesaly: carta digital con QR, pedidos desde la mesa y gestión del salón para restaurantes.",
-  applicationName: "Mesaly",
+  description: "Mesitto: carta digital con QR, pedidos desde la mesa y gestión del salón para restaurantes.",
+  applicationName: "Mesitto",
 };
 
 export const viewport: Viewport = {

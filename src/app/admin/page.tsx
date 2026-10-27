@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ToastProvider } from "@/components/Toast";
 import { ListaAdmin, type FilaAdmin } from "./ListaAdmin";
 
-export const metadata = { title: "Administración · Mesaly" };
+export const metadata = { title: "Administración · Mesitto" };
 export const dynamic = "force-dynamic";
 
 export default async function Admin() {
