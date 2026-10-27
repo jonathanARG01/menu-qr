@@ -3,7 +3,7 @@ import { AuthShell } from "@/components/AuthShell";
 import { createClient } from "@/lib/supabase/server";
 import { RegistroForm } from "./RegistroForm";
 
-export const metadata = { title: "Crear cuenta · Menús QR" };
+export const metadata = { title: "Crear cuenta · Mesaly" };
 
 // Con ?ref=<dirección> viene del link de invitación de otro restaurante (programa de referidos).
 export default async function RegistroPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {

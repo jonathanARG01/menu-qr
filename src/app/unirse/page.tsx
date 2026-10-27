@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AuthShell } from "@/components/AuthShell";
 import { RegistroForm } from "../registro/RegistroForm";
 
-export const metadata = { title: "Unirme a un equipo · Menús QR" };
+export const metadata = { title: "Unirme a un equipo · Mesaly" };
 
 // Para meseros y cocina: el administrador los suma por correo y ellos crean su cuenta aquí.
 export default function UnirsePage() {

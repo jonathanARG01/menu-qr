@@ -4,7 +4,7 @@ import { ToastProvider } from "@/components/Toast";
 import { MarcoPanel } from "./NavPanel";
 import { Onboarding } from "./Onboarding";
 
-export const metadata = { title: "Panel · Menús QR" };
+export const metadata = { title: "Panel · Mesaly" };
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const { user, restaurante, restaurantes, esSuperadmin, rol, secciones } = await obtenerContexto();

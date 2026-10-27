@@ -243,6 +243,9 @@ function MenuLateral({
             </button>
           </form>
         </div>
+        <p className="text-center text-[11px] text-suave">
+          <span className="font-semibold">Mesaly</span> · por Brote Digital
+        </p>
       </div>
     </div>
   );
