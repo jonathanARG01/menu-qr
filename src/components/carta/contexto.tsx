@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { createClient } from "@/lib/supabase/client";
 import { IDIOMAS_EXTRA, texto, type ClaveTexto, type Idioma } from "@/lib/i18n";
 import type { Plato, Restaurante, Seccion, Sucursal } from "@/lib/types";
+import { leerAjustes, type Ajustes } from "@/lib/salon";
 
 type Linea = { plato: Plato; cantidad: number };
 
@@ -12,8 +13,12 @@ type Valor = {
   idiomas: Idioma[];
   setIdioma: (idioma: Idioma) => void;
   t: (clave: ClaveTexto) => string;
-  // Pedidos por WhatsApp
+  // Pedidos: por WhatsApp o directo a la cocina desde la mesa
   pedidos: boolean;
+  whatsapp: boolean;
+  // El cliente está en una mesa (vino del QR) y el restaurante recibe pedidos desde la mesa.
+  pedidosMesa: boolean;
+  ajustes: Ajustes;
   lineas: Linea[];
   cantidad: (platoId: string) => number;
   cambiar: (platoId: string, delta: number) => void;
@@ -32,6 +37,9 @@ const Ctx = createContext<Valor>({
   setIdioma: () => {},
   t: (clave) => texto("es", clave),
   pedidos: false,
+  whatsapp: false,
+  pedidosMesa: false,
+  ajustes: leerAjustes(),
   lineas: [],
   cantidad: () => 0,
   cambiar: () => {},
@@ -140,7 +148,10 @@ export function ProveedorCarta({
   }, []);
 
   const numeroWhatsapp = sucursal?.whatsapp || restaurante.whatsapp || sucursales.find((s) => s.whatsapp)?.whatsapp;
-  const pedidos = Boolean(restaurante.pedidos_whatsapp && numeroWhatsapp);
+  const whatsapp = Boolean(restaurante.pedidos_whatsapp && numeroWhatsapp);
+  const ajustes = useMemo(() => leerAjustes(restaurante.ajustes), [restaurante.ajustes]);
+  const pedidosMesa = Boolean(ajustes.modulos.pedidos_mesa && mesa);
+  const pedidos = whatsapp || pedidosMesa;
 
   const registrarPedido = useCallback(
     (total: number) => {
@@ -168,6 +179,9 @@ export function ProveedorCarta({
     setIdioma,
     t: (clave) => texto(idioma, clave),
     pedidos,
+    whatsapp,
+    pedidosMesa,
+    ajustes,
     lineas,
     cantidad: (id) => cantidades[id] ?? 0,
     cambiar,

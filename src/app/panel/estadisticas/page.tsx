@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requerirRestaurante } from "@/lib/panel";
+import { requerirSeccion } from "@/lib/panel";
 import { NOMBRE_IDIOMA, type Idioma } from "@/lib/i18n";
 import { formatoPrecio } from "@/lib/utils";
 import { BarrasHorizontales, BarrasPorDia, BarrasPorHora } from "./Graficos";
@@ -21,7 +21,7 @@ type Resumen = {
 const RANGOS = [7, 30, 90];
 
 export default async function Estadisticas({ searchParams }: { searchParams: Promise<{ dias?: string }> }) {
-  const { supabase, restaurante } = await requerirRestaurante();
+  const { supabase, restaurante } = await requerirSeccion("estadisticas");
   const pedido = Number((await searchParams).dias);
   const dias = RANGOS.includes(pedido) ? pedido : 30;
   const { data, error } = await supabase.rpc("estadisticas", { p_restaurante: restaurante.id, p_dias: dias });

@@ -7,7 +7,8 @@ import { mensajeError, urlSitio } from "@/lib/utils";
 import { Aviso } from "@/components/AuthShell";
 import { CamposRestaurante } from "@/components/CamposRestaurante";
 
-export function RegistroForm() {
+// Con "equipo" es el alta de un mesero o cocinero invitado: no crea restaurante, entra al del administrador que lo invitó.
+export function RegistroForm({ equipo = false }: { equipo?: boolean }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [revisarCorreo, setRevisarCorreo] = useState(false);
@@ -16,8 +17,8 @@ export function RegistroForm() {
   async function enviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const datos = new FormData(e.currentTarget);
-    const nombre = String(datos.get("nombre")).trim();
-    const slug = String(datos.get("slug")).trim();
+    const nombre = String(datos.get("nombre") ?? "").trim();
+    const slug = String(datos.get("slug") ?? "").trim();
     setCargando(true);
     setError(null);
 
@@ -28,7 +29,7 @@ export function RegistroForm() {
       options: {
         emailRedirectTo: `${urlSitio()}/auth/confirm?next=/panel`,
         // Se guardan para terminar el alta tras confirmar el correo.
-        data: { restaurante_nombre: nombre, restaurante_slug: slug },
+        data: equipo ? {} : { restaurante_nombre: nombre, restaurante_slug: slug },
       },
     });
 
@@ -41,6 +42,12 @@ export function RegistroForm() {
     if (!data.session) {
       setRevisarCorreo(true);
       setCargando(false);
+      return;
+    }
+
+    if (equipo) {
+      router.replace("/panel");
+      router.refresh();
       return;
     }
 
@@ -64,7 +71,12 @@ export function RegistroForm() {
 
   return (
     <form onSubmit={enviar} className="space-y-4">
-      <CamposRestaurante />
+      {!equipo && <CamposRestaurante />}
+      {equipo && (
+        <p className="rounded-lg bg-stone-50 p-3 text-sm text-suave">
+          Usa el mismo correo con el que te invitó el administrador del restaurante.
+        </p>
+      )}
       <div>
         <label htmlFor="email" className="etiqueta-campo">
           Tu correo
