@@ -1,14 +1,16 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Icono } from "@/components/Icono";
 import { Logo } from "@/components/Logo";
+import { PreciosPlanes } from "@/components/inicio/Precios";
 import {
   ARMADO,
   DEMOS,
   DIAS_PRUEBA,
   MODULOS,
   PASOS,
-  PLANES,
   PREGUNTAS,
+  RECORRIDO,
   SERVICIOS,
   TESTIMONIOS,
 } from "@/components/inicio/datos";
@@ -32,6 +34,7 @@ export default function Inicio() {
       <Portada />
       <Cifras />
       <Pasos />
+      <Recorrido />
       <Modulos />
       <Demo />
       <Precios />
@@ -185,21 +188,100 @@ function Cifras() {
 function Pasos() {
   return (
     <section className="py-20">
+      <Contenedor className="grid items-center gap-12 lg:grid-cols-[1fr_1.1fr]">
+        <div>
+          <Titulo etiqueta="Cómo funciona" titulo="Del QR a la mesa en un día" />
+          <ol className="mt-10 space-y-7">
+            {PASOS.map(([titulo, texto], i) => (
+              <li key={titulo} className="flex gap-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-marca-claro text-lg font-bold text-marca-tinta">
+                  {i + 1}
+                </span>
+                <div>
+                  <h3 className="text-lg font-semibold">{titulo}</h3>
+                  <p className="mt-1 text-suave">{texto}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+        {/* Fotos de QR en mesas reales y el gesto de escanear */}
+        <div className="relative grid grid-cols-2 gap-4">
+          <Image
+            src="/inicio/cartel-qr-mesa.webp"
+            alt="Cartel con código QR sobre la mesa de un restaurante"
+            width={900}
+            height={900}
+            className="aspect-[4/5] h-full w-full rounded-3xl object-cover shadow-xl"
+          />
+          <div className="grid gap-4">
+            <Image
+              src="/inicio/servilletero-qr.webp"
+              alt="Servilletero de madera con placa QR y número de mesa"
+              width={765}
+              height={1020}
+              className="aspect-[4/3] h-full w-full rounded-3xl object-cover object-[50%_45%] shadow-xl"
+            />
+            <div className="flex items-center justify-center rounded-3xl bg-marca-tinta p-6">
+              <Image src="/inicio/escanear-qr.webp" alt="Celular escaneando un código QR" width={1280} height={1103} className="h-auto w-full max-w-56" />
+            </div>
+          </div>
+        </div>
+      </Contenedor>
+    </section>
+  );
+}
+
+// Recorrido por el sistema con capturas reales, alternando imagen y texto.
+function Recorrido() {
+  return (
+    <section className="border-t border-borde bg-[#0f1626] py-20 text-slate-50">
       <Contenedor>
-        <Titulo etiqueta="Cómo funciona" titulo="Listo para atender en un día" />
-        <ol className="mt-10 grid gap-6 md:grid-cols-3">
-          {PASOS.map(([titulo, texto], i) => (
-            <li key={titulo} className="flex gap-4">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-marca text-lg font-bold text-white">
-                {i + 1}
-              </span>
-              <div>
-                <h3 className="text-lg font-semibold">{titulo}</h3>
-                <p className="mt-1 text-suave">{texto}</p>
+        <div className="max-w-2xl">
+          <p className="text-sm font-semibold uppercase tracking-wider text-marca-claro">El sistema por dentro</p>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-balance sm:text-4xl">Así se ve un servicio con Mesitto</h2>
+          <p className="mt-3 text-lg text-slate-300">Capturas reales del sistema, desde que el cliente pide hasta que paga.</p>
+        </div>
+        <div className="mt-16 space-y-24">
+          {RECORRIDO.map((r, i) => {
+            const vertical = r.alto > r.ancho;
+            return (
+              <div key={r.titulo} className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+                <div className={`min-w-0 ${i % 2 ? "lg:order-2" : ""}`}>
+                  <p className="text-sm font-semibold uppercase tracking-wider text-marca-claro">{r.etiqueta}</p>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-balance sm:text-3xl">{r.titulo}</h3>
+                  <p className="mt-3 text-lg text-slate-300">{r.texto}</p>
+                  <ul className="mt-6 space-y-2.5">
+                    {r.puntos.map((pt) => (
+                      <li key={pt} className="flex gap-2.5">
+                        <Icono nombre="check" className="mt-1 h-4 w-4 shrink-0 text-marca-claro" />
+                        {pt}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className={`relative flex min-w-0 justify-center ${i % 2 ? "lg:order-1" : ""}`}>
+                  <Image
+                    src={r.imagen}
+                    alt={r.alt}
+                    width={r.ancho}
+                    height={r.alto}
+                    className={`h-auto rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-white/10 ${vertical ? "w-full max-w-72" : "w-full"}`}
+                  />
+                  {r.movil && (
+                    <Image
+                      src={r.movil}
+                      alt="Aviso al cliente: tu pedido está listo"
+                      width={390}
+                      height={844}
+                      className="absolute -right-2 bottom-8 hidden h-auto w-44 rounded-2xl shadow-2xl shadow-black/60 ring-1 ring-white/10 sm:block lg:right-4"
+                    />
+                  )}
+                </div>
               </div>
-            </li>
-          ))}
-        </ol>
+            );
+          })}
+        </div>
       </Contenedor>
     </section>
   );
@@ -271,51 +353,15 @@ function Demo() {
 
 function Precios() {
   return (
-    <section id="precios" className="scroll-mt-16 border-y border-borde bg-superficie py-20">
+    <section id="precios" className="scroll-mt-16 border-y border-borde bg-[#eef1f6] py-20">
       <Contenedor>
         <Titulo
           etiqueta="Precios"
-          titulo="Un precio fijo al mes, sin comisiones"
-          texto={`Precios en pesos chilenos, IVA incluido. Prueba gratis ${DIAS_PRUEBA} días. Si pagas el año, te regalamos dos meses.`}
+          titulo="Un precio fijo, sin comisiones por pedido"
+          texto={`Precios en pesos chilenos, IVA incluido. Prueba gratis ${DIAS_PRUEBA} días con todo incluido.`}
         />
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          {PLANES.map((p) => {
-            const destacado = "destacado" in p && p.destacado;
-            return (
-              <div
-                key={p.id}
-                className={`relative flex flex-col rounded-2xl border p-7 ${
-                  destacado ? "border-marca bg-slate-50/60 shadow-xl shadow-slate-900/10" : "border-borde bg-fondo"
-                }`}
-              >
-                {destacado && (
-                  <span className="absolute -top-3 left-7 rounded-full bg-marca px-3 py-1 text-xs font-semibold text-white">
-                    El más elegido
-                  </span>
-                )}
-                <h3 className="text-xl font-bold">{p.nombre}</h3>
-                <p className="mt-1 text-sm text-suave">{p.para}</p>
-                <p className="mt-5 flex items-baseline gap-1">
-                  <span className="text-4xl font-bold tracking-tight tabular-nums">{clp(p.precio)}</span>
-                  <span className="text-suave">/mes</span>
-                </p>
-                <p className="mt-1 text-sm text-suave tabular-nums">o {clp(p.precio * 10)} al año</p>
-                <ul className="mt-6 flex-1 space-y-2.5 text-sm">
-                  {p.incluye.map((item) => (
-                    <li key={item} className="flex gap-2">
-                      <Icono nombre="check" className="mt-0.5 h-4 w-4 shrink-0 text-marca" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/registro" className={`mt-7 ${destacado ? "boton" : "boton-secundario"}`}>
-                  Empezar prueba gratis
-                </Link>
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-borde px-6 py-4">
+        <PreciosPlanes />
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-stone-300 bg-superficie/60 px-6 py-4">
           <p>
             <span className="font-semibold">¿No tienes tiempo de cargar la carta?</span>{" "}
             <span className="text-suave">{ARMADO.texto}</span>

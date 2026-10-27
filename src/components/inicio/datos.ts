@@ -2,7 +2,7 @@
 
 export const MONEDA = "CLP";
 
-// Precios mensuales en pesos chilenos. El plan anual cobra 10 meses (2 gratis).
+// Precios mensuales en pesos chilenos (IVA incluido). Los períodos más largos aplican el descuento de PERIODOS.
 export const PLANES = [
   {
     id: "carta",
@@ -46,6 +46,14 @@ export const PLANES = [
   },
 ] as const;
 
+// Períodos de pago del selector de precios: meses que se cobran juntos y descuento sobre el precio mensual.
+export const PERIODOS = [
+  { id: "mensual", nombre: "Mensual", meses: 1, descuento: 0 },
+  { id: "trimestral", nombre: "3 meses", meses: 3, descuento: 0.05 },
+  { id: "semestral", nombre: "Semestral", meses: 6, descuento: 0.1 },
+  { id: "anual", nombre: "Anual", meses: 12, descuento: 0.15 },
+] as const;
+
 export const ARMADO = { precio: 39990, texto: "Cargamos tu carta, fotos y traducciones, y te entregamos los QR para imprimir." };
 
 export const DIAS_PRUEBA = 14;
@@ -67,8 +75,63 @@ export const MODULOS: { icono: string; titulo: string; texto: string }[] = [
 
 export const PASOS: [string, string][] = [
   ["Nos mandas tu carta", "Una foto de la carta actual basta. La cargamos con fotos y traducciones, o la armas tú en minutos."],
-  ["Pegas los QR en las mesas", "Cada mesa tiene su QR con tu logo. Si cambias un precio, el QR sigue siendo el mismo."],
-  ["Tus clientes piden y tú atiendes", "Los pedidos llegan a cocina, el salón se ve en vivo y la cuenta se cobra sin vueltas."],
+  ["Pones los QR en las mesas", "Cada mesa tiene su QR con tu logo, en un cartel, un servilletero o una placa. Si cambias un precio, el QR sigue siendo el mismo."],
+  ["Tus clientes escanean y piden", "Con la cámara del celular, sin bajar ninguna app. El pedido llega a cocina y tú ves el salón en vivo."],
+];
+
+// Recorrido por el sistema con capturas reales (en public/inicio).
+export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; puntos: string[]; imagen: string; alto: number; ancho: number; alt: string; movil?: string }[] = [
+  {
+    etiqueta: "En la mesa",
+    titulo: "El cliente pide desde su celular",
+    texto: "Escanea el QR, elige en la carta y envía el pedido con su número de mesa. Después le avisamos cuando la cocina empieza y cuando está listo.",
+    puntos: ["Carta en su idioma", "Notas para la cocina", "Llamar al mesero o pedir la cuenta"],
+    imagen: "/inicio/pedido-movil.webp",
+    ancho: 600,
+    alto: 1298,
+    alt: "Carrito de pedido en el celular del cliente, listo para enviar a la mesa 15",
+    movil: "/inicio/aviso-listo.webp",
+  },
+  {
+    etiqueta: "Salón",
+    titulo: "Todo tu local en una pantalla",
+    texto: "Dibuja el salón con sus pisos, barra y pasillos. Cada mesa cambia de color cuando se ocupa, tiene un pedido listo o pide la cuenta, y los avisos aparecen al costado.",
+    puntos: ["Vista simple, a color o en 3D", "Pantalla completa para el mostrador", "Avisos con sonido distinto para cada caso"],
+    imagen: "/inicio/salon-3d.webp",
+    ancho: 1440,
+    alto: 740,
+    alt: "Plano 3D del salón con las mesas numeradas y avisos de la mesa 15",
+  },
+  {
+    etiqueta: "Cocina",
+    titulo: "Las comandas llegan solas a la cocina",
+    texto: "Cada estación ve lo suyo: la barra las bebidas, la cocina los platos. Se ordenan arrastrando y con un toque el mesero sabe que está listo para llevar.",
+    puntos: ["Separado por cocina y barra", "Tiempo de espera en cada comanda", "Funciona en cualquier tablet o televisor"],
+    imagen: "/inicio/cocina.webp",
+    ancho: 1136,
+    alto: 772,
+    alt: "Pantalla de cocina con dos comandas de la mesa 15",
+  },
+  {
+    etiqueta: "Cuenta",
+    titulo: "Cobra como quieran pagar",
+    texto: "Todo junto, en partes iguales, cada uno lo suyo o un monto libre. Con propina sugerida, medio de pago por persona y cierre de caja al final del turno.",
+    puntos: ["Cuenta dividida en segundos", "Propina en porcentaje o monto", "Cobro online con Mercado Pago"],
+    imagen: "/inicio/cobro.webp",
+    ancho: 512,
+    alto: 900,
+    alt: "Cuenta de la mesa 15 dividida en seis partes iguales",
+  },
+  {
+    etiqueta: "A tu medida",
+    titulo: "Activa solo lo que usas",
+    texto: "Un café chico no necesita lo mismo que un restaurante de dos pisos. Enciende o apaga cada parte del sistema y decide qué ve cada persona del equipo.",
+    puntos: ["Solo carta, local chico o restaurante completo", "Roles para mesero, cocina y administración", "Se cambia cuando quieras"],
+    imagen: "/inicio/personalizar.webp",
+    ancho: 1184,
+    alto: 900,
+    alt: "Pantalla Personalizar con los módulos del sistema encendidos",
+  },
 ];
 
 export const SERVICIOS: [string, string][] = [
@@ -116,7 +179,7 @@ export const PREGUNTAS: [string, string][] = [
   ["¿Necesito comprar equipos?", "No. Funciona en el celular, tablet o computador que ya tienes. Para la cocina sirve cualquier tablet o un televisor con navegador."],
   ["¿El cliente tiene que bajar una app?", "No. Escanea el QR con la cámara y la carta se abre en el navegador."],
   ["¿Cobran comisión por pedido?", "No. Pagas el plan mensual y nada más. En el cobro online, Mercado Pago cobra su comisión habitual."],
-  ["¿Hay permanencia?", "No. Es mes a mes y puedes cancelar cuando quieras. Si pagas el año, te regalamos dos meses."],
+  ["¿Hay permanencia?", "No. Es mes a mes y puedes cancelar cuando quieras. Si pagas cada 3, 6 o 12 meses, tienes descuento."],
   ["¿Sirve fuera de Chile?", "Sí. Cada local elige su país, moneda, zona horaria e idiomas."],
   ["¿Qué pasa si se cae internet en el local?", "La carta la ven tus clientes con sus propios datos móviles, así que sigue funcionando."],
 ];
