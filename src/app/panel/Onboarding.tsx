@@ -6,7 +6,7 @@ import { AuthShell, Aviso } from "@/components/AuthShell";
 import { CamposRestaurante } from "@/components/CamposRestaurante";
 import { crearRestaurante, cerrarSesion } from "./actions";
 
-export function Onboarding({ nombre, slug, email }: { nombre?: string; slug?: string; email: string }) {
+export function Onboarding({ nombre, slug, pais, email }: { nombre?: string; slug?: string; pais?: string; email: string }) {
   const params = useSearchParams();
   const [error, accion, pendiente] = useActionState(crearRestaurante, params.get("error"));
 
@@ -20,7 +20,7 @@ export function Onboarding({ nombre, slug, email }: { nombre?: string; slug?: st
       }
     >
       <form action={accion} className="space-y-4">
-        <CamposRestaurante nombreInicial={nombre} slugInicial={slug} />
+        <CamposRestaurante nombreInicial={nombre} slugInicial={slug} paisInicial={pais} />
         {error && <Aviso>{error}</Aviso>}
         <button type="submit" className="boton w-full" disabled={pendiente}>
           {pendiente ? "Creando…" : "Crear mi carta"}

@@ -10,8 +10,15 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const { user, restaurante, restaurantes, esSuperadmin, rol, secciones } = await obtenerContexto();
 
   if (!restaurante) {
-    const meta = user.user_metadata as { restaurante_nombre?: string; restaurante_slug?: string };
-    return <Onboarding nombre={meta.restaurante_nombre} slug={meta.restaurante_slug} email={user.email ?? ""} />;
+    const meta = user.user_metadata as { restaurante_nombre?: string; restaurante_slug?: string; restaurante_pais?: string };
+    return (
+      <Onboarding
+        nombre={meta.restaurante_nombre}
+        slug={meta.restaurante_slug}
+        pais={meta.restaurante_pais}
+        email={user.email ?? ""}
+      />
+    );
   }
 
   // Modo oscuro por defecto; el botón del menú guarda la elección en esta cookie.

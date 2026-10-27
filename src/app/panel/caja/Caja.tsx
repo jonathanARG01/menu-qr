@@ -5,7 +5,7 @@ import { Icono } from "@/components/Icono";
 import { useToast } from "@/components/Toast";
 import { esEfectivo, resumirCaja, type TotalesCaja } from "@/lib/caja";
 import { fechaCorta, imprimirTicket, type LineaTicket } from "@/lib/imprimir";
-import type { Pago } from "@/lib/salon";
+import { leerAjustes, regionDe, type Pago } from "@/lib/salon";
 import { createClient } from "@/lib/supabase/client";
 import type { Restaurante } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
@@ -47,6 +47,7 @@ export function Caja({
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
   const formato = useCallback((n: number) => formatoPrecio(n, restaurante.moneda), [restaurante.moneda]);
+  const region = regionDe(leerAjustes(restaurante.ajustes));
   const [cargando, setCargando] = useState(true);
   const [falta0009, setFalta0009] = useState(false);
   const [cierres, setCierres] = useState<Cierre[]>([]);
@@ -172,7 +173,7 @@ export function Caja({
     const lineas: LineaTicket[] = [
       { tipo: "titulo", texto: "Cierre de caja" },
       { tipo: "texto", texto: restaurante.nombre, fuerte: true },
-      { tipo: "texto", texto: `${fechaCorta(c.desde)} → ${fechaCorta(c.hasta)}`, chico: true },
+      { tipo: "texto", texto: `${fechaCorta(c.desde, region)} → ${fechaCorta(c.hasta, region)}`, chico: true },
       { tipo: "separador" },
       { tipo: "fila", izq: "Ventas", der: formato(t.ventas) },
       { tipo: "fila", izq: "Propinas", der: formato(t.propinas) },
@@ -223,7 +224,7 @@ export function Caja({
         <div className="mr-auto">
           <h1 className="text-2xl font-bold">Caja</h1>
           <p className="text-sm text-suave" suppressHydrationWarning>
-            Turno desde {fechaCorta(desde)} {ultimo ? "(último cierre)" : "(inicio del día)"}
+            Turno desde {fechaCorta(desde, region)} {ultimo ? "(último cierre)" : "(inicio del día)"}
           </p>
         </div>
         <button type="button" onClick={() => cargar()} className="boton-secundario">
@@ -421,7 +422,7 @@ export function Caja({
                       >
                         <span className="min-w-0 flex-1">
                           <span className="block font-medium" suppressHydrationWarning>
-                            {fechaCorta(c.desde)} → {fechaCorta(c.hasta)}
+                            {fechaCorta(c.desde, region)} → {fechaCorta(c.hasta, region)}
                           </span>
                           <span className="block text-xs text-suave">
                             {c.totales.mesas} mesas · {c.totales.cobros} cobros
@@ -453,7 +454,7 @@ export function Caja({
               <div className="flex-1">
                 <h2 className="text-lg font-semibold">Cierre de caja</h2>
                 <p className="text-sm text-suave" suppressHydrationWarning>
-                  {fechaCorta(viendo.desde)} → {fechaCorta(viendo.hasta)}
+                  {fechaCorta(viendo.desde, region)} → {fechaCorta(viendo.hasta, region)}
                 </p>
               </div>
               <button

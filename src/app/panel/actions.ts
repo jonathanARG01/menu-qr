@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { COOKIE_RESTAURANTE } from "@/lib/panel";
 import { createClient } from "@/lib/supabase/server";
 import { mensajeError } from "@/lib/utils";
+import { aplicarPais } from "@/lib/region";
 
 // Tras guardar en el panel: regenera la carta pública para que el cambio se vea al momento.
 export async function revalidarCarta() {
@@ -25,11 +26,12 @@ export async function revalidarCarta() {
 export async function crearRestaurante(_prev: string | null, formData: FormData): Promise<string | null> {
   const supabase = await createClient();
   const slug = String(formData.get("slug") ?? "");
-  const { error } = await supabase.rpc("crear_restaurante", {
+  const { data, error } = await supabase.rpc("crear_restaurante", {
     p_nombre: String(formData.get("nombre") ?? ""),
     p_slug: slug,
   });
   if (error) return mensajeError(error);
+  await aplicarPais(supabase, (data as { id: string }).id, String(formData.get("pais") ?? ""));
   revalidatePath(`/${slug}`);
   revalidatePath("/panel", "layout");
   redirect("/panel");

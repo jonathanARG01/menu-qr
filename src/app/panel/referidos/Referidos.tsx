@@ -11,6 +11,7 @@ import {
   type EstadoReferido,
   type Nivel,
 } from "@/lib/referidos";
+import { PAIS_BASE } from "@/lib/region";
 
 type Props = {
   slug: string;
@@ -22,7 +23,8 @@ type Props = {
   referidos: { nombre: string; estado: EstadoReferido; created_at: string }[];
 };
 
-const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" });
+const fecha = (iso: string) =>
+  new Date(iso).toLocaleDateString(PAIS_BASE.locale, { day: "numeric", month: "short", year: "numeric" });
 
 export function Referidos({ slug, nombre, ciclo, activo, niveles, descuentos, referidos }: Props) {
   const avisar = useToast();

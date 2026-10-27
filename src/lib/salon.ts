@@ -1,4 +1,5 @@
 import type { Propina } from "./cuenta";
+import { PAIS_BASE, paisDe, type Region } from "./region";
 
 // Gestión de salón: roles, secciones del panel, ajustes de cada restaurante y tipos de mesas, pedidos y pagos.
 
@@ -88,6 +89,8 @@ export type Ajustes = {
   alertas: { amarillo: number; rojo: number };
   // Sonido al pasar de página en el diseño Revista (archivos en public/sonidos).
   sonido_hoja: SonidoHoja;
+  // País del local (código ISO): formato de fechas del panel y código de WhatsApp. Ver lib/region.ts.
+  pais: string;
   // Zona horaria del local: define el "día" de la caja, las promos y hasta cuándo dura un agotado.
   zona_horaria: string;
   reservas: {
@@ -126,12 +129,13 @@ export const AJUSTES_BASE: Ajustes = {
   },
   vistas: { mesero: ["salon", "cocina"], cocina: ["cocina"] },
   confirmar_pedidos: false,
-  propinas: { activas: true, porcentajes: [10, 15, 20], montos: [500, 1000, 2000], libre: true, sugerida: 10 },
+  propinas: { activas: true, porcentajes: [10, 15, 20], montos: [1000, 2000, 5000], libre: true, sugerida: 10 },
   metodos_pago: ["Efectivo", "Tarjeta de débito", "Tarjeta de crédito", "Transferencia", "Mercado Pago"],
   estaciones: ["Cocina", "Barra"],
   alertas: { amarillo: 10, rojo: 20 },
   sonido_hoja: "papel",
-  zona_horaria: "America/Argentina/Buenos_Aires",
+  pais: PAIS_BASE.codigo,
+  zona_horaria: PAIS_BASE.zona,
   reservas: { online: false, tolerancia: 15 },
   resenas: { pedir: true, google_url: "" },
   cobro_online: { activo: false },
@@ -162,12 +166,19 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
     alertas: { ...AJUSTES_BASE.alertas, ...(g.alertas ?? {}) },
     imagenes_defecto: g.imagenes_defecto === true,
     sonido_hoja: SONIDOS_HOJA.includes(g.sonido_hoja as SonidoHoja) ? (g.sonido_hoja as SonidoHoja) : AJUSTES_BASE.sonido_hoja,
-    zona_horaria: typeof g.zona_horaria === "string" && g.zona_horaria ? g.zona_horaria : AJUSTES_BASE.zona_horaria,
+    pais: paisDe(g.pais).codigo,
+    zona_horaria: typeof g.zona_horaria === "string" && g.zona_horaria ? g.zona_horaria : paisDe(g.pais).zona,
     reservas: { ...AJUSTES_BASE.reservas, ...(g.reservas ?? {}) },
     resenas: { ...AJUSTES_BASE.resenas, ...(g.resenas ?? {}) },
     cobro_online: { ...AJUSTES_BASE.cobro_online, ...(g.cobro_online ?? {}) },
   };
 }
+
+// Formato de fechas y zona horaria del local, para mostrar horas en el panel.
+export const regionDe = (a: Pick<Ajustes, "pais" | "zona_horaria">): Region => ({
+  locale: paisDe(a.pais).locale,
+  zona: a.zona_horaria,
+});
 
 // Módulo del que depende cada sección (las que no figuran están siempre).
 const MODULO_DE: Partial<Record<Seccion, Modulo>> = {

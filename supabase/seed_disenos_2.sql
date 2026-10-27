@@ -26,7 +26,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('palmera-tragos', 'Palmera Tragos', 'Tragos frescos para la noche', '#ff3fa4', '#0b0d0c', 'ARS', '5491100000000')
+    values ('palmera-tragos', 'Palmera Tragos', 'Tragos frescos para la noche', '#ff3fa4', '#0b0d0c', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Caipis y clásicos', 0) returning id into cid;
@@ -62,7 +62,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('jugos-del-huerto', 'Jugos del Huerto', 'Todos nuestros jugos son 100% naturales', '#8cc63f', '#0f2a17', 'ARS', '5491100000000')
+    values ('jugos-del-huerto', 'Jugos del Huerto', 'Todos nuestros jugos son 100% naturales', '#8cc63f', '#0f2a17', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Jugos especiales', 0) returning id into cid;
@@ -98,7 +98,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('batido-feliz', 'Batido Feliz', 'Buenos ingredientes + gran sabor', '#3b1f0e', '#ffc62a', 'ARS', '5491100000000')
+    values ('batido-feliz', 'Batido Feliz', 'Buenos ingredientes + gran sabor', '#3b1f0e', '#ffc62a', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Batidos saludables', 0) returning id into cid;
@@ -132,7 +132,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('casa-verdi', 'Casa Verdi', 'Alta cocina en cada momento del día', '#c9a96a', '#12302a', 'ARS', '5491100000000')
+    values ('casa-verdi', 'Casa Verdi', 'Alta cocina en cada momento del día', '#c9a96a', '#12302a', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Brunch', 0) returning id into cid;
@@ -168,7 +168,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('vivero-hoja', 'Vivero Hoja', 'Plantas de interior con maceta incluida', '#8bc34a', '#1b231d', 'ARS', '5491100000000')
+    values ('vivero-hoja', 'Vivero Hoja', 'Plantas de interior con maceta incluida', '#8bc34a', '#1b231d', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Más vendidas', 0) returning id into cid;
@@ -201,7 +201,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('don-ciro', 'Pizzería Don Ciro', 'Menú especial · Delivery gratis', '#d62828', '#efe6d3', 'ARS', '5491100000000')
+    values ('don-ciro', 'Pizzería Don Ciro', 'Menú especial · Delivery gratis', '#d62828', '#efe6d3', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Pizzas saladas', 0) returning id into cid;
@@ -236,7 +236,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('trattoria-roma', 'Trattoria Roma', 'El sabor de Italia en tu mesa', '#d7263d', '#151515', 'ARS', '5491100000000')
+    values ('trattoria-roma', 'Trattoria Roma', 'El sabor de Italia en tu mesa', '#d7263d', '#151515', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Pizzas', 0) returning id into cid;
@@ -292,7 +292,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('la-porcion', 'La Porción', 'Pizza por porción, recién salida del horno', '#c0392b', '#f4ede1', 'ARS', '5491100000000')
+    values ('la-porcion', 'La Porción', 'Pizza por porción, recién salida del horno', '#c0392b', '#f4ede1', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Porciones', 0) returning id into cid;
@@ -325,7 +325,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('horno-de-barrio', 'Horno de Barrio', 'Pizzas a la piedra, como las de antes', '#f4a261', '#6b4423', 'ARS', '5491100000000')
+    values ('horno-de-barrio', 'Horno de Barrio', 'Pizzas a la piedra, como las de antes', '#f4a261', '#6b4423', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Pizzas', 0) returning id into cid;
@@ -358,7 +358,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('bar-medianoche', 'Bar Medianoche', 'Cócteles de autor', '#ff5fa2', '#0d0d0d', 'ARS', '5491100000000')
+    values ('bar-medianoche', 'Bar Medianoche', 'Cócteles de autor', '#ff5fa2', '#0d0d0d', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Cócteles', 0) returning id into cid;
@@ -396,7 +396,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('cafe-folio', 'Café Folio', 'Cocina de estación', '#b8452f', '#f5efe6', 'ARS', '5491100000000')
+    values ('cafe-folio', 'Café Folio', 'Cocina de estación', '#b8452f', '#f5efe6', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Entradas', 0) returning id into cid;

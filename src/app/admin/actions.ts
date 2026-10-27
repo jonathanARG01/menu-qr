@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { COOKIE_RESTAURANTE } from "@/lib/panel";
 import { createClient } from "@/lib/supabase/server";
 import { mensajeError } from "@/lib/utils";
+import { aplicarPais } from "@/lib/region";
 
 // Cambia el plan o pausa/reactiva un restaurante. Las funciones de la base comprueban que seas superadmin.
 export async function actualizarRestaurante(id: string, slug: string, cambios: { plan?: string; activo?: boolean }) {
@@ -48,6 +49,7 @@ export async function crearParaCliente(_prev: string | null, formData: FormData)
     p_slug: slug,
   });
   if (error) return mensajeError(error);
+  await aplicarPais(supabase, (data as { id: string }).id, String(formData.get("pais") ?? ""));
   revalidatePath(`/${slug}`);
   await elegir((data as { id: string }).id);
   redirect("/panel");

@@ -3,7 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icono } from "@/components/Icono";
 import { useToast } from "@/components/Toast";
-import { NOMBRE_ESTADO, type Ajustes, type EstadoPedido, type Pedido, type PedidoItem, type Piso, nombreMesa } from "@/lib/salon";
+import {
+  NOMBRE_ESTADO,
+  regionDe,
+  type Ajustes,
+  type EstadoPedido,
+  type Pedido,
+  type PedidoItem,
+  type Piso,
+  nombreMesa,
+} from "@/lib/salon";
 import type { Mesa, Restaurante } from "@/lib/types";
 import { avisarComensal } from "@/lib/push";
 import { sonar } from "@/lib/sonidos";
@@ -143,7 +152,7 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos, p
       { tipo: "texto", texto: `${p.estacion} · #${p.numero}${piso ? ` · ${piso}` : ""}`, fuerte: true },
       {
         tipo: "texto",
-        texto: `${horaCorta(p.created_at)} · ${p.origen === "cliente" ? "desde el QR" : "mesero"}${p.nombre ? ` · ${p.nombre}` : ""}`,
+        texto: `${horaCorta(p.created_at, regionDe(ajustes))} · ${p.origen === "cliente" ? "desde el QR" : "mesero"}${p.nombre ? ` · ${p.nombre}` : ""}`,
         chico: true,
       },
       { tipo: "separador" },
@@ -453,9 +462,7 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos, p
                       {piso ? ` · ${piso}` : ""}
                       {estacion === "Todas" ? ` · ${p.estacion}` : ""}
                     </span>
-                    <span suppressHydrationWarning>
-                      {new Date(p.created_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}
-                    </span>
+                    <span suppressHydrationWarning>{horaCorta(p.created_at, regionDe(ajustes))}</span>
                   </span>
                 </button>
                 {p.estado === "preparando" && (
@@ -580,14 +587,8 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos, p
                   {lugar(elegido).piso ? ` · ${lugar(elegido).piso}` : ""}
                 </p>
                 <p className="text-sm text-stone-500" suppressHydrationWarning>
-                  Pedido a las{" "}
-                  {new Date(elegido.created_at).toLocaleTimeString("es-AR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false,
-                  })}{" "}
-                  ({minutosDesde(elegido.created_at, ahora)} min) ·{" "}
-                  {elegido.origen === "cliente" ? "desde el QR" : "por el mesero"}
+                  Pedido a las {horaCorta(elegido.created_at, regionDe(ajustes))} ({minutosDesde(elegido.created_at, ahora)} min)
+                  · {elegido.origen === "cliente" ? "desde el QR" : "por el mesero"}
                   {elegido.nombre ? ` · ${elegido.nombre}` : ""}
                 </p>
               </div>

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { mensajeError, urlSitio } from "@/lib/utils";
 import { Aviso } from "@/components/AuthShell";
 import { CamposRestaurante } from "@/components/CamposRestaurante";
+import { aplicarPais } from "@/lib/region";
 
 // Con "equipo" es el alta de un mesero o cocinero invitado: no crea restaurante, entra al del administrador que lo invitó.
 // "referido" es la dirección del restaurante que lo invitó: se guarda en la cuenta y la base la anota al crear el restaurante.
@@ -20,6 +21,7 @@ export function RegistroForm({ equipo = false, referido }: { equipo?: boolean; r
     const datos = new FormData(e.currentTarget);
     const nombre = String(datos.get("nombre") ?? "").trim();
     const slug = String(datos.get("slug") ?? "").trim();
+    const pais = String(datos.get("pais") ?? "");
     setCargando(true);
     setError(null);
 
@@ -30,7 +32,14 @@ export function RegistroForm({ equipo = false, referido }: { equipo?: boolean; r
       options: {
         emailRedirectTo: `${urlSitio()}/auth/confirm?next=/panel`,
         // Se guardan para terminar el alta tras confirmar el correo.
-        data: equipo ? {} : { restaurante_nombre: nombre, restaurante_slug: slug, ...(referido ? { ref: referido } : {}) },
+        data: equipo
+          ? {}
+          : {
+              restaurante_nombre: nombre,
+              restaurante_slug: slug,
+              restaurante_pais: pais,
+              ...(referido ? { ref: referido } : {}),
+            },
       },
     });
 
@@ -52,12 +61,13 @@ export function RegistroForm({ equipo = false, referido }: { equipo?: boolean; r
       return;
     }
 
-    const { error: errorAlta } = await supabase.rpc("crear_restaurante", { p_nombre: nombre, p_slug: slug });
+    const { data: alta, error: errorAlta } = await supabase.rpc("crear_restaurante", { p_nombre: nombre, p_slug: slug });
     if (errorAlta) {
       // La cuenta ya existe: el panel le pedirá corregir los datos del restaurante.
       router.replace(`/panel?error=${encodeURIComponent(mensajeError(errorAlta))}`);
       return;
     }
+    await aplicarPais(supabase, (alta as { id: string }).id, pais);
     router.replace("/panel");
     router.refresh();
   }

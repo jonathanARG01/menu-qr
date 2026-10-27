@@ -12,6 +12,7 @@ import {
   type PedidoItem,
   type SolicitudCuenta,
   nombreMesa,
+  regionDe,
 } from "@/lib/salon";
 import { avisarComensal } from "@/lib/push";
 import { fechaCorta, imprimirTicket } from "@/lib/imprimir";
@@ -164,7 +165,7 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
       { tipo: "titulo", texto: restaurante.nombre },
       {
         tipo: "texto",
-        texto: `${nombreMesa(mesa.numero)} · ${cuenta?.comensales ?? 1} pers. · ${fechaCorta(Date.now())}`,
+        texto: `${nombreMesa(mesa.numero)} · ${cuenta?.comensales ?? 1} pers. · ${fechaCorta(Date.now(), regionDe(ajustes))}`,
         chico: true,
       },
       { tipo: "separador" },

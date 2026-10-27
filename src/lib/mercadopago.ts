@@ -3,6 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // Mercado Pago (Checkout Pro). Cada restaurante cobra con su propia clave; acá solo se habla con su API.
 export const MP_API = (process.env.MP_API_URL || "https://api.mercadopago.com").replace(/\/$/, "");
 
+// Monedas en las que cobra Mercado Pago (una por país: la cuenta de Chile cobra en CLP).
+export const MONEDAS_MP = ["CLP", "ARS", "BRL", "MXN", "COP", "PEN", "UYU"];
+
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type PagoMP = { id: number | string; status: string; transaction_amount: number; external_reference: string | null };

@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/components/Toast";
 import { Icono } from "@/components/Icono";
-import { ELEMENTOS, nombreMesa, type Ajustes, type Elemento, type Piso, type TipoElemento } from "@/lib/salon";
+import { ELEMENTOS, nombreMesa, regionDe, type Ajustes, type Elemento, type Piso, type TipoElemento } from "@/lib/salon";
 import type { Categoria, Mesa, Plato, Restaurante, Sucursal } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { totalLineas } from "@/lib/cuenta";
@@ -26,6 +26,7 @@ import {
 } from "./Plano";
 import { MesaPanel } from "./MesaPanel";
 import { PantallaSalon } from "./PantallaSalon";
+import { formatoHora, type Region } from "@/lib/region";
 
 type Props = {
   restaurante: Restaurante;
@@ -469,7 +470,9 @@ export function Salon({
           ) : (
             <div className={`grid gap-4 ${editando ? "xl:grid-cols-[1fr_300px]" : ""}`}>
               <div className="space-y-3">
-                {!editando && ajustes.modulos.reservas && <ProximasReservas supabase={supabase} restauranteId={restaurante.id} />}
+                {!editando && ajustes.modulos.reservas && (
+                  <ProximasReservas supabase={supabase} restauranteId={restaurante.id} region={regionDe(ajustes)} />
+                )}
                 <Plano
                   piso={piso}
                   mesas={mesas}
@@ -586,6 +589,7 @@ export function Salon({
           enVivo={servicioVivo.enVivo}
           ahora={ahora}
           formato={formato}
+          region={regionDe(ajustes)}
         >
           {fichaMesa}
         </PantallaSalon>
@@ -964,7 +968,15 @@ function PanelEdicion({
 }
 
 // Franja sobre el plano: quién espera en la puerta y qué reservas llegan en las próximas 2 horas.
-function ProximasReservas({ supabase, restauranteId }: { supabase: SupabaseClient; restauranteId: string }) {
+function ProximasReservas({
+  supabase,
+  restauranteId,
+  region,
+}: {
+  supabase: SupabaseClient;
+  restauranteId: string;
+  region: Region;
+}) {
   const [datos, setDatos] = useState<{ espera: number; proximas: { nombre: string; personas: number; fecha: string }[] }>({
     espera: 0,
     proximas: [],
@@ -1003,7 +1015,7 @@ function ProximasReservas({ supabase, restauranteId }: { supabase: SupabaseClien
   }, [supabase, restauranteId]);
 
   if (!datos.espera && !datos.proximas.length) return null;
-  const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  const hora = (iso: string) => formatoHora(iso, region);
   return (
     <Link
       href="/panel/reservas"

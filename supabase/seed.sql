@@ -11,7 +11,7 @@ declare
   c_bebidas uuid;
 begin
   insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-  values ('la-esquina', 'La Esquina', 'Cocina de barrio desde 1998', '#9a3412', '#fffaf3', 'USD', '5491100000000')
+  values ('la-esquina', 'La Esquina', 'Cocina de barrio desde 1998', '#9a3412', '#fffaf3', 'USD', '56900000000')
   on conflict (slug) do nothing
   returning id into rid;
 

@@ -6,6 +6,7 @@ import { CamposRestaurante } from "@/components/CamposRestaurante";
 import { Interruptor } from "@/components/Interruptor";
 import { useToast } from "@/components/Toast";
 import { actualizarRestaurante, crearParaCliente, dejarRestaurante, editarRestaurante } from "./actions";
+import { PAIS_BASE } from "@/lib/region";
 
 export type FilaAdmin = {
   id: string;
@@ -29,8 +30,9 @@ const PLANES = [
   { valor: "grupo", texto: "Grupo" },
 ];
 
-const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" });
-const numero = (n: number) => Number(n).toLocaleString("es-AR");
+const fecha = (iso: string) =>
+  new Date(iso).toLocaleDateString(PAIS_BASE.locale, { day: "numeric", month: "short", year: "numeric" });
+const numero = (n: number) => Number(n).toLocaleString(PAIS_BASE.locale);
 
 export function ListaAdmin({ filas: iniciales }: { filas: FilaAdmin[] }) {
   const avisar = useToast();

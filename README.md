@@ -8,7 +8,7 @@ Stack: Next.js 15 (App Router) + Supabase (Postgres, Auth, Storage, RLS) + Verce
 
 - **Carta pública** `/<slug>?mesa=7`: rápida, pensada para el móvil, cacheada y regenerada al guardar en el panel. Muestra la mesa y un botón de WhatsApp.
 - **Panel del dueño** `/panel`: categorías y platos con foto, precio, descripción y etiquetas; precio editable en línea; interruptor de agotado; reordenar arrastrando; ocultar categorías.
-- **Marca** `/panel/marca`: logo, colores con vista previa, moneda, WhatsApp.
+- **Marca** `/panel/marca`: logo, colores con vista previa, moneda, WhatsApp. El país (moneda, zona horaria y código de WhatsApp sugeridos) se elige al crear el restaurante y se cambia en Personalizar; por defecto, Chile (CLP, America/Santiago).
 - **Códigos QR** `/panel/qr`: QR general (PNG y SVG), QR por mesa (PNG) y hoja PDF A4 con 6 tarjetas para imprimir.
 - **Cuentas**: registro, login, recuperar contraseña. Las fotos se comprimen en el navegador a WebP de 1200 px antes de subirlas.
 - **Diseños de carta**: Clásico, Noche, Esmeralda, Comida rápida y Retro, elegibles en Marca con vista previa.
@@ -23,7 +23,7 @@ Stack: Next.js 15 (App Router) + Supabase (Postgres, Auth, Storage, RLS) + Verce
 ## Puesta en marcha
 
 1. Crea un proyecto en [Supabase](https://supabase.com).
-2. En **SQL Editor**, ejecuta en orden los archivos de `supabase/migrations/` (0001, 0002 y 0003). Opcional: `supabase/seed.sql` crea la carta de ejemplo `/la-esquina` y `supabase/seed_cafe.sql` la cafetería `/aroma-cafe` con 36 bebidas, fotos y traducciones. `supabase/seed_disenos.sql` (después de 0006) crea una carta demo por cada diseño nuevo: `/la-esquina-verde` (Bistró), `/jardin-veggie` (Dorado), `/forno-pizzeria` (Forno), `/warung-oriente` (Oriente) y `/neon-tokio` (Neón). `supabase/seed_disenos_2.sql` (después de 0007) suma 11 cartas demo más, una por diseño nuevo (Tropical, Natural, Soleado, Gala, Vitrina, Cinta, Trattoria, Kraft, Madera, Cóctel y Revista), y marca algunos platos como destacados.
+2. En **SQL Editor**, ejecuta en orden todos los archivos de `supabase/migrations/` (de 0001 a 0013). Opcional: `supabase/seed.sql` crea la carta de ejemplo `/la-esquina` y `supabase/seed_cafe.sql` la cafetería `/aroma-cafe` con 36 bebidas, fotos y traducciones. `supabase/seed_disenos.sql` (después de 0006) crea una carta demo por cada diseño nuevo: `/la-esquina-verde` (Bistró), `/jardin-veggie` (Dorado), `/forno-pizzeria` (Forno), `/warung-oriente` (Oriente) y `/neon-tokio` (Neón). `supabase/seed_disenos_2.sql` (después de 0007) suma 11 cartas demo más, una por diseño nuevo (Tropical, Natural, Soleado, Gala, Vitrina, Cinta, Trattoria, Kraft, Madera, Cóctel y Revista), y marca algunos platos como destacados.
 3. Para entrar a `/admin`, date permiso de superadmin con tu correo:
    ```sql
    insert into public.superadmins (user_id) select id from auth.users where email = 'tu@correo.com';

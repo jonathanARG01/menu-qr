@@ -14,7 +14,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('la-esquina-verde', 'La Esquina Verde', 'Buena comida, buen humor', '#f5c518', '#1d4a2f', 'ARS', '5491100000000')
+    values ('la-esquina-verde', 'La Esquina Verde', 'Buena comida, buen humor', '#f5c518', '#1d4a2f', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Nuestra carta', 0) returning id into cid;
@@ -42,7 +42,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('jardin-veggie', 'Jardín Veggie', 'Cocina vegetariana con sabores de la India', '#d9b25f', '#14291b', 'ARS', '5491100000000')
+    values ('jardin-veggie', 'Jardín Veggie', 'Cocina vegetariana con sabores de la India', '#d9b25f', '#14291b', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Entradas', 0) returning id into cid;
@@ -80,7 +80,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('forno-pizzeria', 'Forno', 'El verdadero sabor de Italia · Horno a leña', '#c8302b', '#f3f2ee', 'ARS', '5491100000000')
+    values ('forno-pizzeria', 'Forno', 'El verdadero sabor de Italia · Horno a leña', '#c8302b', '#f3f2ee', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Pizzas', 0) returning id into cid;
@@ -118,7 +118,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('warung-oriente', 'Warung Oriente', 'Sabores de Indonesia y Tailandia', '#2f6b4f', '#f3eedd', 'ARS', '5491100000000')
+    values ('warung-oriente', 'Warung Oriente', 'Sabores de Indonesia y Tailandia', '#2f6b4f', '#f3eedd', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Entradas', 0) returning id into cid;
@@ -154,7 +154,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('neon-tokio', 'Neón Tokio', 'Cocina asiática · Abierto hasta tarde', '#ff2bd6', '#07070b', 'ARS', '5491100000000')
+    values ('neon-tokio', 'Neón Tokio', 'Cocina asiática · Abierto hasta tarde', '#ff2bd6', '#07070b', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Sopas', 0) returning id into cid;

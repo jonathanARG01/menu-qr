@@ -1,12 +1,13 @@
 export const ETIQUETAS = ["vegetariano", "vegano", "sin gluten", "picante", "nuevo", "recomendado"];
 
-export const MONEDAS = ["USD", "EUR", "MXN", "ARS", "COP", "CLP", "PEN", "UYU", "BOB", "PYG", "GTQ", "CRC", "DOP"];
+export const MONEDAS = ["CLP", "USD", "EUR", "MXN", "ARS", "BRL", "COP", "PEN", "UYU", "BOB", "PYG", "GTQ", "CRC", "DOP"];
 
-// Formato local de cada moneda ($ 2.800 en Argentina, $2,800 en México); el resto usa español de Latinoamérica.
+// Formato local de cada moneda ($2.800 en Chile, $2,800 en México); el resto usa español de Latinoamérica.
 const LOCALES: Record<string, string> = {
+  CLP: "es-CL",
   EUR: "es-ES",
   ARS: "es-AR",
-  CLP: "es-CL",
+  BRL: "pt-BR",
   COP: "es-CO",
   UYU: "es-UY",
   PYG: "es-PY",
@@ -14,17 +15,27 @@ const LOCALES: Record<string, string> = {
   CRC: "es-CR",
 };
 
+// Decimales que usa la moneda: 0 en pesos chilenos o guaraníes, 2 en dólares o euros.
+export function decimalesMoneda(moneda: string) {
+  try {
+    return new Intl.NumberFormat("en", { style: "currency", currency: moneda }).resolvedOptions().maximumFractionDigits ?? 2;
+  } catch {
+    return 2;
+  }
+}
+
 export function formatoPrecio(valor: number, moneda: string) {
+  const decimales = decimalesMoneda(moneda);
   try {
     return new Intl.NumberFormat(LOCALES[moneda] ?? "es-419", {
       style: "currency",
       currency: moneda,
       currencyDisplay: "narrowSymbol",
-      minimumFractionDigits: Number.isInteger(Number(valor)) ? 0 : 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: Number.isInteger(Number(valor)) ? 0 : decimales,
+      maximumFractionDigits: decimales,
     }).format(Number(valor));
   } catch {
-    return `${moneda} ${Number(valor).toFixed(2)}`;
+    return `${moneda} ${Number(valor).toFixed(decimales)}`;
   }
 }
 

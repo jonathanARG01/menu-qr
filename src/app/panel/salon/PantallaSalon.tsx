@@ -6,6 +6,7 @@ import { nombreMesa, type Cuenta, type Pedido, type Piso } from "@/lib/salon";
 import type { Mesa } from "@/lib/types";
 import { minutosDesde } from "@/lib/useServicio";
 import { ESTILOS_PLANO, Plano, type EstadoMesa, type EstiloPlano } from "./Plano";
+import { formatoHora, type Region } from "@/lib/region";
 
 type Aviso = {
   id: string;
@@ -40,6 +41,7 @@ export function PantallaSalon({
   enVivo,
   ahora,
   formato,
+  region,
   children,
 }: {
   nombre: string;
@@ -55,6 +57,7 @@ export function PantallaSalon({
   enVivo: boolean;
   ahora: number;
   formato: (n: number) => string;
+  region: Region;
   children?: React.ReactNode;
 }) {
   const marco = useRef<HTMLDivElement>(null);
@@ -114,7 +117,7 @@ export function PantallaSalon({
   avisos.sort((a, b) => PRIORIDAD.indexOf(a.tipo) - PRIORIDAD.indexOf(b.tipo) || a.desde.localeCompare(b.desde));
 
   const ocupadas = mesas.filter((m) => estados.get(m.id)?.ocupada).length;
-  const hora = new Date(ahora).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const hora = formatoHora(ahora, region);
 
   return (
     <div

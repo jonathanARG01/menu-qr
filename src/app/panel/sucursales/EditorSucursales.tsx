@@ -182,7 +182,7 @@ function FormSucursal({
         </h2>
         <label className="block">
           <span className="etiqueta-campo">Nombre</span>
-          <input required maxLength={60} placeholder="Palermo" className="campo" autoFocus {...campo("nombre")} />
+          <input required maxLength={60} placeholder="Providencia" className="campo" autoFocus {...campo("nombre")} />
         </label>
         <label className="block">
           <span className="etiqueta-campo">Nombre corto para el enlace</span>
@@ -208,7 +208,7 @@ function FormSucursal({
         </label>
         <label className="block">
           <span className="etiqueta-campo">WhatsApp para pedidos</span>
-          <input inputMode="tel" placeholder="5491112345678" className="campo" {...campo("whatsapp")} />
+          <input inputMode="tel" placeholder="56912345678" className="campo" {...campo("whatsapp")} />
           <span className="mt-1 block text-xs text-suave">Opcional. Si lo dejas vacío se usa el del restaurante.</span>
         </label>
         <div className="flex justify-end gap-3">

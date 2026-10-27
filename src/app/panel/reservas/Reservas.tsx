@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
 import { Icono } from "@/components/Icono";
-import { nombreMesa, type Ajustes } from "@/lib/salon";
+import { nombreMesa, regionDe, type Ajustes } from "@/lib/salon";
+import { formatoFecha, formatoHora, numeroWhatsapp, paisDe, type Region } from "@/lib/region";
 import type { Mesa, Restaurante } from "@/lib/types";
 import { mensajeError } from "@/lib/utils";
 import { useAhora } from "@/lib/useServicio";
@@ -35,16 +36,8 @@ const ESTADO: Record<Estado, { texto: string; color: string }> = {
   no_vino: { texto: "No vino", color: "bg-red-100 text-red-800" },
 };
 
-// WhatsApp necesita el número con código de país. Si lo anotaron sin él, se asume Argentina (54 9).
-export function numeroWhatsapp(telefono: string) {
-  let d = telefono.replace(/\D/g, "");
-  if (d.startsWith("00")) d = d.slice(2);
-  if (d.startsWith("0")) d = d.slice(1);
-  return d.length <= 10 ? `549${d}` : d;
-}
-
-const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-const dia = (iso: string) => new Date(iso).toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" });
+const hora = (iso: string, region: Region) => formatoHora(iso, region);
+const dia = (iso: string, region: Region) => formatoFecha(iso, region, { weekday: "short", day: "numeric", month: "short" });
 const mismoDia = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
 // Reservas del día y lista de espera: avisar por WhatsApp cuando la mesa está lista y sentarlos en una mesa libre.
@@ -52,6 +45,7 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
   const ahora = useAhora();
+  const region = regionDe(ajustes);
   const [lista, setLista] = useState<Reserva[] | null>(null);
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [ocupadas, setOcupadas] = useState<Set<string>>(new Set());
@@ -117,7 +111,11 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
 
   function whatsapp(r: Reserva, mensaje: string) {
     if (!r.telefono) return;
-    window.open(`https://wa.me/${numeroWhatsapp(r.telefono)}?text=${encodeURIComponent(mensaje)}`, "_blank", "noopener");
+    window.open(
+      `https://wa.me/${numeroWhatsapp(r.telefono, paisDe(ajustes.pais))}?text=${encodeURIComponent(mensaje)}`,
+      "_blank",
+      "noopener",
+    );
   }
 
   function avisarMesaLista(r: Reserva) {
@@ -130,7 +128,7 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
     if (r.fecha)
       whatsapp(
         r,
-        `Hola ${r.nombre}, te confirmamos la reserva en ${restaurante.nombre} para ${r.personas} ${r.personas === 1 ? "persona" : "personas"} el ${dia(r.fecha)} a las ${hora(r.fecha)}. ¡Te esperamos!`,
+        `Hola ${r.nombre}, te confirmamos la reserva en ${restaurante.nombre} para ${r.personas} ${r.personas === 1 ? "persona" : "personas"} el ${dia(r.fecha, region)} a las ${hora(r.fecha, region)}. ¡Te esperamos!`,
       );
   }
 
@@ -266,6 +264,7 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
         <ListaReservas
           lista={vista === "hoy" ? deHoy : proximas}
           conDia={vista === "proximas"}
+          region={region}
           atrasada={atrasada}
           mesas={mesas}
           onConfirmar={confirmar}
@@ -335,6 +334,7 @@ function ListaReservas({
   onSentar,
   onCambiar,
   vacio,
+  region,
 }: {
   lista: Reserva[];
   conDia: boolean;
@@ -344,6 +344,7 @@ function ListaReservas({
   onSentar: (r: Reserva) => void;
   onCambiar: (r: Reserva, c: Partial<Reserva>, texto?: string) => void;
   vacio: string;
+  region: Region;
 }) {
   if (lista.length === 0) return <Vacio texto={vacio} />;
   const abierta = (r: Reserva) => r.estado === "pendiente" || r.estado === "confirmada";
@@ -358,8 +359,8 @@ function ListaReservas({
             className={`tarjeta flex flex-wrap items-center gap-3 p-4 ${abierta(r) ? "" : "opacity-60"} ${tarde ? "ring-2 ring-red-300" : ""}`}
           >
             <div className="w-16 text-center">
-              <p className="text-lg font-bold tabular-nums">{r.fecha ? hora(r.fecha) : "—"}</p>
-              {conDia && r.fecha && <p className="text-xs text-suave">{dia(r.fecha)}</p>}
+              <p className="text-lg font-bold tabular-nums">{r.fecha ? hora(r.fecha, region) : "—"}</p>
+              {conDia && r.fecha && <p className="text-xs text-suave">{dia(r.fecha, region)}</p>}
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-semibold">
@@ -472,7 +473,7 @@ function FormularioReserva({
               maxLength={30}
               value={telefono}
               onChange={(e) => setTelefono(e.target.value)}
-              placeholder="11 2345 6789"
+              placeholder="9 1234 5678"
               className="campo mt-1"
             />
           </label>
