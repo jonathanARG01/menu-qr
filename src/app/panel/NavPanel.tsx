@@ -34,6 +34,8 @@ export function MarcoPanel(props: Props) {
   const ruta = usePathname();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const completo = ANCHO_COMPLETO.some((r) => ruta.startsWith(r));
+  // La carta lleva una columna de resumen a la derecha en pantallas anchas.
+  const ancho = ruta === "/panel" ? "max-w-6xl" : "max-w-5xl";
   const accesos = props.secciones.slice(0, 4);
 
   const [tema, setTema] = useState(props.tema);
@@ -49,64 +51,107 @@ export function MarcoPanel(props: Props) {
   const botonTema = <BotonTema tema={tema} onClick={alternarTema} />;
 
   return (
-    <div className={`min-h-screen bg-fondo text-tinta ${tema === "oscuro" ? "tema-oscuro" : ""}`}>
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-borde bg-superficie lg:flex">
+    <div className={`panel-ui panel-fondo min-h-screen text-tinta ${tema === "oscuro" ? "tema-oscuro" : ""}`}>
+      {/* Computadora: menú lateral flotante, como una tarjeta más */}
+      <aside className="fixed inset-y-3 left-3 z-30 hidden w-60 overflow-hidden rounded-3xl border border-borde bg-superficie shadow-[0_20px_50px_-30px_rgb(0_0_0/0.5)] lg:flex">
         <MenuLateral {...props} ruta={ruta} botonTema={botonTema} />
       </aside>
 
       {/* Teléfono y tableta: barra superior */}
-      <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-borde bg-superficie/95 px-4 py-2.5 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-borde bg-superficie/90 px-4 py-2.5 backdrop-blur lg:hidden">
         <Logo restaurante={props.restaurante} />
         <p className="min-w-0 flex-1 truncate font-semibold">{props.restaurante.nombre}</p>
         {botonTema}
         <button
           type="button"
           onClick={() => setMenuAbierto(true)}
-          className="rounded-lg p-2 text-suave hover:bg-stone-100 hover:text-tinta"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-suave hover:text-tinta"
           aria-label="Abrir menú"
         >
-          <Icono nombre="menu" />
+          <Icono nombre="menu" className="h-5 w-5" />
         </button>
       </header>
 
       {menuAbierto && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMenuAbierto(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] bg-superficie shadow-2xl">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={() => setMenuAbierto(false)} />
+          <div className="absolute inset-y-2 left-2 flex w-72 max-w-[85vw] overflow-hidden rounded-3xl border border-borde bg-superficie shadow-2xl">
             <MenuLateral {...props} ruta={ruta} botonTema={botonTema} onCerrar={() => setMenuAbierto(false)} />
           </div>
         </div>
       )}
 
-      <div className="pb-24 lg:pb-10 lg:pl-64">
-        <main className={completo ? "px-3 py-4 sm:px-6 lg:py-6" : "mx-auto max-w-4xl px-4 py-5 sm:px-6 lg:py-8"}>
+      <div className="pb-28 lg:pb-10 lg:pl-[16.5rem]">
+        <BarraSuperior {...props} botonTema={botonTema} />
+        <main className={completo ? "px-3 py-4 sm:px-6 lg:pt-2 lg:pb-6" : `mx-auto ${ancho} px-4 py-5 sm:px-6 lg:pt-2 lg:pb-8`}>
           {props.children}
         </main>
       </div>
 
-      {/* Teléfono: accesos al alcance del pulgar. Fuera de la cabecera: su backdrop-blur rompería el position: fixed. */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-borde bg-superficie pb-[env(safe-area-inset-bottom)] lg:hidden">
-        {accesos.map((s) => (
-          <Link
-            key={s.id}
-            href={s.href}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${activa(ruta, s.href) ? "text-marca" : "text-suave"}`}
-          >
-            <Icono nombre={s.id} />
-            {s.texto}
-          </Link>
-        ))}
+      {/* Teléfono: accesos al alcance del pulgar, en una barra flotante. Fuera de la cabecera: su backdrop-blur
+          rompería el position: fixed. */}
+      <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 flex gap-1 rounded-2xl border border-borde bg-superficie/95 p-1.5 shadow-[0_12px_40px_-12px_rgb(0_0_0/0.45)] backdrop-blur lg:hidden">
+        {accesos.map((s) => {
+          const actual = activa(ruta, s.href);
+          return (
+            <Link
+              key={s.id}
+              href={s.href}
+              aria-current={actual ? "page" : undefined}
+              className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium transition ${
+                actual ? "bg-marca-claro text-marca-tinta" : "text-suave"
+              }`}
+            >
+              <Icono nombre={s.id} className="h-5 w-5" />
+              {s.texto}
+            </Link>
+          );
+        })}
         {props.secciones.length > accesos.length && (
           <button
             type="button"
             onClick={() => setMenuAbierto(true)}
-            className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-suave"
+            className="flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium text-suave"
           >
-            <Icono nombre="mas" />
+            <Icono nombre="mas" className="h-5 w-5" />
             Más
           </button>
         )}
       </nav>
+    </div>
+  );
+}
+
+// Computadora: el restaurante que se está editando, su carta pública y la fecha, arriba del contenido.
+function BarraSuperior({ restaurante, restaurantes, botonTema }: Props & { botonTema: React.ReactNode }) {
+  const [hoy, setHoy] = useState("");
+  // Se calcula en el navegador para mostrar la fecha del lugar donde está la persona.
+  useEffect(() => {
+    const texto = new Date().toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" });
+    setHoy(texto.charAt(0).toUpperCase() + texto.slice(1));
+  }, []);
+
+  return (
+    <div className="hidden items-center gap-3 px-6 pt-5 pb-4 lg:flex">
+      <Logo restaurante={restaurante} />
+      <div className="min-w-0">
+        {restaurantes.length > 1 ? (
+          <SelectorRestaurante actual={restaurante.id} restaurantes={restaurantes} />
+        ) : (
+          <p className="truncate font-semibold leading-tight">{restaurante.nombre}</p>
+        )}
+        <p className="text-xs text-suave">{hoy || "\u00a0"}</p>
+      </div>
+      <div className="ml-auto flex items-center gap-2">
+        <a
+          href={`/${restaurante.slug}`}
+          target="_blank"
+          className="inline-flex items-center gap-1.5 rounded-full border border-borde bg-superficie px-3.5 py-2 text-sm font-medium hover:bg-stone-100"
+        >
+          Ver carta pública <Icono nombre="externo" className="h-3.5 w-3.5 text-suave" />
+        </a>
+        <span className="rounded-full border border-borde bg-superficie p-0.5">{botonTema}</span>
+      </div>
     </div>
   );
 }
@@ -117,7 +162,7 @@ function BotonTema({ tema, onClick }: { tema: Tema; onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="rounded-lg p-2 text-suave hover:bg-stone-100 hover:text-tinta"
+      className="flex h-9 w-9 items-center justify-center rounded-full text-suave hover:bg-stone-100 hover:text-tinta"
       aria-label={texto}
       title={texto}
     >
@@ -155,41 +200,50 @@ function MenuLateral({
 
   return (
     <div className="flex min-h-0 w-full flex-col">
-      <div className="flex items-start gap-3 border-b border-borde px-4 py-4">
-        <Logo restaurante={restaurante} />
-        <div className="min-w-0 flex-1">
-          {restaurantes.length > 1 ? (
-            <SelectorRestaurante actual={restaurante.id} restaurantes={restaurantes} />
-          ) : (
-            <p className="truncate font-semibold leading-tight">{restaurante.nombre}</p>
-          )}
-          <a
-            href={`/${restaurante.slug}`}
-            target="_blank"
-            className="mt-0.5 inline-flex items-center gap-1 text-xs text-marca hover:underline"
-          >
-            Ver carta pública <Icono nombre="externo" className="h-3 w-3" />
-          </a>
-        </div>
+      <div className="flex items-center gap-2 px-5 pt-5 pb-3">
+        <Link href="/panel" className="text-xl" aria-label="Mesitto, inicio del panel">
+          <MarcaMesitto oscuro />
+        </Link>
         {onCerrar && (
           <button
             type="button"
             onClick={onCerrar}
-            className="-mr-1 rounded-lg p-1.5 text-suave hover:bg-stone-100"
+            className="ml-auto flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-suave"
             aria-label="Cerrar menú"
           >
-            <Icono nombre="cerrar" />
+            <Icono nombre="cerrar" className="h-5 w-5" />
           </button>
         )}
       </div>
 
-      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Secciones del panel">
+      {/* En el teléfono la barra superior no tiene el selector: va aquí. */}
+      {onCerrar && (
+        <div className="mx-3 mb-1 flex items-center gap-3 rounded-2xl bg-stone-50 p-3">
+          <Logo restaurante={restaurante} />
+          <div className="min-w-0 flex-1">
+            {restaurantes.length > 1 ? (
+              <SelectorRestaurante actual={restaurante.id} restaurantes={restaurantes} />
+            ) : (
+              <p className="truncate font-semibold leading-tight">{restaurante.nombre}</p>
+            )}
+            <a
+              href={`/${restaurante.slug}`}
+              target="_blank"
+              className="mt-0.5 inline-flex items-center gap-1 text-xs text-marca hover:underline"
+            >
+              Ver carta pública <Icono nombre="externo" className="h-3 w-3" />
+            </a>
+          </div>
+        </div>
+      )}
+
+      <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-3" aria-label="Secciones del panel">
         {grupos.map((grupo) => {
           const items = secciones.filter((s) => s.grupo === grupo);
           if (items.length === 0) return null;
           return (
             <div key={grupo}>
-              <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-stone-400">{grupo}</p>
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400">{grupo}</p>
               <ul className="space-y-0.5">
                 {items.map((s) => {
                   const actual = activa(ruta, s.href);
@@ -197,20 +251,25 @@ function MenuLateral({
                     <li key={s.id}>
                       <Link
                         href={s.href}
+                        title={s.ayuda}
                         aria-current={actual ? "page" : undefined}
-                        className={`group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
-                          actual ? "bg-marca/10 text-marca" : "text-stone-600 hover:bg-stone-100 hover:text-tinta"
+                        className={`group flex items-center gap-3 rounded-2xl px-2 py-1.5 text-sm transition ${
+                          actual
+                            ? "bg-stone-100 font-semibold text-tinta"
+                            : "font-medium text-stone-600 hover:bg-stone-50 hover:text-tinta"
                         }`}
                       >
-                        <Icono nombre={s.id} className={`h-5 w-5 ${actual ? "" : "text-stone-400 group-hover:text-stone-600"}`} />
-                        <span className="min-w-0">
-                          <span className="block">{s.texto}</span>
-                          <span
-                            className={`block truncate text-[11px] font-normal ${actual ? "text-marca/70" : "text-stone-400"}`}
-                          >
-                            {s.ayuda}
-                          </span>
+                        <span
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition ${
+                            actual
+                              ? "bg-marca-claro text-marca-tinta shadow-[0_6px_16px_-6px_rgb(242_163_58/0.7)]"
+                              : "bg-stone-100 text-stone-500 group-hover:text-tinta"
+                          }`}
+                        >
+                          <Icono nombre={s.id} className="h-[18px] w-[18px]" />
                         </span>
+                        <span className="min-w-0 flex-1 truncate">{s.texto}</span>
+                        {actual && <span className="mr-1 h-1.5 w-1.5 rounded-full bg-marca-claro" aria-hidden />}
                       </Link>
                     </li>
                   );
@@ -221,34 +280,46 @@ function MenuLateral({
         })}
       </nav>
 
-      <div className="space-y-3 border-t border-borde px-4 py-4">
-        <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-100 text-stone-500">
-            <Icono nombre="personas" className="h-4 w-4" />
+      <div className="m-3 mt-1 space-y-3 rounded-2xl border border-borde bg-stone-50 p-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-marca text-sm font-bold text-white">
+            {email.charAt(0).toUpperCase()}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs text-suave">{email}</p>
-            <p className="text-xs font-semibold">{NOMBRE_ROL[rol] ?? rol}</p>
+            <p className="truncate text-xs font-semibold">{email}</p>
+            <p className="text-[11px] text-suave">{NOMBRE_ROL[rol] ?? rol}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {esSuperadmin && (
-            <Link href="/admin" className="rounded-lg bg-stone-900 px-2.5 py-1.5 text-xs font-semibold text-white">
+            <Link href="/admin" className="rounded-full bg-stone-900 px-3 py-1.5 text-xs font-semibold text-white">
               Admin
             </Link>
           )}
           <span className="ml-auto">{botonTema}</span>
           <form action={cerrarSesion}>
-            <button className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-suave hover:bg-stone-100 hover:text-tinta">
-              <Icono nombre="salir" className="h-4 w-4" /> Salir
+            <button
+              className="flex h-9 w-9 items-center justify-center rounded-full text-suave hover:bg-stone-100 hover:text-tinta"
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
+            >
+              <Icono nombre="salir" className="h-5 w-5" />
             </button>
           </form>
         </div>
-        <p className="flex items-center justify-center gap-1.5 text-[11px] text-suave">
-          <Marca className="h-4 w-4" />
-          <span className="font-semibold">Mesitto</span> · por Brote Digital
-        </p>
       </div>
     </div>
+  );
+}
+
+// Símbolo y nombre de Mesitto; en oscuro, el nombre en blanco.
+function MarcaMesitto({ oscuro }: { oscuro?: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <Marca className="h-8 w-8" oscuro={oscuro} />
+      <span className="font-marca text-lg font-bold leading-none tracking-tight">
+        Mesitto<span className="text-marca-claro">.</span>
+      </span>
+    </span>
   );
 }

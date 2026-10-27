@@ -297,7 +297,7 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos, p
   return (
     <div
       ref={tablero}
-      className="tema-fijo flex min-h-[calc(100vh-8rem)] flex-col gap-3 rounded-2xl bg-stone-900 p-3 text-white sm:p-4"
+      className="tema-fijo flex min-h-[calc(100vh-8rem)] flex-col gap-3 rounded-3xl bg-[#161b26] p-3 text-white sm:p-4"
     >
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="mr-2 flex items-center gap-2 text-lg font-bold">
