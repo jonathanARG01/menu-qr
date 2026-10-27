@@ -69,7 +69,8 @@ const ESTILO_ELEMENTO: Record<string, string> = {
   bano: "bg-sky-100 text-sky-800 border-sky-200",
   cocina: "bg-orange-100 text-orange-800 border-orange-200",
   entrada: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  escalera: "bg-[repeating-linear-gradient(0deg,var(--color-stone-200)_0,var(--color-stone-200)_4px,var(--color-stone-50)_4px,var(--color-stone-50)_8px)] text-stone-600 border-stone-300",
+  escalera:
+    "bg-[repeating-linear-gradient(0deg,var(--color-stone-200)_0,var(--color-stone-200)_4px,var(--color-stone-50)_4px,var(--color-stone-50)_8px)] text-stone-600 border-stone-300",
   caja: "bg-violet-100 text-violet-800 border-violet-200",
   planta: "bg-transparent text-xl border-transparent",
 };
@@ -372,7 +373,7 @@ export function Plano({
                   ambientado ? "text-[#fff7ed]" : `border-2 shadow-sm ${colorMesa(editando ? undefined : est)}`
                 } ${m.forma === "redonda" ? "rounded-full" : ambientado ? "rounded-md" : "rounded-xl"} ${
                   editando ? "cursor-grab active:cursor-grabbing" : "hover:shadow-md"
-                } ${elegido ? "ring-2 ring-marca ring-offset-2" : ""} ${invalido ? "!border-red-500 !bg-red-50 opacity-80" : ""}`}
+                } ${elegido ? (editando ? "ring-2 ring-marca ring-offset-2" : "animate-pulse ring-4 ring-marca ring-offset-2") : ""} ${invalido ? "!border-red-500 !bg-red-50 opacity-80" : ""}`}
                 style={{
                   ...pct(caja),
                   ...(ambientado

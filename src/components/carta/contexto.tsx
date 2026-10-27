@@ -18,6 +18,8 @@ type Valor = {
   whatsapp: boolean;
   // El cliente está en una mesa (vino del QR) y el restaurante recibe pedidos desde la mesa.
   pedidosMesa: boolean;
+  // Sin mesa: el restaurante recibe pedidos para llevar (o delivery) desde la carta.
+  pedidosLlevar: boolean;
   ajustes: Ajustes;
   lineas: Linea[];
   cantidad: (platoId: string) => number;
@@ -39,6 +41,7 @@ const Ctx = createContext<Valor>({
   pedidos: false,
   whatsapp: false,
   pedidosMesa: false,
+  pedidosLlevar: false,
   ajustes: leerAjustes(),
   lineas: [],
   cantidad: () => 0,
@@ -151,7 +154,8 @@ export function ProveedorCarta({
   const whatsapp = Boolean(restaurante.pedidos_whatsapp && numeroWhatsapp);
   const ajustes = useMemo(() => leerAjustes(restaurante.ajustes), [restaurante.ajustes]);
   const pedidosMesa = Boolean(ajustes.modulos.pedidos_mesa && mesa);
-  const pedidos = whatsapp || pedidosMesa;
+  const pedidosLlevar = Boolean(!mesa && !vistaPrevia && ajustes.modulos.llevar && ajustes.llevar.online);
+  const pedidos = whatsapp || pedidosMesa || pedidosLlevar;
 
   const registrarPedido = useCallback(
     (total: number) => {
@@ -181,6 +185,7 @@ export function ProveedorCarta({
     pedidos,
     whatsapp,
     pedidosMesa,
+    pedidosLlevar,
     ajustes,
     lineas,
     cantidad: (id) => cantidades[id] ?? 0,

@@ -6,6 +6,8 @@ import { decimalesMoneda } from "@/lib/utils";
 export const runtime = "nodejs";
 
 type Pedido = {
+  // Pedido para llevar o delivery (id de la cuenta). Si viene, no hacen falta restaurante ni mesa.
+  pedido?: string;
   restaurante?: string;
   sucursal?: string | null;
   mesa?: string;
@@ -17,7 +19,8 @@ type Preparado = {
   id: string;
   monto: number;
   propina: number;
-  mesa: string;
+  mesa?: string;
+  tipo?: string;
   restaurante: string;
   slug: string;
   moneda: string;
@@ -36,17 +39,24 @@ export async function POST(request: Request) {
   if (!admin) return NextResponse.json({ error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY" }, { status: 501 });
 
   const b = (await request.json().catch(() => ({}))) as Pedido;
-  if (!b.restaurante || !UUID.test(b.restaurante) || (b.sucursal && !UUID.test(b.sucursal)) || !b.mesa || b.mesa.length > 12) {
+  const llevar = !!b.pedido;
+  if (
+    llevar
+      ? !UUID.test(b.pedido!)
+      : !b.restaurante || !UUID.test(b.restaurante) || (b.sucursal && !UUID.test(b.sucursal)) || !b.mesa || b.mesa.length > 12
+  ) {
     return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
   }
 
-  const { data, error } = await admin.rpc("crear_pago_online", {
-    p_restaurante: b.restaurante,
-    p_sucursal: b.sucursal || null,
-    p_mesa: b.mesa,
-    p_partes: Math.round(Number(b.partes) || 1),
-    p_propina: Math.max(0, Number(b.propina) || 0),
-  });
+  const { data, error } = llevar
+    ? await admin.rpc("crear_pago_pedido", { p_cuenta: b.pedido, p_propina: Math.max(0, Number(b.propina) || 0) })
+    : await admin.rpc("crear_pago_online", {
+        p_restaurante: b.restaurante,
+        p_sucursal: b.sucursal || null,
+        p_mesa: b.mesa,
+        p_partes: Math.round(Number(b.partes) || 1),
+        p_propina: Math.max(0, Number(b.propina) || 0),
+      });
   if (error || !data) return NextResponse.json({ error: error?.message ?? "No se pudo preparar el pago" }, { status: 400 });
   const p = data as Preparado;
   if (!MONEDAS_MP.includes(p.moneda)) {
@@ -58,8 +68,9 @@ export async function POST(request: Request) {
   const total = Math.ceil((Number(p.monto) + Number(p.propina)) * factor - 1e-6) / factor;
 
   const origen = new URL(request.url).origin;
-  // Solo se vuelve a la carta del mismo restaurante.
-  const volver = b.volver?.startsWith(`/${p.slug}`) ? b.volver : `/${p.slug}?mesa=${encodeURIComponent(p.mesa)}`;
+  // Solo se vuelve a la carta del mismo restaurante (o a la página del pedido para llevar).
+  const porDefecto = llevar ? `/${p.slug}/pedido/${b.pedido}` : `/${p.slug}?mesa=${encodeURIComponent(p.mesa ?? "")}`;
+  const volver = b.volver?.startsWith(`/${p.slug}`) ? b.volver : porDefecto;
   const vuelta = new URL(volver, origen);
   vuelta.searchParams.set("pago", p.id);
 
@@ -70,7 +81,9 @@ export async function POST(request: Request) {
       items: [
         {
           id: p.id,
-          title: `${p.restaurante} · Mesa ${p.mesa}`,
+          title: llevar
+            ? `${p.restaurante} · ${p.tipo === "delivery" ? "Delivery" : "Para llevar"}`
+            : `${p.restaurante} · Mesa ${p.mesa}`,
           quantity: 1,
           unit_price: total,
           currency_id: p.moneda,

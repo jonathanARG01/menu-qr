@@ -8,6 +8,11 @@ import { textoSobre } from "@/lib/utils";
 // Idioma del cliente en las páginas sueltas (reservar, lista de espera): el que eligió en la carta o el del navegador,
 // entre los que ofrece el restaurante.
 export function useTextos(restaurante: Restaurante) {
+  const idioma = useIdioma(restaurante);
+  return (clave: ClaveTexto) => texto(idioma, clave);
+}
+
+export function useIdioma(restaurante: Restaurante) {
   const ofrecidos = (restaurante.idiomas ?? []).join(",");
   const [idioma, setIdioma] = useState<Idioma>("es");
   useEffect(() => {
@@ -20,7 +25,7 @@ export function useTextos(restaurante: Restaurante) {
     );
     if (elegido) setIdioma(elegido);
   }, [ofrecidos]);
-  return (clave: ClaveTexto) => texto(idioma, clave);
+  return idioma;
 }
 
 // La sucursal sale de ?s=<slug>, igual que en la carta.

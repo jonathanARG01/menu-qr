@@ -19,6 +19,7 @@ export const esAdmin = (rol?: string | null) => rol === "dueno" || rol === "staf
 // ── Secciones del panel ───────────────────────
 export type Seccion =
   | "salon"
+  | "llevar"
   | "cocina"
   | "reservas"
   | "caja"
@@ -27,6 +28,8 @@ export type Seccion =
   | "marca"
   | "qr"
   | "estadisticas"
+  | "reportes"
+  | "clientes"
   | "sucursales"
   | "equipo"
   | "personalizar"
@@ -36,6 +39,7 @@ export type InfoSeccion = { id: Seccion; href: string; texto: string; grupo: "Se
 
 export const SECCIONES: InfoSeccion[] = [
   { id: "salon", href: "/panel/salon", texto: "Salón", grupo: "Servicio", ayuda: "Plano de mesas, pedidos y cobros" },
+  { id: "llevar", href: "/panel/llevar", texto: "Para llevar", grupo: "Servicio", ayuda: "Pedidos para llevar y delivery" },
   { id: "cocina", href: "/panel/cocina", texto: "Cocina", grupo: "Servicio", ayuda: "Comandas en tiempo real" },
   { id: "reservas", href: "/panel/reservas", texto: "Reservas", grupo: "Servicio", ayuda: "Reservas y lista de espera" },
   { id: "caja", href: "/panel/caja", texto: "Caja", grupo: "Servicio", ayuda: "Cierre de caja del turno" },
@@ -44,6 +48,8 @@ export const SECCIONES: InfoSeccion[] = [
   { id: "marca", href: "/panel/marca", texto: "Marca", grupo: "Carta", ayuda: "Diseño, logo, idiomas" },
   { id: "qr", href: "/panel/qr", texto: "QR", grupo: "Carta", ayuda: "Códigos para imprimir" },
   { id: "estadisticas", href: "/panel/estadisticas", texto: "Estadísticas", grupo: "Negocio", ayuda: "Visitas y lo más pedido" },
+  { id: "reportes", href: "/panel/reportes", texto: "Reportes", grupo: "Negocio", ayuda: "Ventas y propinas por mesero" },
+  { id: "clientes", href: "/panel/clientes", texto: "Clientes", grupo: "Negocio", ayuda: "Clientes frecuentes y premios" },
   { id: "sucursales", href: "/panel/sucursales", texto: "Sucursales", grupo: "Negocio", ayuda: "Locales del mismo negocio" },
   { id: "equipo", href: "/panel/equipo", texto: "Equipo", grupo: "Negocio", ayuda: "Meseros, cocina y administradores" },
   {
@@ -59,12 +65,13 @@ export const SECCIONES: InfoSeccion[] = [
 // Lo que cada rol puede llegar a ver. El administrador elige, dentro de esto, qué le aparece a cada uno.
 // La base de datos aplica los permisos de verdad: un mesero no puede cambiar precios aunque llegue a la pantalla.
 export const PERMITIDAS: Record<"mesero" | "cocina", Seccion[]> = {
-  mesero: ["salon", "cocina", "reservas", "caja", "estadisticas"],
-  cocina: ["cocina", "salon"],
+  mesero: ["salon", "llevar", "cocina", "reservas", "caja", "clientes", "estadisticas"],
+  cocina: ["cocina", "salon", "llevar"],
 };
 
 // ── Ajustes (restaurantes.ajustes) ─────────────
-export type Modulo = "salon" | "cocina" | "cobros" | "pedidos_mesa" | "reservas" | "estadisticas" | "sucursales" | "equipo";
+export type Modulo =
+  "salon" | "llevar" | "cocina" | "cobros" | "pedidos_mesa" | "reservas" | "clientes" | "estadisticas" | "sucursales" | "equipo";
 
 export type Ajustes = {
   // Partes del sistema en uso. Lo apagado desaparece del panel (y de la carta, si corresponde).
@@ -98,7 +105,26 @@ export type Ajustes = {
     online: boolean;
     // Minutos que se guarda una mesa reservada antes de liberarla.
     tolerancia: number;
+    // Aviso al celular del cliente unas horas antes (si lo activó al reservar); si no, el panel ofrece WhatsApp.
+    recordatorio: boolean;
+    horas_antes: number;
   };
+  // Pedidos para llevar y delivery (sección Para llevar).
+  llevar: {
+    // El cliente puede pedir desde la carta, sin mesa.
+    online: boolean;
+    delivery: boolean;
+    // Costo de envío del delivery (0: gratis).
+    envio: number;
+    // Minutos que tarda un pedido: la hora de retiro más temprana que se ofrece.
+    minutos: number;
+    // Los pedidos de internet esperan que alguien los acepte antes de ir a cocina.
+    confirmar: boolean;
+    // Desde la carta se paga con Mercado Pago antes de que el pedido pase a cocina.
+    pago_obligatorio: boolean;
+  };
+  // Premio a los clientes frecuentes: cada tantas visitas (0: sin premio), el equipo ve el aviso al atenderlo.
+  clientes: { premio_cada: number; premio: string };
   resenas: {
     // Al cerrar la mesa se le pregunta al cliente cómo estuvo todo.
     pedir: boolean;
@@ -123,6 +149,8 @@ export const AJUSTES_BASE: Ajustes = {
     cobros: true,
     pedidos_mesa: false,
     reservas: false,
+    llevar: true,
+    clientes: true,
     estadisticas: true,
     sucursales: true,
     equipo: true,
@@ -136,7 +164,9 @@ export const AJUSTES_BASE: Ajustes = {
   sonido_hoja: "papel",
   pais: PAIS_BASE.codigo,
   zona_horaria: PAIS_BASE.zona,
-  reservas: { online: false, tolerancia: 15 },
+  reservas: { online: false, tolerancia: 15, recordatorio: true, horas_antes: 3 },
+  llevar: { online: false, delivery: false, envio: 0, minutos: 30, confirmar: true, pago_obligatorio: false },
+  clientes: { premio_cada: 0, premio: "" },
   resenas: { pedir: true, google_url: "" },
   cobro_online: { activo: false },
   imagenes_defecto: false,
@@ -169,6 +199,8 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
     pais: paisDe(g.pais).codigo,
     zona_horaria: typeof g.zona_horaria === "string" && g.zona_horaria ? g.zona_horaria : paisDe(g.pais).zona,
     reservas: { ...AJUSTES_BASE.reservas, ...(g.reservas ?? {}) },
+    llevar: { ...AJUSTES_BASE.llevar, ...(g.llevar ?? {}) },
+    clientes: { ...AJUSTES_BASE.clientes, ...(g.clientes ?? {}) },
     resenas: { ...AJUSTES_BASE.resenas, ...(g.resenas ?? {}) },
     cobro_online: { ...AJUSTES_BASE.cobro_online, ...(g.cobro_online ?? {}) },
   };
@@ -187,6 +219,9 @@ const MODULO_DE: Partial<Record<Seccion, Modulo>> = {
   reservas: "reservas",
   caja: "cobros",
   estadisticas: "estadisticas",
+  llevar: "llevar",
+  clientes: "clientes",
+  reportes: "cobros",
   sucursales: "sucursales",
   equipo: "equipo",
 };
@@ -263,7 +298,21 @@ export type Cuenta = {
   aviso: Aviso | null;
   abierta_at: string;
   cerrada_at: string | null;
+  // Migración 0014: para llevar y delivery, cliente y quién atiende.
+  tipo?: TipoCuenta;
+  origen?: "personal" | "cliente";
+  cliente_id?: string | null;
+  cliente_nombre?: string | null;
+  cliente_telefono?: string | null;
+  direccion?: string | null;
+  para_hora?: string | null;
+  envio?: number;
+  despachado_at?: string | null;
+  mesero_id?: string | null;
 };
+
+export type TipoCuenta = "mesa" | "llevar" | "delivery";
+export const NOMBRE_TIPO: Record<TipoCuenta, string> = { mesa: "Mesa", llevar: "Para llevar", delivery: "Delivery" };
 
 export type PedidoItem = {
   id: string;
@@ -293,6 +342,8 @@ export type Pedido = {
   nota: string | null;
   // Orden manual en la pantalla de cocina (migración 0005); sin valor va por hora de llegada.
   orden?: number | null;
+  // De mesa, para llevar o delivery (migración 0014).
+  tipo?: TipoCuenta;
   created_at: string;
   actualizado_at: string;
   pedido_items?: PedidoItem[];

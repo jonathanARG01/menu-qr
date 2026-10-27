@@ -27,6 +27,8 @@ import {
 import { MesaPanel } from "./MesaPanel";
 import { PantallaSalon } from "./PantallaSalon";
 import { formatoHora, type Region } from "@/lib/region";
+import { guardarSeguirAvisos, leerSeguirAvisos, useAvisoNuevo } from "./avisos";
+import { useRecordatorios } from "@/lib/push";
 
 type Props = {
   restaurante: Restaurante;
@@ -128,6 +130,35 @@ export function Salon({
     if (nuevos.some((a) => a.tipo === "cuenta" || a.tipo === "pago")) sonar("cuenta");
     else if (nuevos.length) sonar("mozo");
   }, [cuentas]);
+
+  // Aviso nuevo de una mesa de otro piso: el plano pasa a ese piso y marca la mesa unos segundos.
+  const [seguirAvisos, setSeguirAvisos] = useState(true);
+  const [resaltada, setResaltada] = useState<string | null>(null);
+  useEffect(() => setSeguirAvisos(leerSeguirAvisos()), []);
+  useAvisoNuevo(cuentas, pedidos, (mesaId) => {
+    const mesa = mesas.find((m) => m.id === mesaId);
+    const suPiso = pisosVisibles.find((p) => p.id === mesa?.piso_id);
+    if (!mesa || !suPiso || editando || pantalla || !seguirAvisos) return;
+    if (suPiso.id !== piso?.id && !mesaAbierta) {
+      setPisoId(suPiso.id);
+      setSeleccion(null);
+      avisar(`${suPiso.nombre}: aviso de ${nombreMesa(mesa.numero)}`);
+    }
+    setResaltada(mesa.id);
+  });
+  useEffect(() => {
+    if (!resaltada) return;
+    const id = setTimeout(() => setResaltada(null), 10000);
+    return () => clearTimeout(id);
+  }, [resaltada]);
+
+  useRecordatorios(restaurante.id, ajustes.modulos.reservas && ajustes.reservas.recordatorio);
+
+  // Pedidos para llevar que esperan que alguien los acepte (llegaron desde la carta).
+  const llevarPorAceptar = ajustes.modulos.llevar
+    ? cuentas.filter((c) => c.tipo && c.tipo !== "mesa" && pedidos.some((p) => p.cuenta_id === c.id && p.estado === "pendiente"))
+        .length
+    : 0;
 
   const ocupadas = mesasLocal.filter((m) => estados.get(m.id)?.ocupada).length;
   const avisos = mesasLocal.filter((m) => estados.get(m.id)?.aviso || estados.get(m.id)?.pendiente);
@@ -377,8 +408,17 @@ export function Salon({
         )}
       </div>
 
-      {avisos.length > 0 && !editando && (
+      {(avisos.length > 0 || llevarPorAceptar > 0) && !editando && (
         <div className="flex flex-wrap gap-2">
+          {llevarPorAceptar > 0 && (
+            <Link
+              href="/panel/llevar"
+              className="inline-flex animate-pulse items-center gap-2 rounded-full bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white"
+            >
+              <Icono nombre="llevar" className="h-4 w-4" />
+              {llevarPorAceptar} para llevar por aceptar
+            </Link>
+          )}
           {avisos.map((m) => {
             const e = estados.get(m.id)!;
             return (
@@ -440,6 +480,23 @@ export function Salon({
                   </span>
                 </button>
               ))}
+              {pisosVisibles.length > 1 && !editando && (
+                <label
+                  className="ml-auto flex cursor-pointer items-center gap-2 text-sm text-suave"
+                  title="Cuando llega un aviso de una mesa de otro piso, el plano muestra ese piso"
+                >
+                  <input
+                    type="checkbox"
+                    checked={seguirAvisos}
+                    onChange={(e) => {
+                      setSeguirAvisos(e.target.checked);
+                      guardarSeguirAvisos(e.target.checked);
+                    }}
+                    className="accent-[var(--color-marca)]"
+                  />
+                  Ir al piso del aviso
+                </label>
+              )}
               {admin && (
                 <button
                   type="button"
@@ -478,7 +535,7 @@ export function Salon({
                   mesas={mesas}
                   estados={estados}
                   editando={editando}
-                  seleccion={seleccion}
+                  seleccion={editando ? seleccion : resaltada ? { tipo: "mesa", id: resaltada } : null}
                   onSeleccionar={setSeleccion}
                   onMover={mover}
                   onAbrirMesa={setMesaAbierta}

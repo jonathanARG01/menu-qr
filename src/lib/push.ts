@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 // Avisos al celular del comensal con la carta cerrada (notificaciones push del navegador).
@@ -65,11 +66,63 @@ export async function suscribirAvisos(
 
 // Desde el panel: después de cambiar el estado de un pedido, avisa al celular del comensal (si se suscribió).
 export function avisarComensal(pedidoId: string) {
+  enviarAviso({ pedido_id: pedidoId });
+}
+
+// Delivery: el pedido salió del local.
+export function avisarEnCamino(cuentaId: string) {
+  enviarAviso({ cuenta_id: cuentaId, evento: "en_camino" });
+}
+
+function enviarAviso(cuerpo: Record<string, string>) {
   if (!CLAVE_PUBLICA) return;
   fetch("/api/avisos", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pedido_id: pedidoId }),
+    body: JSON.stringify(cuerpo),
     keepalive: true,
   }).catch(() => {});
+}
+
+// Suscribe este navegador a un pedido para llevar o a una reserva (sin mesa): la función de la base lo ata.
+export async function suscribirA(destino: { tipo: "pedido" | "reserva"; id: string }, idioma: string): Promise<boolean> {
+  if (!soportaPush()) return false;
+  if (Notification.permission !== "granted" && (await Notification.requestPermission()) !== "granted") return false;
+  try {
+    const registro = await navigator.serviceWorker.register("/sw-carta.js");
+    await navigator.serviceWorker.ready;
+    const suscripcion =
+      (await registro.pushManager.getSubscription()) ??
+      (await registro.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: aBytes(CLAVE_PUBLICA) }));
+    const json = suscripcion.toJSON();
+    const { data, error } = await createClient().rpc(
+      destino.tipo === "pedido" ? "suscribir_avisos_pedido" : "suscribir_avisos_reserva",
+      {
+        [destino.tipo === "pedido" ? "p_cuenta" : "p_reserva"]: destino.id,
+        p_endpoint: json.endpoint,
+        p_claves: json.keys ?? {},
+        p_idioma: idioma,
+      },
+    );
+    return !error && data === true;
+  } catch {
+    return false;
+  }
+}
+
+// Con Reservas o el Salón abiertos, cada 5 minutos se mandan los recordatorios de reserva que ya tocan (al celular de
+// los clientes que los aceptaron). El servidor decide cuáles y no repite.
+export function useRecordatorios(restauranteId: string, activo: boolean) {
+  useEffect(() => {
+    if (!activo || !CLAVE_PUBLICA) return;
+    const mandar = () =>
+      fetch("/api/recordatorios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restaurante: restauranteId }),
+      }).catch(() => {});
+    mandar();
+    const id = setInterval(mandar, 5 * 60000);
+    return () => clearInterval(id);
+  }, [restauranteId, activo]);
 }

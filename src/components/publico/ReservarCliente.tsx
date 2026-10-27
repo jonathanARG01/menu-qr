@@ -21,7 +21,7 @@ export function ReservarCliente({ restaurante, sucursales }: { restaurante: Rest
   const [hora, setHora] = useState("21:00");
   const [nota, setNota] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [listo, setListo] = useState(false);
+  const [listo, setListo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const falta = sucursales.length > 1 && !sucursal;
 
@@ -29,7 +29,7 @@ export function ReservarCliente({ restaurante, sucursales }: { restaurante: Rest
     e.preventDefault();
     setEnviando(true);
     setError(null);
-    const { error } = await createClient().rpc("reservar", {
+    const { data, error } = await createClient().rpc("reservar", {
       p_restaurante: restaurante.id,
       p_sucursal: sucursal?.id ?? null,
       p_nombre: nombre,
@@ -40,7 +40,7 @@ export function ReservarCliente({ restaurante, sucursales }: { restaurante: Rest
     });
     setEnviando(false);
     if (error) return setError(error.message);
-    setListo(true);
+    setListo(String(data));
   }
 
   if (listo) {
@@ -48,7 +48,10 @@ export function ReservarCliente({ restaurante, sucursales }: { restaurante: Rest
       <Marco restaurante={restaurante} titulo={t("reservar")}>
         <p className="text-5xl">✅</p>
         <p className="mt-3 text-lg">{t("reservaEnviada")}</p>
-        <a href={`/${restaurante.slug}`} className={`${BOTON} mt-6 block text-center`} style={ESTILO_BOTON}>
+        <a href={`/${restaurante.slug}/reserva/${listo}`} className={`${BOTON} mt-6 block text-center`} style={ESTILO_BOTON}>
+          {t("verReserva")}
+        </a>
+        <a href={`/${restaurante.slug}`} className="mt-3 block text-center text-sm text-stone-500 hover:underline">
           {t("verCarta")}
         </a>
       </Marco>

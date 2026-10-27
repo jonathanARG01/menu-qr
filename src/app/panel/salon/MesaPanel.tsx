@@ -6,7 +6,9 @@ import { Icono } from "@/components/Icono";
 import { describirPropina, totalLineas } from "@/lib/cuenta";
 import {
   NOMBRE_ESTADO,
+  NOMBRE_TIPO,
   type Ajustes,
+  type Cuenta,
   type EstadoPedido,
   type Pedido,
   type PedidoItem,
@@ -19,6 +21,8 @@ import { fechaCorta, imprimirTicket } from "@/lib/imprimir";
 import type { Categoria, Mesa, Plato, Restaurante } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { minutosDesde, tiempo, useAhora, type useServicio } from "@/lib/useServicio";
+import { formatoHora, numeroWhatsapp, paisDe } from "@/lib/region";
+import { ClienteCuenta, Atiende } from "./ClienteCuenta";
 import { Cobro, type NuevoPago } from "./Cobro";
 import { TomarPedido, type LineaNueva } from "./TomarPedido";
 
@@ -32,7 +36,9 @@ export const COLOR_ESTADO: Record<EstadoPedido, string> = {
 };
 
 type Props = {
-  mesa: Mesa;
+  // Una mesa del plano, o un pedido para llevar o delivery (cuentaId, sin mesa).
+  mesa?: Mesa;
+  cuentaId?: string;
   piso?: string;
   restaurante: Restaurante;
   ajustes: Ajustes;
@@ -41,23 +47,45 @@ type Props = {
   platos: Plato[];
   servicio: ReturnType<typeof useServicio>;
   onCerrar: () => void;
+  // Pantalla con la que abre (un pedido para llevar recién creado va directo a la carta).
+  inicio?: "mesa" | "pedido" | "cobro";
 };
 
-// Ficha de una mesa: abrirla, tomar pedidos, cambiar lo pedido, asignar platos a cada comensal y cobrar.
-export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias, platos, servicio, onCerrar }: Props) {
+// Ficha de una mesa (o de un pedido para llevar): abrirla, tomar pedidos, cambiar lo pedido, asignar platos a cada
+// comensal y cobrar.
+export function MesaPanel({
+  mesa,
+  cuentaId,
+  piso,
+  restaurante,
+  ajustes,
+  admin,
+  categorias,
+  platos,
+  servicio,
+  onCerrar,
+  inicio = "mesa",
+}: Props) {
   const avisar = useToast();
   const ahora = useAhora();
   const { supabase, recargar } = servicio;
   const formato = (n: number) => formatoPrecio(n, restaurante.moneda);
-  const cuenta = servicio.cuentas.find((c) => c.mesa_id === mesa.id);
+  const cuenta = cuentaId
+    ? servicio.cuentas.find((c) => c.id === cuentaId)
+    : servicio.cuentas.find((c) => !!mesa && c.mesa_id === mesa.id);
+  const llevar = !mesa;
+  const titulo = mesa
+    ? nombreMesa(mesa.numero)
+    : `${NOMBRE_TIPO[cuenta?.tipo ?? "llevar"]}${cuenta?.cliente_nombre ? ` · ${cuenta.cliente_nombre}` : ""}`;
   const pedidos = cuenta ? servicio.pedidos.filter((p) => p.cuenta_id === cuenta.id && p.estado !== "cancelado") : [];
   const pagos = cuenta ? servicio.pagos.filter((p) => p.cuenta_id === cuenta.id) : [];
   const lineas = pedidos.flatMap((p) => p.pedido_items ?? []);
-  const total = totalLineas(lineas);
+  const envio = Number(cuenta?.envio ?? 0);
+  const total = totalLineas(lineas) + envio;
   const pagado = pagos.reduce((t, p) => t + Number(p.monto), 0);
   const propinas = pagos.reduce((t, p) => t + Number(p.propina), 0);
-  const [pantalla, setPantalla] = useState<"mesa" | "pedido" | "cobro">("mesa");
-  const [comensalesNuevos, setComensalesNuevos] = useState(mesa.capacidad ?? 2);
+  const [pantalla, setPantalla] = useState<"mesa" | "pedido" | "cobro">(inicio);
+  const [comensalesNuevos, setComensalesNuevos] = useState(mesa?.capacidad ?? 2);
 
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
@@ -77,6 +105,7 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
   }
 
   const abrir = () =>
+    mesa &&
     hacer(
       supabase.from("cuentas").insert({
         restaurante_id: restaurante.id,
@@ -101,10 +130,11 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
           restaurante_id: restaurante.id,
           cuenta_id: cuenta.id,
           sucursal_id: cuenta.sucursal_id,
-          mesa_numero: mesa.numero,
+          mesa_numero: mesa?.numero ?? null,
           estacion,
           origen: "personal",
           estado: "nuevo",
+          nombre: llevar ? (cuenta.cliente_nombre?.slice(0, 40) ?? null) : null,
         })
         .select("id")
         .single();
@@ -165,7 +195,7 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
       { tipo: "titulo", texto: restaurante.nombre },
       {
         tipo: "texto",
-        texto: `${nombreMesa(mesa.numero)} · ${cuenta?.comensales ?? 1} pers. · ${fechaCorta(Date.now(), regionDe(ajustes))}`,
+        texto: `${llevar ? titulo : `${titulo} · ${cuenta?.comensales ?? 1} pers.`} · ${fechaCorta(Date.now(), regionDe(ajustes))}`,
         chico: true,
       },
       { tipo: "separador" },
@@ -174,6 +204,8 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
         izq: `${a.cantidad} × ${nombre}`,
         der: formato(a.importe),
       })),
+      ...(envio > 0 ? [{ tipo: "fila" as const, izq: "Envío", der: formato(envio) }] : []),
+      ...(llevar && cuenta?.direccion ? [{ tipo: "texto" as const, texto: cuenta.direccion, chico: true }] : []),
       { tipo: "separador" },
       { tipo: "fila", izq: "Total", der: formato(total), fuerte: true },
       ...(pagado > 0
@@ -207,28 +239,28 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
   async function cerrarMesa() {
     if (!cuenta) return;
     const falta = total - pagado;
-    if (falta > 0.009 && !confirm(`Todavía faltan ${formato(falta)}. ¿Cerrar la mesa igual?`)) return;
+    if (falta > 0.009 && !confirm(`Todavía faltan ${formato(falta)}. ¿Cerrar ${llevar ? "el pedido" : "la mesa"} igual?`)) return;
     if (
       await hacer(
         supabase
           .from("cuentas")
           .update({ estado: "cerrada", cerrada_at: new Date().toISOString(), aviso: null })
           .eq("id", cuenta.id),
-        `${nombreMesa(mesa.numero)} cerrada`,
+        llevar ? "Pedido cerrado" : `${titulo} cerrada`,
       )
     )
       onCerrar();
   }
 
   async function anular() {
-    if (!cuenta || !confirm("¿Anular esta mesa? Se descarta sin cobrar.")) return;
+    if (!cuenta || !confirm(`¿Anular ${llevar ? "este pedido" : "esta mesa"}? Se descarta sin cobrar.`)) return;
     if (
       await hacer(
         supabase
           .from("cuentas")
           .update({ estado: "anulada", cerrada_at: new Date().toISOString(), aviso: null })
           .eq("id", cuenta.id),
-        "Mesa anulada",
+        llevar ? "Pedido anulado" : "Mesa anulada",
       )
     )
       onCerrar();
@@ -241,18 +273,18 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={nombreMesa(mesa.numero)}
+        aria-label={titulo}
         onClick={(e) => e.stopPropagation()}
         className={`flex h-full w-full ${ancho} flex-col bg-superficie shadow-2xl`}
       >
         <div className="flex items-center gap-3 border-b border-borde px-5 py-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xl font-bold">{nombreMesa(mesa.numero)}</p>
+            <p className="truncate text-xl font-bold">{titulo}</p>
             <p className="text-sm text-suave" suppressHydrationWarning>
               {[
                 piso,
-                `${mesa.capacidad ?? 4} lugares`,
-                cuenta && `abierta hace ${tiempo(minutosDesde(cuenta.abierta_at, ahora))}`,
+                mesa && `${mesa.capacidad ?? 4} lugares`,
+                cuenta && `${llevar ? "pedido" : "abierta"} hace ${tiempo(minutosDesde(cuenta.abierta_at, ahora))}`,
               ]
                 .filter(Boolean)
                 .join(" · ")}
@@ -303,14 +335,16 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
             </div>
           )}
 
-          {!cuenta ? (
+          {!cuenta && llevar ? (
+            <p className="rounded-xl bg-stone-50 p-4 text-center text-suave">Este pedido ya se cerró.</p>
+          ) : !cuenta ? (
             <div className="space-y-4">
               <p className="rounded-xl bg-stone-50 p-4 text-center text-suave">Mesa libre</p>
               <div className="flex items-center justify-between">
                 <span className="font-medium">¿Cuántos son?</span>
                 <Contador valor={comensalesNuevos} onChange={setComensalesNuevos} />
               </div>
-              {comensalesNuevos > (mesa.capacidad ?? 4) && (
+              {mesa && comensalesNuevos > (mesa.capacidad ?? 4) && (
                 <p className="text-sm text-amber-700">
                   Son más que los lugares de la mesa ({mesa.capacidad}): agrega sillas o junta mesas.
                 </p>
@@ -324,7 +358,7 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
               categorias={categorias}
               platos={platos}
               zona={ajustes.zona_horaria}
-              comensales={cuenta.comensales}
+              comensales={llevar ? 1 : cuenta.comensales}
               formato={formato}
               onEnviar={enviarPedido}
               onCancelar={() => setPantalla("mesa")}
@@ -333,7 +367,7 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
             <Cobro
               total={total}
               pagos={pagos}
-              comensales={cuenta.comensales}
+              comensales={llevar ? 1 : cuenta.comensales}
               lineas={lineas}
               ajustes={ajustes}
               solicitud={cuenta.aviso?.tipo === "cuenta" ? (cuenta.aviso.detalle ?? null) : null}
@@ -344,23 +378,35 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
             />
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-medium">Comensales</span>
-                <Contador
-                  valor={cuenta.comensales}
-                  onChange={(n) => hacer(supabase.from("cuentas").update({ comensales: n }).eq("id", cuenta.id))}
-                />
-              </div>
-              {cuenta.comensales > (mesa.capacidad ?? 4) && (
-                <p className="-mt-2 text-xs text-amber-700">Más que los {mesa.capacidad} lugares de la mesa.</p>
+              {llevar ? (
+                <DatosLlevar cuenta={cuenta} ajustes={ajustes} formato={formato} />
+              ) : (
+                <>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-medium">Comensales</span>
+                    <Contador
+                      valor={cuenta.comensales}
+                      onChange={(n) => hacer(supabase.from("cuentas").update({ comensales: n }).eq("id", cuenta.id))}
+                    />
+                  </div>
+                  {mesa && cuenta.comensales > (mesa.capacidad ?? 4) && (
+                    <p className="-mt-2 text-xs text-amber-700">Más que los {mesa.capacidad} lugares de la mesa.</p>
+                  )}
+                </>
               )}
+              {ajustes.modulos.clientes && !llevar && (
+                <ClienteCuenta supabase={supabase} cuenta={cuenta} ajustes={ajustes} formato={formato} onCambio={recargar} />
+              )}
+              {ajustes.modulos.equipo && <Atiende supabase={supabase} cuenta={cuenta} onCambio={recargar} />}
 
               <button type="button" className="boton w-full py-3" onClick={() => setPantalla("pedido")}>
                 <Icono nombre="mas_simple" className="h-4 w-4" /> Tomar pedido
               </button>
 
               {pedidos.length === 0 ? (
-                <p className="py-6 text-center text-sm text-suave">Todavía no hay pedidos en esta mesa.</p>
+                <p className="py-6 text-center text-sm text-suave">
+                  Todavía no hay pedidos {llevar ? "en este pedido" : "en esta mesa"}.
+                </p>
               ) : (
                 <ul className="space-y-3">
                   {pedidos.map((p) => (
@@ -409,7 +455,7 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
                               title="De quién es (para dividir por consumo)"
                             >
                               <option value="">Todos</option>
-                              {Array.from({ length: cuenta.comensales }, (_, k) => (
+                              {Array.from({ length: llevar ? 0 : cuenta.comensales }, (_, k) => (
                                 <option key={k} value={k + 1}>
                                   C{k + 1}
                                 </option>
@@ -490,7 +536,7 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
                 </button>
               ) : (
                 <button type="button" className="boton flex-1 py-3" onClick={cerrarMesa}>
-                  Cerrar mesa
+                  {llevar ? "Cerrar pedido" : "Cerrar mesa"}
                 </button>
               )}
             </div>
@@ -548,5 +594,51 @@ function AvisoCliente({
         </ul>
       )}
     </>
+  );
+}
+
+// Datos del pedido para llevar o delivery: cliente, teléfono, hora y dirección.
+function DatosLlevar({ cuenta, ajustes, formato }: { cuenta: Cuenta; ajustes: Ajustes; formato: (n: number) => string }) {
+  const region = regionDe(ajustes);
+  const telefono = cuenta.cliente_telefono;
+  return (
+    <div className="space-y-1.5 rounded-xl bg-stone-50 p-3 text-sm">
+      <p className="flex items-center gap-2 font-semibold">
+        <Icono nombre={cuenta.tipo === "delivery" ? "delivery" : "llevar"} className="h-4 w-4" />
+        {cuenta.cliente_nombre ?? "Sin nombre"}
+        {cuenta.origen === "cliente" && (
+          <span className="rounded bg-violet-100 px-1.5 text-xs font-normal text-violet-800">desde la carta</span>
+        )}
+      </p>
+      {telefono && (
+        <p>
+          <a
+            href={`https://wa.me/${numeroWhatsapp(telefono, paisDe(ajustes.pais))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-emerald-700 hover:underline"
+          >
+            <Icono nombre="whatsapp" className="h-4 w-4" /> {telefono}
+          </a>
+        </p>
+      )}
+      <p className="text-suave">
+        {cuenta.tipo === "delivery" ? "Entregar" : "Retira"}{" "}
+        {cuenta.para_hora ? `a las ${formatoHora(cuenta.para_hora, region)}` : "lo antes posible"}
+        {Number(cuenta.envio) > 0 ? ` · envío ${formato(Number(cuenta.envio))}` : ""}
+      </p>
+      {cuenta.direccion && (
+        <p>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cuenta.direccion)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-marca hover:underline"
+          >
+            {cuenta.direccion}
+          </a>
+        </p>
+      )}
+    </div>
   );
 }
