@@ -7,11 +7,16 @@ import type { Restaurante, Seccion, Sucursal, Tema } from "@/lib/types";
 import type { PropsTema } from "./comun";
 import { ProveedorCarta, useCarta } from "./contexto";
 import { PieCarta } from "./PieCarta";
+import { TemaBistro } from "./TemaBistro";
 import { TemaClasico } from "./TemaClasico";
 import { TemaEsmeralda } from "./TemaEsmeralda";
+import { TemaForno } from "./TemaForno";
+import { TemaNeon } from "./TemaNeon";
 import { TemaNoir } from "./TemaNoir";
+import { TemaOriente } from "./TemaOriente";
 import { TemaRetro } from "./TemaRetro";
 import { TemaStreet } from "./TemaStreet";
+import { TemaVeggie } from "./TemaVeggie";
 
 const TEMAS: Record<Tema, (props: PropsTema) => React.ReactNode> = {
   clasico: TemaClasico,
@@ -19,6 +24,11 @@ const TEMAS: Record<Tema, (props: PropsTema) => React.ReactNode> = {
   esmeralda: TemaEsmeralda,
   street: TemaStreet,
   retro: TemaRetro,
+  bistro: TemaBistro,
+  veggie: TemaVeggie,
+  forno: TemaForno,
+  oriente: TemaOriente,
+  neon: TemaNeon,
 };
 
 type Props = {

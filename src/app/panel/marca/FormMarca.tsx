@@ -34,7 +34,15 @@ const MUESTRA_FUENTE: Record<Tema, string> = {
   esmeralda: "f-cormorant",
   street: "f-pacifico",
   retro: "f-oswald uppercase",
+  bistro: "f-marker uppercase",
+  veggie: "f-vibes text-2xl",
+  forno: "f-kaushan",
+  oriente: "f-playfair uppercase font-bold",
+  neon: "f-righteous uppercase [text-shadow:0_0_8px_currentColor]",
 };
+
+// Diseños que necesitan el SQL 0006 para poder guardarse.
+const TEMAS_0006: Tema[] = ["bistro", "veggie", "forno", "oriente", "neon"];
 
 export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante; secciones: Seccion[] }) {
   const supabase = useMemo(() => createClient(), []);
@@ -102,10 +110,8 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
     setGuardando(false);
     if (error) {
       const falta = error.message.includes("tema");
-      return avisar(
-        falta ? "Falta ejecutar el SQL 0002_temas.sql en Supabase para guardar el diseño." : mensajeError(error),
-        "error",
-      );
+      const sql = TEMAS_0006.includes(tema) ? "0006_temas_nuevos.sql" : "0002_temas.sql";
+      return avisar(falta ? `Falta ejecutar el SQL ${sql} en Supabase para guardar el diseño.` : mensajeError(error), "error");
     }
     if (restaurante.logo_url && restaurante.logo_url !== logo) borrarFoto(supabase, restaurante.logo_url);
     avisar("Cambios guardados");

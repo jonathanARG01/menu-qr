@@ -9,6 +9,10 @@
 @import "@fontsource/montserrat/500.css";
 @import "@fontsource/montserrat/600.css";
 @import "@fontsource/pacifico/400.css";
+@import "@fontsource/permanent-marker/400.css";
+@import "@fontsource/great-vibes/400.css";
+@import "@fontsource/kaushan-script/400.css";
+@import "@fontsource/righteous/400.css";
 
 .f-playfair {
   font-family: "Playfair Display", Georgia, serif;
@@ -25,4 +29,16 @@
 }
 .f-pacifico {
   font-family: "Pacifico", cursive;
+}
+.f-marker {
+  font-family: "Permanent Marker", "Impact", sans-serif;
+}
+.f-vibes {
+  font-family: "Great Vibes", cursive;
+}
+.f-kaushan {
+  font-family: "Kaushan Script", cursive;
+}
+.f-righteous {
+  font-family: "Righteous", system-ui, sans-serif;
 }

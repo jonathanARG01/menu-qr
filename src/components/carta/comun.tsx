@@ -17,6 +17,16 @@ export const TEMA_INFO: Record<Tema, { nombre: string; descripcion: string; acen
   esmeralda: { nombre: "Esmeralda", descripcion: "Verde gourmet con detalles dorados", acento: "#d4af6a", fondo: "#0e3b30" },
   street: { nombre: "Comida rápida", descripcion: "Negro con colores intensos", acento: "#ffc300", fondo: "#121212" },
   retro: { nombre: "Retro", descripcion: "Crema y café con mostaza", acento: "#f2b134", fondo: "#3a2c25" },
+  bistro: {
+    nombre: "Bistró",
+    descripcion: "Verde intenso, letras pintadas y platos redondos",
+    acento: "#f5c518",
+    fondo: "#1d4a2f",
+  },
+  veggie: { nombre: "Dorado", descripcion: "Verde oscuro con marco y letras doradas", acento: "#d9b25f", fondo: "#14291b" },
+  forno: { nombre: "Forno", descripcion: "Blanco con pinceladas, ideal para pizzerías", acento: "#c8302b", fondo: "#f3f2ee" },
+  oriente: { nombre: "Oriente", descripcion: "Verde y crema con ondas, cocina asiática", acento: "#2f6b4f", fondo: "#f3eedd" },
+  neon: { nombre: "Neón", descripcion: "Negro con luces de neón y brochazos", acento: "#ff2bd6", fondo: "#07070b" },
 };
 
 export const ICONOS: Record<string, string> = {
@@ -50,6 +60,63 @@ export function Foto({ plato, className }: { plato: Plato; className: string }) 
   if (!plato.foto_url) return null;
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={plato.foto_url} alt={plato.nombre} loading="lazy" decoding="async" className={className} />;
+}
+
+// Emoji de reserva para los diseños de platos redondos cuando el plato no tiene foto.
+const EMOJIS: [RegExp, string][] = [
+  [/pizza|margarita|pepperoni|prosciutto|cuatro quesos|carnes|hongos/, "🍕"],
+  [/hamburgues|burger/, "🍔"],
+  [/papas/, "🍟"],
+  [/rollito|lumpia|spring|empanad|gyoza/, "🥟"],
+  [/roll|sushi|philadelphia|california|tuna|maki/, "🍣"],
+  [/fideo|ramen|soba|mie |noodle|pasta/, "🍜"],
+  [/sopa|tom yum|tom yam|miso|caldo/, "🍲"],
+  [/biryani|masala|tikka|curry|arroz/, "🍛"],
+  [/kabab|falafel|medall/, "🧆"],
+  [/bruschetta|pan /, "🥖"],
+  [/langostin|camar|shrimp/, "🍤"],
+  [/pollo|alita|ayam/, "🍗"],
+  [/carne|daging|teriyaki|bife/, "🥩"],
+  [/edamame|arveja/, "🫛"],
+  [/tofu/, "🥢"],
+  [/mochi/, "🍡"],
+  [/cheesecake|torta|tarta/, "🍰"],
+  [/helado/, "🍨"],
+  [/gulab|rasmalai|flan/, "🍮"],
+  [/bubble/, "🧋"],
+  [/matcha|té |latte/, "🍵"],
+  [/limonada|jugo/, "🍋"],
+  [/ensalada|verdura|vegetal/, "🥗"],
+];
+
+const emojiPlato = (nombre: string) => {
+  const n = ` ${nombre
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")} `;
+  return EMOJIS.find(([re]) => re.test(n))?.[1] ?? "🍽️";
+};
+
+// Foto circular del plato; sin foto, un plato con un emoji para que el diseño no quede vacío.
+export function FotoRedonda({ plato, className, style }: { plato: Plato; className: string; style?: React.CSSProperties }) {
+  if (plato.foto_url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={plato.foto_url}
+        alt={plato.nombre}
+        loading="lazy"
+        decoding="async"
+        className={`aspect-square rounded-full object-cover ${className}`}
+        style={style}
+      />
+    );
+  }
+  return (
+    <span aria-hidden className={`flex aspect-square items-center justify-center rounded-full ${className}`} style={style}>
+      {emojiPlato(plato.nombre)}
+    </span>
+  );
 }
 
 export function Logo({
