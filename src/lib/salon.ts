@@ -241,5 +241,7 @@ export type SolicitudCuenta = {
   partes?: number;
   propina?: Propina;
   metodo?: string;
+  // Al dividir, el medio de pago de cada persona (posición 0 = persona 1); vacío si no lo eligió.
+  metodos?: string[];
   monto?: number;
 };

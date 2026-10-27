@@ -365,7 +365,7 @@ function BloqueCategoria({
             onChange={(e) => onEstacion(e.target.value)}
             title="Pantalla donde llegan las comandas de esta categoría"
             aria-label={`Pantalla de ${categoria.nombre}`}
-            className="max-w-28 rounded-lg border border-borde bg-white px-2 py-1 text-xs text-suave"
+            className="max-w-28 rounded-lg border border-borde bg-superficie px-2 py-1 text-xs text-suave"
           >
             {[...new Set([...estaciones, categoria.estacion ?? "Cocina"])].map((e) => (
               <option key={e}>{e}</option>
@@ -419,7 +419,7 @@ function FilaPlato({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={`flex items-center gap-2 bg-white px-2 py-2 ${isDragging ? "relative z-10 shadow-lg" : ""}`}
+      className={`flex items-center gap-2 bg-superficie px-2 py-2 ${isDragging ? "relative z-10 shadow-lg" : ""}`}
     >
       <Asa {...attributes} {...listeners} />
       <button type="button" onClick={onEditar} className="flex min-w-0 flex-1 items-center gap-3 text-left">
@@ -469,7 +469,7 @@ function Menu({ opciones }: { opciones: { texto: string; accion: () => void; pel
       {abierto && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setAbierto(false)} />
-          <div className="absolute right-0 z-40 mt-1 w-52 overflow-hidden rounded-xl border border-borde bg-white py-1 shadow-xl">
+          <div className="absolute right-0 z-40 mt-1 w-52 overflow-hidden rounded-xl border border-borde bg-superficie py-1 shadow-xl">
             {opciones.map((o) => (
               <button
                 key={o.texto}
@@ -521,7 +521,7 @@ function TraducirCategoria({
         role="dialog"
         aria-modal="true"
         aria-label={`Traducir ${categoria.nombre}`}
-        className="w-full max-w-sm space-y-4 rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl"
+        className="w-full max-w-sm space-y-4 rounded-t-2xl bg-superficie p-5 shadow-2xl sm:rounded-2xl"
       >
         <h2 className="text-lg font-semibold">Traducir “{categoria.nombre}”</h2>
         {idiomas.map((i) => (

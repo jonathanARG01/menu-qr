@@ -15,8 +15,11 @@ type Props = {
   rol: Rol;
   email: string;
   esSuperadmin: boolean;
+  tema: Tema;
   children: React.ReactNode;
 };
+
+export type Tema = "oscuro" | "claro";
 
 // Pantallas que usan todo el ancho (plano y comandas); el resto va centrado.
 const ANCHO_COMPLETO = ["/panel/salon", "/panel/cocina"];
@@ -32,18 +35,29 @@ export function MarcoPanel(props: Props) {
   const completo = ANCHO_COMPLETO.some((r) => ruta.startsWith(r));
   const accesos = props.secciones.slice(0, 4);
 
+  const [tema, setTema] = useState(props.tema);
+
   useEffect(() => setMenuAbierto(false), [ruta]);
 
+  // Se guarda en una cookie para que el servidor pinte el tema correcto desde el primer momento.
+  function alternarTema() {
+    const nuevo = tema === "oscuro" ? "claro" : "oscuro";
+    setTema(nuevo);
+    document.cookie = `panel-tema=${nuevo}; path=/; max-age=31536000; samesite=lax`;
+  }
+  const botonTema = <BotonTema tema={tema} onClick={alternarTema} />;
+
   return (
-    <div className="min-h-screen bg-fondo">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-borde bg-white lg:flex">
-        <MenuLateral {...props} ruta={ruta} />
+    <div className={`min-h-screen bg-fondo text-tinta ${tema === "oscuro" ? "tema-oscuro" : ""}`}>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-borde bg-superficie lg:flex">
+        <MenuLateral {...props} ruta={ruta} botonTema={botonTema} />
       </aside>
 
       {/* Teléfono y tableta: barra superior */}
-      <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-borde bg-white/95 px-4 py-2.5 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-borde bg-superficie/95 px-4 py-2.5 backdrop-blur lg:hidden">
         <Logo restaurante={props.restaurante} />
         <p className="min-w-0 flex-1 truncate font-semibold">{props.restaurante.nombre}</p>
+        {botonTema}
         <button
           type="button"
           onClick={() => setMenuAbierto(true)}
@@ -57,8 +71,8 @@ export function MarcoPanel(props: Props) {
       {menuAbierto && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMenuAbierto(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] bg-white shadow-2xl">
-            <MenuLateral {...props} ruta={ruta} onCerrar={() => setMenuAbierto(false)} />
+          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] bg-superficie shadow-2xl">
+            <MenuLateral {...props} ruta={ruta} botonTema={botonTema} onCerrar={() => setMenuAbierto(false)} />
           </div>
         </div>
       )}
@@ -70,7 +84,7 @@ export function MarcoPanel(props: Props) {
       </div>
 
       {/* Teléfono: accesos al alcance del pulgar. Fuera de la cabecera: su backdrop-blur rompería el position: fixed. */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-borde bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-borde bg-superficie pb-[env(safe-area-inset-bottom)] lg:hidden">
         {accesos.map((s) => (
           <Link
             key={s.id}
@@ -96,6 +110,21 @@ export function MarcoPanel(props: Props) {
   );
 }
 
+function BotonTema({ tema, onClick }: { tema: Tema; onClick: () => void }) {
+  const texto = tema === "oscuro" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-lg p-2 text-suave hover:bg-stone-100 hover:text-tinta"
+      aria-label={texto}
+      title={texto}
+    >
+      <Icono nombre={tema === "oscuro" ? "sol" : "luna"} className="h-5 w-5" />
+    </button>
+  );
+}
+
 function Logo({ restaurante }: { restaurante: Props["restaurante"] }) {
   return restaurante.logo_url ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -118,8 +147,9 @@ function MenuLateral({
   email,
   esSuperadmin,
   ruta,
+  botonTema,
   onCerrar,
-}: Props & { ruta: string; onCerrar?: () => void }) {
+}: Props & { ruta: string; botonTema: React.ReactNode; onCerrar?: () => void }) {
   const grupos = ["Servicio", "Carta", "Negocio"] as const;
 
   return (
@@ -206,7 +236,8 @@ function MenuLateral({
               Admin
             </Link>
           )}
-          <form action={cerrarSesion} className="ml-auto">
+          <span className="ml-auto">{botonTema}</span>
+          <form action={cerrarSesion}>
             <button className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-suave hover:bg-stone-100 hover:text-tinta">
               <Icono nombre="salir" className="h-4 w-4" /> Salir
             </button>

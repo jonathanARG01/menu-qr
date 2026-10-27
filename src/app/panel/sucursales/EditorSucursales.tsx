@@ -175,7 +175,7 @@ function FormSucursal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="titulo-sucursal"
-        className="w-full max-w-md space-y-4 rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl"
+        className="w-full max-w-md space-y-4 rounded-t-2xl bg-superficie p-5 shadow-2xl sm:rounded-2xl"
       >
         <h2 id="titulo-sucursal" className="text-lg font-semibold">
           {nueva ? "Nueva sucursal" : "Editar sucursal"}

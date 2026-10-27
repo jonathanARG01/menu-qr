@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { obtenerContexto } from "@/lib/panel";
 import { ToastProvider } from "@/components/Toast";
 import { MarcoPanel } from "./NavPanel";
@@ -13,8 +14,12 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     return <Onboarding nombre={meta.restaurante_nombre} slug={meta.restaurante_slug} email={user.email ?? ""} />;
   }
 
+  // Modo oscuro por defecto; el botón del menú guarda la elección en esta cookie.
+  const tema = (await cookies()).get("panel-tema")?.value === "claro" ? "claro" : "oscuro";
+
   return (
     <MarcoPanel
+      tema={tema}
       restaurante={{
         id: restaurante.id,
         nombre: restaurante.nombre,

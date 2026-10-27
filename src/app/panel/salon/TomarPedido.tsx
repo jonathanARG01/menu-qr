@@ -87,7 +87,7 @@ export function TomarPedido({
                   disabled={!p.disponible}
                   onClick={() => sumar(p)}
                   className={`flex w-full items-center gap-2 rounded-xl border p-2.5 text-left transition ${
-                    n ? "border-marca bg-marca/5" : "border-borde bg-white hover:border-stone-300"
+                    n ? "border-marca bg-marca/5" : "border-borde bg-superficie hover:border-stone-300"
                   } disabled:opacity-50`}
                 >
                   <span className="min-w-0 flex-1">
@@ -110,7 +110,7 @@ export function TomarPedido({
         ) : (
           <ul className="flex-1 space-y-2 overflow-y-auto md:max-h-[48vh]">
             {lineas.map((l) => (
-              <li key={l.clave} className="rounded-xl bg-white p-2.5 shadow-sm">
+              <li key={l.clave} className="rounded-xl bg-superficie p-2.5 shadow-sm">
                 <div className="flex items-center gap-2">
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{l.plato.nombre}</span>
                   <span className="flex items-center rounded-lg border border-borde">

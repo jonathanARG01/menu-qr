@@ -42,6 +42,7 @@ export function MiMesa({
     ajustes.propinas.sugerida ? { tipo: "porcentaje", valor: ajustes.propinas.sugerida } : { tipo: "ninguna" },
   );
   const [metodo, setMetodo] = useState<string | undefined>(undefined);
+  const [metodos, setMetodos] = useState<string[]>([]);
   const [enviando, setEnviando] = useState(false);
   const precio = (n: number) => formatoPrecio(n, restaurante.moneda);
   const cobros = ajustes.modulos.cobros;
@@ -74,8 +75,9 @@ export function MiMesa({
         ? {
             modo,
             partes: modo === "iguales" ? partes : undefined,
+            metodos: cobros && modo !== "junto" ? Array.from({ length: partes }, (_, i) => metodos[i] ?? "") : undefined,
             propina: cobros ? propina : undefined,
-            metodo: cobros ? metodo : undefined,
+            metodo: cobros && modo === "junto" ? metodo : undefined,
           }
         : null;
     const { error } = await createClient().rpc("avisar_desde_mesa", {
@@ -89,6 +91,21 @@ export function MiMesa({
     onAviso(error ? t("errorEnvio") : tipo === "mozo" ? t("meseroAvisado") : t("cuentaPedida"));
     if (!error) onCerrar();
   }
+
+  const contador = (etiqueta: string) => (
+    <div className="mt-2 flex items-center justify-between">
+      <span className="text-sm text-stone-500">{etiqueta}</span>
+      <span className="flex items-center rounded-lg border border-stone-200 bg-white">
+        <button type="button" aria-label="−" className="h-9 w-9 text-lg" onClick={() => setPartes(Math.max(2, partes - 1))}>
+          −
+        </button>
+        <span className="w-8 text-center font-semibold tabular-nums">{partes}</span>
+        <button type="button" aria-label="+" className="h-9 w-9 text-lg" onClick={() => setPartes(Math.min(30, partes + 1))}>
+          +
+        </button>
+      </span>
+    </div>
+  );
 
   const chip = (activo: boolean) =>
     `rounded-xl border-2 p-3 text-left ${activo ? "border-stone-900 bg-stone-50" : "border-stone-200 bg-white"}`;
@@ -170,39 +187,47 @@ export function MiMesa({
                     <button type="button" className="block w-full text-left font-semibold" onClick={() => setModo("iguales")}>
                       {t("partesIguales")}
                     </button>
-                    {modo === "iguales" && (
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-sm text-stone-500">{t("entreCuantos")}</span>
-                        <span className="flex items-center rounded-lg border border-stone-200 bg-white">
-                          <button
-                            type="button"
-                            aria-label="−"
-                            className="h-9 w-9 text-lg"
-                            onClick={() => setPartes(Math.max(2, partes - 1))}
-                          >
-                            −
-                          </button>
-                          <span className="w-8 text-center font-semibold tabular-nums">{partes}</span>
-                          <button
-                            type="button"
-                            aria-label="+"
-                            className="h-9 w-9 text-lg"
-                            onClick={() => setPartes(Math.min(30, partes + 1))}
-                          >
-                            +
-                          </button>
-                        </span>
-                      </div>
-                    )}
+                    {modo === "iguales" && contador(t("entreCuantos"))}
                   </div>
-                  <button type="button" className={chip(modo === "consumo")} onClick={() => setModo("consumo")}>
-                    <span className="block font-semibold">{t("cadaUno")}</span>
-                    <span className="block text-sm text-stone-500">{t("cadaUnoAyuda")}</span>
-                  </button>
+                  <div className={chip(modo === "consumo")}>
+                    <button type="button" className="block w-full text-left" onClick={() => setModo("consumo")}>
+                      <span className="block font-semibold">{t("cadaUno")}</span>
+                      <span className="block text-sm text-stone-500">{t("cadaUnoAyuda")}</span>
+                    </button>
+                    {modo === "consumo" && cobros && ajustes.metodos_pago.length > 0 && contador(t("cuantosSon"))}
+                  </div>
                 </div>
               </div>
 
-              {cobros && ajustes.metodos_pago.length > 0 && (
+              {cobros && ajustes.metodos_pago.length > 0 && modo !== "junto" && (
+                <div>
+                  <p className="mb-2 text-sm font-semibold">{t("comoPagaCada")}</p>
+                  <ul className="space-y-2">
+                    {Array.from({ length: partes }, (_, i) => (
+                      <li key={i} className="flex items-center gap-3">
+                        <span className="w-24 shrink-0 text-sm text-stone-600">
+                          {t("persona")} {i + 1}
+                        </span>
+                        <select
+                          value={metodos[i] ?? ""}
+                          onChange={(e) => setMetodos((m) => Object.assign([...m], { [i]: e.target.value }))}
+                          aria-label={`${t("medioPago")} · ${t("persona")} ${i + 1}`}
+                          className="min-w-0 flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-base"
+                        >
+                          <option value="">{t("elegir")}</option>
+                          {ajustes.metodos_pago.map((m) => (
+                            <option key={m} value={m}>
+                              {m}
+                            </option>
+                          ))}
+                        </select>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {cobros && ajustes.metodos_pago.length > 0 && modo === "junto" && (
                 <div>
                   <p className="mb-2 text-sm font-semibold">{t("medioPago")}</p>
                   <div className="flex flex-wrap gap-2">

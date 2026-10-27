@@ -39,7 +39,7 @@ export function SelectorPropina({
   const [tipoLibre, setTipoLibre] = useState<"porcentaje" | "monto">("porcentaje");
   const metodo = valor.tipo === "porcentaje" || valor.tipo === "monto" ? valor.metodo : undefined;
   const chip = (activo: boolean) =>
-    `rounded-xl border px-3 py-2 text-sm font-medium transition ${activo ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 bg-white hover:border-stone-400"}`;
+    `rounded-xl border px-3 py-2 text-sm font-medium transition ${activo ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 bg-superficie hover:border-stone-400"}`;
   const elegir = (p: Propina) => {
     setLibre(false);
     onChange(p.tipo === "porcentaje" || p.tipo === "monto" ? { ...p, metodo } : p);
@@ -104,7 +104,7 @@ export function SelectorPropina({
                   setTipoLibre(t);
                   onChange({ tipo: t, valor: 0, metodo });
                 }}
-                className={`rounded-md px-3 py-1 font-semibold ${valor.tipo === t ? "bg-white shadow-sm" : "text-stone-500"}`}
+                className={`rounded-md px-3 py-1 font-semibold ${valor.tipo === t ? "bg-superficie shadow-sm" : "text-stone-500"}`}
               >
                 {t === "porcentaje" ? textos.porcentaje : textos.monto}
               </button>
@@ -133,7 +133,7 @@ export function SelectorPropina({
                 key={m ?? "mismo"}
                 type="button"
                 onClick={() => onChange({ ...valor, metodo: m })}
-                className={`rounded-lg border px-2.5 py-1 text-xs ${metodo === m ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 bg-white"}`}
+                className={`rounded-lg border px-2.5 py-1 text-xs ${metodo === m ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 bg-superficie"}`}
               >
                 {m ?? textos.mismo}
               </button>

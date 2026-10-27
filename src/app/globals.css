@@ -9,6 +9,7 @@
   --color-suave: #78716c;
   --color-borde: #e7e5e4;
   --color-fondo: #fafaf9;
+  --color-superficie: #ffffff;
 }
 
 body {
@@ -18,7 +19,7 @@ body {
 }
 
 .campo {
-  @apply w-full rounded-lg border border-borde bg-white px-3 py-2.5 text-base outline-none transition focus:border-marca focus:ring-2 focus:ring-marca/20;
+  @apply w-full rounded-lg border border-borde bg-superficie px-3 py-2.5 text-base outline-none transition focus:border-marca focus:ring-2 focus:ring-marca/20;
 }
 
 .etiqueta-campo {
@@ -30,11 +31,180 @@ body {
 }
 
 .boton-secundario {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-borde bg-white px-4 py-2.5 text-sm font-medium text-tinta transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60;
+  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-borde bg-superficie px-4 py-2.5 text-sm font-medium text-tinta transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60;
 }
 
 .tarjeta {
-  @apply rounded-2xl border border-borde bg-white;
+  @apply rounded-2xl border border-borde bg-superficie;
+}
+
+/* ── Tema oscuro del panel ──
+   En vez de repetir clases dark: en cada pantalla, dentro de .tema-oscuro se invierten las escalas de color
+   (el 50 pasa a ser el 950, el 100 el 900…) y las superficies. Los tonos medios (400–600) y el blanco del texto
+   quedan igual, así los botones de color se ven como siempre. .tema-fijo vuelve a los colores originales
+   (pantalla de cocina, que ya es oscura, y la vista previa de la carta). */
+.tema-oscuro {
+  color-scheme: dark;
+  --color-superficie: #1f1c1a;
+  --color-fondo: #141210;
+  --color-tinta: #f5f5f4;
+  --color-suave: #a8a29e;
+  --color-borde: #36312d;
+  --color-stone-50: oklch(14.7% 0.004 49.25);
+  --color-stone-950: oklch(98.5% 0.001 106.423);
+  --color-stone-100: oklch(21.6% 0.006 56.043);
+  --color-stone-900: oklch(97% 0.001 106.424);
+  --color-stone-200: oklch(26.8% 0.007 34.298);
+  --color-stone-800: oklch(92.3% 0.003 48.717);
+  --color-stone-300: oklch(37.4% 0.01 67.558);
+  --color-stone-700: oklch(86.9% 0.005 56.366);
+  --color-stone-400: oklch(44.4% 0.011 73.639);
+  --color-stone-600: oklch(70.9% 0.01 56.259);
+  --color-emerald-50: oklch(26.2% 0.051 172.552);
+  --color-emerald-950: oklch(97.9% 0.021 166.113);
+  --color-emerald-100: oklch(37.8% 0.077 168.94);
+  --color-emerald-900: oklch(95% 0.052 163.051);
+  --color-emerald-200: oklch(43.2% 0.095 166.913);
+  --color-emerald-800: oklch(90.5% 0.093 164.15);
+  --color-emerald-300: oklch(50.8% 0.118 165.612);
+  --color-emerald-700: oklch(84.5% 0.143 164.978);
+  --color-sky-50: oklch(29.3% 0.066 243.157);
+  --color-sky-950: oklch(97.7% 0.013 236.62);
+  --color-sky-100: oklch(39.1% 0.09 240.876);
+  --color-sky-900: oklch(95.1% 0.026 236.824);
+  --color-sky-200: oklch(44.3% 0.11 240.79);
+  --color-sky-800: oklch(90.1% 0.058 230.902);
+  --color-sky-300: oklch(50% 0.134 242.749);
+  --color-sky-700: oklch(82.8% 0.111 230.318);
+  --color-red-50: oklch(25.8% 0.092 26.042);
+  --color-red-950: oklch(97.1% 0.013 17.38);
+  --color-red-100: oklch(39.6% 0.141 25.723);
+  --color-red-900: oklch(93.6% 0.032 17.717);
+  --color-red-200: oklch(44.4% 0.177 26.899);
+  --color-red-800: oklch(88.5% 0.062 18.334);
+  --color-red-300: oklch(50.5% 0.213 27.518);
+  --color-red-700: oklch(80.8% 0.114 19.571);
+  --color-amber-50: oklch(27.9% 0.077 45.635);
+  --color-amber-950: oklch(98.7% 0.022 95.277);
+  --color-amber-100: oklch(41.4% 0.112 45.904);
+  --color-amber-900: oklch(96.2% 0.059 95.617);
+  --color-amber-200: oklch(47.3% 0.137 46.201);
+  --color-amber-800: oklch(92.4% 0.12 95.746);
+  --color-amber-300: oklch(55.5% 0.163 48.998);
+  --color-amber-700: oklch(87.9% 0.169 91.605);
+  --color-violet-50: oklch(28.3% 0.141 291.089);
+  --color-violet-950: oklch(96.9% 0.016 293.756);
+  --color-violet-100: oklch(38% 0.189 293.745);
+  --color-violet-900: oklch(94.3% 0.029 294.588);
+  --color-violet-200: oklch(43.2% 0.232 292.759);
+  --color-violet-800: oklch(89.4% 0.057 293.283);
+  --color-violet-300: oklch(49.1% 0.27 292.581);
+  --color-violet-700: oklch(81.1% 0.111 293.571);
+  --color-orange-50: oklch(26.6% 0.079 36.259);
+  --color-orange-950: oklch(98% 0.016 73.684);
+  --color-orange-100: oklch(40.8% 0.123 38.172);
+  --color-orange-900: oklch(95.4% 0.038 75.164);
+  --color-orange-200: oklch(47% 0.157 37.304);
+  --color-orange-800: oklch(90.1% 0.076 70.697);
+  --color-orange-300: oklch(55.3% 0.195 38.402);
+  --color-orange-700: oklch(83.7% 0.128 66.29);
+  --color-green-50: oklch(26.6% 0.065 152.934);
+  --color-green-950: oklch(98.2% 0.018 155.826);
+  --color-green-100: oklch(39.3% 0.095 152.535);
+  --color-green-900: oklch(96.2% 0.044 156.743);
+  --color-green-200: oklch(44.8% 0.119 151.328);
+  --color-green-800: oklch(92.5% 0.084 155.995);
+  --color-green-300: oklch(52.7% 0.154 150.069);
+  --color-green-700: oklch(87.1% 0.15 154.449);
+}
+.tema-oscuro :is(.bg-stone-700, .bg-stone-800, .bg-stone-900, .bg-stone-950).text-white {
+  color: var(--color-stone-50);
+}
+/* Barras oscuras sobre fondo claro (la de guardar, por ejemplo): en oscuro siguen oscuras, apenas más claras que el fondo. */
+.tema-oscuro .bg-tinta {
+  background-color: #2e2926;
+  box-shadow: 0 0 0 1px #46403b;
+}
+.tema-oscuro .tema-fijo {
+  color-scheme: light;
+  --color-superficie: #ffffff;
+  --color-fondo: #fafaf9;
+  --color-tinta: #1c1917;
+  --color-suave: #78716c;
+  --color-borde: #e7e5e4;
+  --color-stone-50: oklch(98.5% 0.001 106.423);
+  --color-stone-950: oklch(14.7% 0.004 49.25);
+  --color-stone-100: oklch(97% 0.001 106.424);
+  --color-stone-900: oklch(21.6% 0.006 56.043);
+  --color-stone-200: oklch(92.3% 0.003 48.717);
+  --color-stone-800: oklch(26.8% 0.007 34.298);
+  --color-stone-300: oklch(86.9% 0.005 56.366);
+  --color-stone-700: oklch(37.4% 0.01 67.558);
+  --color-stone-400: oklch(70.9% 0.01 56.259);
+  --color-stone-600: oklch(44.4% 0.011 73.639);
+  --color-emerald-50: oklch(97.9% 0.021 166.113);
+  --color-emerald-950: oklch(26.2% 0.051 172.552);
+  --color-emerald-100: oklch(95% 0.052 163.051);
+  --color-emerald-900: oklch(37.8% 0.077 168.94);
+  --color-emerald-200: oklch(90.5% 0.093 164.15);
+  --color-emerald-800: oklch(43.2% 0.095 166.913);
+  --color-emerald-300: oklch(84.5% 0.143 164.978);
+  --color-emerald-700: oklch(50.8% 0.118 165.612);
+  --color-sky-50: oklch(97.7% 0.013 236.62);
+  --color-sky-950: oklch(29.3% 0.066 243.157);
+  --color-sky-100: oklch(95.1% 0.026 236.824);
+  --color-sky-900: oklch(39.1% 0.09 240.876);
+  --color-sky-200: oklch(90.1% 0.058 230.902);
+  --color-sky-800: oklch(44.3% 0.11 240.79);
+  --color-sky-300: oklch(82.8% 0.111 230.318);
+  --color-sky-700: oklch(50% 0.134 242.749);
+  --color-red-50: oklch(97.1% 0.013 17.38);
+  --color-red-950: oklch(25.8% 0.092 26.042);
+  --color-red-100: oklch(93.6% 0.032 17.717);
+  --color-red-900: oklch(39.6% 0.141 25.723);
+  --color-red-200: oklch(88.5% 0.062 18.334);
+  --color-red-800: oklch(44.4% 0.177 26.899);
+  --color-red-300: oklch(80.8% 0.114 19.571);
+  --color-red-700: oklch(50.5% 0.213 27.518);
+  --color-amber-50: oklch(98.7% 0.022 95.277);
+  --color-amber-950: oklch(27.9% 0.077 45.635);
+  --color-amber-100: oklch(96.2% 0.059 95.617);
+  --color-amber-900: oklch(41.4% 0.112 45.904);
+  --color-amber-200: oklch(92.4% 0.12 95.746);
+  --color-amber-800: oklch(47.3% 0.137 46.201);
+  --color-amber-300: oklch(87.9% 0.169 91.605);
+  --color-amber-700: oklch(55.5% 0.163 48.998);
+  --color-violet-50: oklch(96.9% 0.016 293.756);
+  --color-violet-950: oklch(28.3% 0.141 291.089);
+  --color-violet-100: oklch(94.3% 0.029 294.588);
+  --color-violet-900: oklch(38% 0.189 293.745);
+  --color-violet-200: oklch(89.4% 0.057 293.283);
+  --color-violet-800: oklch(43.2% 0.232 292.759);
+  --color-violet-300: oklch(81.1% 0.111 293.571);
+  --color-violet-700: oklch(49.1% 0.27 292.581);
+  --color-orange-50: oklch(98% 0.016 73.684);
+  --color-orange-950: oklch(26.6% 0.079 36.259);
+  --color-orange-100: oklch(95.4% 0.038 75.164);
+  --color-orange-900: oklch(40.8% 0.123 38.172);
+  --color-orange-200: oklch(90.1% 0.076 70.697);
+  --color-orange-800: oklch(47% 0.157 37.304);
+  --color-orange-300: oklch(83.7% 0.128 66.29);
+  --color-orange-700: oklch(55.3% 0.195 38.402);
+  --color-green-50: oklch(98.2% 0.018 155.826);
+  --color-green-950: oklch(26.6% 0.065 152.934);
+  --color-green-100: oklch(96.2% 0.044 156.743);
+  --color-green-900: oklch(39.3% 0.095 152.535);
+  --color-green-200: oklch(92.5% 0.084 155.995);
+  --color-green-800: oklch(44.8% 0.119 151.328);
+  --color-green-300: oklch(87.1% 0.15 154.449);
+  --color-green-700: oklch(52.7% 0.154 150.069);
+}
+.tema-oscuro .tema-fijo :is(.bg-stone-700, .bg-stone-800, .bg-stone-900, .bg-stone-950).text-white {
+  color: #fff;
+}
+.tema-oscuro .tema-fijo .bg-tinta {
+  background-color: var(--color-tinta);
+  box-shadow: none;
 }
 
 /* Aviso emergente del pedido en el celular del comensal */

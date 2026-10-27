@@ -410,7 +410,7 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
       <aside className="order-first md:order-none">
         <div className="md:sticky md:top-28">
           <p className="mb-2 text-xs font-medium uppercase tracking-wider text-suave">Vista previa</p>
-          <div className="mx-auto h-[480px] w-full max-w-[320px] overflow-y-auto overscroll-contain rounded-[2.2rem] border-[10px] border-tinta bg-white shadow-xl [scrollbar-width:none] md:h-[620px]">
+          <div className="mx-auto h-[480px] w-full max-w-[320px] overflow-y-auto overscroll-contain rounded-[2.2rem] border-[10px] tema-fijo border-tinta bg-white shadow-xl [scrollbar-width:none] md:h-[620px]">
             <Carta restaurante={vista} secciones={secciones.length ? secciones : SECCIONES_EJEMPLO} vistaPrevia />
           </div>
           {secciones.length === 0 && (
