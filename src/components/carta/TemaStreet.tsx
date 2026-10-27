@@ -60,7 +60,7 @@ export function TemaStreet({ restaurante, secciones, vistaPrevia, pie }: PropsTe
         <Destacados
           restaurante={restaurante}
           secciones={secciones}
-          className="-mb-2"
+          className="pb-2"
           claseTitulo="f-oswald text-2xl font-semibold uppercase italic"
           style={{ "--dest-bg": "#1f1f1f" } as React.CSSProperties}
         />

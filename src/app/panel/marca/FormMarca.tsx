@@ -14,6 +14,7 @@ import { SECCIONES_EJEMPLO } from "@/components/carta/ejemplo";
 import { Interruptor } from "@/components/Interruptor";
 import { IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
 import { revalidarCarta } from "../actions";
+import { leerAjustes, SONIDOS_HOJA, type SonidoHoja } from "@/lib/salon";
 
 const PALETAS = [
   { primario: "#b45309", fondo: "#fffbf5" },
@@ -52,6 +53,13 @@ const MUESTRA_FUENTE: Record<Tema, string> = {
   revista: "f-playfair italic font-bold",
 };
 
+const NOMBRE_SONIDO: Record<SonidoHoja, string> = {
+  papel: "Papel",
+  hojas: "Hojas",
+  diario: "Diario",
+  ninguno: "Sin sonido",
+};
+
 // SQL que habilita cada diseño, para avisar si falta ejecutarlo.
 const SQL_TEMA = (t: Tema) =>
   ["clasico", "noir", "esmeralda", "street", "retro"].includes(t)
@@ -72,6 +80,9 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
   const [fondo, setFondo] = useState(restaurante.color_fondo);
   const [moneda, setMoneda] = useState(restaurante.moneda);
   const [tema, setTema] = useState<Tema>(restaurante.tema ?? "clasico");
+  // Los ajustes existen desde la migración 0004.
+  const tieneAjustes = "ajustes" in restaurante;
+  const [sonidoHoja, setSonidoHoja] = useState<SonidoHoja>(leerAjustes(restaurante.ajustes).sonido_hoja);
   const [grupo, setGrupo] = useState<GrupoTema>(TEMA_INFO[restaurante.tema ?? "clasico"]?.grupo ?? "sencillos");
   const [whatsapp, setWhatsapp] = useState(restaurante.whatsapp ?? "");
   const [idiomas, setIdiomas] = useState<string[]>(restaurante.idiomas ?? []);
@@ -122,6 +133,9 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
         whatsapp: telefono || null,
         tema,
         ...(tieneExtras ? { idiomas, traducciones, pedidos_whatsapp: pedidos } : {}),
+        ...(tieneAjustes && sonidoHoja !== leerAjustes(restaurante.ajustes).sonido_hoja
+          ? { ajustes: { ...leerAjustes(restaurante.ajustes), sonido_hoja: sonidoHoja } }
+          : {}),
       })
       .eq("id", restaurante.id);
     setGuardando(false);
@@ -155,6 +169,7 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
     idiomas,
     traducciones,
     pedidos_whatsapp: pedidos,
+    ajustes: { ...leerAjustes(restaurante.ajustes), sonido_hoja: sonidoHoja },
   };
 
   return (
@@ -219,6 +234,30 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
               );
             })}
           </div>
+          {tema === "revista" && tieneAjustes && (
+            <div className="space-y-2 rounded-xl border border-borde p-4">
+              <p className="text-sm font-semibold">Sonido al pasar página</p>
+              <div className="flex flex-wrap gap-2">
+                {SONIDOS_HOJA.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    aria-pressed={sonidoHoja === s}
+                    onClick={() => {
+                      setSonidoHoja(s);
+                      if (s !== "ninguno") new Audio(`/sonidos/hoja-${s}.mp3`).play().catch(() => {});
+                    }}
+                    className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
+                      sonidoHoja === s ? "border-marca bg-marca text-white" : "border-borde hover:border-stone-400"
+                    }`}
+                  >
+                    {NOMBRE_SONIDO[s]}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-suave">Tocá uno para escucharlo. El cliente también puede silenciarlo desde la carta.</p>
+            </div>
+          )}
         </div>
 
         <div className="tarjeta space-y-4 p-5">

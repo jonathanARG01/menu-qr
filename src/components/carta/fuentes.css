@@ -65,42 +65,75 @@
   font-family: "Allura", cursive;
 }
 
-/* Diseño Revista: la página nueva entra girando desde el lomo, como al hojear. */
-.hoja-siguiente {
+/* Diseño Revista: la hoja gira sobre el lomo izquierdo, se curva un poco y deja ver su dorso. */
+.hoja-giro {
   transform-origin: left center;
-  animation: hoja-siguiente 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transform-style: preserve-3d;
+  will-change: transform;
 }
-.hoja-anterior {
-  transform-origin: right center;
-  animation: hoja-anterior 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+.hoja-giro-siguiente {
+  animation: hoja-pasa 0.95s cubic-bezier(0.45, 0.05, 0.3, 1) forwards;
 }
-@keyframes hoja-siguiente {
-  from {
-    transform: perspective(1800px) rotateY(80deg);
-    box-shadow: -40px 0 60px rgba(0, 0, 0, 0.35);
-    opacity: 0.4;
+.hoja-giro-anterior {
+  animation: hoja-pasa 0.95s cubic-bezier(0.45, 0.05, 0.3, 1) reverse forwards;
+}
+@keyframes hoja-pasa {
+  0% {
+    transform: rotateY(0deg) skewY(0deg);
   }
-  to {
-    transform: perspective(1800px) rotateY(0);
-    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  35% {
+    transform: rotateY(-55deg) skewY(-2.5deg) scaleX(0.97);
+  }
+  65% {
+    transform: rotateY(-125deg) skewY(2.5deg) scaleX(0.97);
+  }
+  100% {
+    transform: rotateY(-180deg) skewY(0deg);
+  }
+}
+.hoja-cara {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+.hoja-dorso {
+  transform: rotateY(180deg);
+}
+/* Sombras que acompañan el giro: sobre la hoja que se levanta y sobre la página de abajo. */
+.hoja-sombra-cara {
+  animation: hoja-sombra 0.95s ease-in-out forwards;
+}
+.hoja-giro-anterior .hoja-sombra-cara {
+  animation-direction: reverse;
+}
+.hoja-sombra-base {
+  animation: hoja-sombra-base 0.95s ease-in-out forwards;
+}
+@keyframes hoja-sombra {
+  0% {
+    opacity: 0;
+  }
+  50% {
     opacity: 1;
   }
-}
-@keyframes hoja-anterior {
-  from {
-    transform: perspective(1800px) rotateY(-80deg);
-    box-shadow: 40px 0 60px rgba(0, 0, 0, 0.35);
-    opacity: 0.4;
+  100% {
+    opacity: 0.6;
   }
-  to {
-    transform: perspective(1800px) rotateY(0);
-    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+@keyframes hoja-sombra-base {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  45% {
     opacity: 1;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hoja-siguiente,
-  .hoja-anterior {
-    animation: none;
+  .hoja-giro-siguiente,
+  .hoja-giro-anterior {
+    animation-duration: 0.01s;
   }
 }

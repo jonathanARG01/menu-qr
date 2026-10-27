@@ -70,24 +70,28 @@ export function TemaCinta({ restaurante, secciones, vistaPrevia, pie }: PropsTem
             <h2 className="mb-4 text-center text-2xl font-extrabold italic" style={{ color: VERDE }}>
               {seccion.nombre}
             </h2>
-            <ul className="grid gap-x-6 gap-y-5 @md:grid-cols-2">
+            <ul className="grid gap-x-8 gap-y-6 @md:grid-cols-2">
               {seccion.platos.map((plato) => (
-                <li key={plato.id} className="flex items-start gap-3">
+                <li
+                  key={plato.id}
+                  className="flex items-start gap-4 rounded-2xl p-3 pr-4 shadow-[0_6px_18px_rgba(80,50,10,0.12)]"
+                  style={{ background: "rgba(255,255,255,0.55)" }}
+                >
                   <FotoRedonda
                     plato={plato}
-                    className="-ml-6 mt-3 w-28 shrink-0 text-6xl"
+                    className="mt-1 w-24 shrink-0 text-5xl"
                     style={{ background: "#d9b98b", boxShadow: "0 0 0 5px #b07d48, 0 12px 24px rgba(80,50,10,0.35)" }}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-stretch">
                       <h3
-                        className="flex flex-1 items-center rounded-l-xl py-2 pl-4 pr-3 text-lg font-medium leading-tight text-white"
+                        className="flex min-w-0 flex-1 items-center rounded-l-xl py-2 pl-3 pr-3 text-base font-semibold leading-tight text-white"
                         style={{ background: `linear-gradient(135deg, ${VERDE}, #2c7a4b)` }}
                       >
                         {plato.nombre}
                       </h3>
                       <span
-                        className="-ml-1 flex shrink-0 items-center px-3 text-lg font-extrabold italic tabular-nums shadow-md"
+                        className="-ml-1 flex shrink-0 items-center whitespace-nowrap px-3 text-base font-extrabold italic tabular-nums shadow-md"
                         style={{
                           background: rojo,
                           color: textoSobre(rojo),
@@ -98,9 +102,9 @@ export function TemaCinta({ restaurante, secciones, vistaPrevia, pie }: PropsTem
                       </span>
                     </div>
                     {plato.descripcion && (
-                      <p className="mt-2 text-[13px] font-medium italic leading-snug opacity-80">{plato.descripcion}</p>
+                      <p className="mt-2.5 text-[13px] font-medium italic leading-snug opacity-80">{plato.descripcion}</p>
                     )}
-                    <div className="mt-1.5 flex items-center justify-between gap-3">
+                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3">
                       <Etiquetas plato={plato} className="opacity-70" />
                       <Agregar plato={plato} className="ml-auto" />
                     </div>

@@ -14,30 +14,6 @@ const POR_PAGINA = 4;
 
 type Pagina = { tipo: "portada" } | { tipo: "platos"; titulo: string; numero: number; platos: Plato[]; destacada?: boolean };
 
-// Sonido de hoja: un soplido de ruido filtrado que sube de tono, hecho en el momento (sin archivos).
-function sonarHoja(contexto: AudioContext) {
-  const duracion = 0.45;
-  const muestras = Math.floor(contexto.sampleRate * duracion);
-  const buffer = contexto.createBuffer(1, muestras, contexto.sampleRate);
-  const datos = buffer.getChannelData(0);
-  for (let i = 0; i < muestras; i++) datos[i] = (Math.random() * 2 - 1) * (1 - i / muestras);
-  const fuente = contexto.createBufferSource();
-  fuente.buffer = buffer;
-  const filtro = contexto.createBiquadFilter();
-  filtro.type = "bandpass";
-  filtro.Q.value = 0.9;
-  const ahora = contexto.currentTime;
-  filtro.frequency.setValueAtTime(700, ahora);
-  filtro.frequency.exponentialRampToValueAtTime(3200, ahora + duracion * 0.6);
-  const volumen = contexto.createGain();
-  volumen.gain.setValueAtTime(0.0001, ahora);
-  volumen.gain.exponentialRampToValueAtTime(0.35, ahora + 0.05);
-  volumen.gain.exponentialRampToValueAtTime(0.0001, ahora + duracion);
-  fuente.connect(filtro).connect(volumen).connect(contexto.destination);
-  fuente.start(ahora);
-  fuente.stop(ahora + duracion);
-}
-
 // Arma las páginas: portada, destacados y cada categoría (las largas ocupan varias páginas).
 function armarPaginas(secciones: Seccion[], tituloDestacados: string): Pagina[] {
   const paginas: Pagina[] = [{ tipo: "portada" }];
@@ -63,13 +39,17 @@ export function TemaRevista({ restaurante, secciones, vistaPrevia, pie }: PropsT
   const acento = restaurante.color_primario;
   const { t } = useCarta();
   const paginas = useMemo(() => armarPaginas(secciones, t("destacados")), [secciones, t]);
+  const { ajustes } = useCarta();
   const [actual, setActual] = useState(0);
-  const [sentido, setSentido] = useState<"siguiente" | "anterior" | null>(null);
+  // Giro en curso: la hoja que se mueve y hacia dónde.
+  const [giro, setGiro] = useState<{ hoja: number; base: number; sentido: "siguiente" | "anterior" } | null>(null);
   const [sonido, setSonido] = useState(true);
-  const audio = useRef<AudioContext | null>(null);
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const reloj = useRef<ReturnType<typeof setTimeout> | null>(null);
   const raiz = useRef<HTMLDivElement>(null);
   const toque = useRef<number | null>(null);
   const pagina = Math.min(actual, paginas.length - 1);
+  const archivoSonido = ajustes.sonido_hoja === "ninguno" ? null : `/sonidos/hoja-${ajustes.sonido_hoja}.mp3`;
 
   useEffect(() => {
     try {
@@ -77,18 +57,29 @@ export function TemaRevista({ restaurante, secciones, vistaPrevia, pie }: PropsT
     } catch {}
   }, []);
 
+  // Precarga el sonido para que suene justo al tocar.
+  useEffect(() => {
+    if (!archivoSonido) return;
+    const a = new Audio(archivoSonido);
+    a.preload = "auto";
+    a.volume = 0.7;
+    audio.current = a;
+  }, [archivoSonido]);
+
+  useEffect(() => () => void (reloj.current && clearTimeout(reloj.current)), []);
+
   const irA = useCallback(
     (destino: number) => {
       if (destino < 0 || destino >= paginas.length || destino === pagina) return;
-      setSentido(destino > pagina ? "siguiente" : "anterior");
+      const sentido = destino > pagina ? "siguiente" : "anterior";
+      // Al avanzar gira la hoja actual; al volver, la hoja anterior vuelve sobre la actual.
+      setGiro({ hoja: sentido === "siguiente" ? pagina : destino, base: sentido === "siguiente" ? destino : pagina, sentido });
       setActual(destino);
-      if (sonido) {
-        try {
-          const Contexto =
-            window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-          audio.current ??= new Contexto();
-          sonarHoja(audio.current);
-        } catch {}
+      if (reloj.current) clearTimeout(reloj.current);
+      reloj.current = setTimeout(() => setGiro(null), 950);
+      if (sonido && audio.current) {
+        audio.current.currentTime = 0;
+        audio.current.play().catch(() => {});
       }
       // Vuelve al principio de la página nueva si el cliente había bajado.
       const arriba = raiz.current?.getBoundingClientRect().top ?? 0;
@@ -116,7 +107,7 @@ export function TemaRevista({ restaurante, secciones, vistaPrevia, pie }: PropsT
     });
   };
 
-  const hoja = paginas[pagina];
+  const props = { paginas, restaurante, secciones, irA };
   const boton =
     "flex h-11 w-11 items-center justify-center rounded-full text-xl shadow-md transition active:scale-95 disabled:opacity-30";
 
@@ -139,24 +130,24 @@ export function TemaRevista({ restaurante, secciones, vistaPrevia, pie }: PropsT
         <div className="flex items-center justify-between gap-3 border-b border-black/15 pb-2 text-[11px] font-semibold uppercase tracking-[0.25em]">
           <span>{restaurante.nombre}</span>
           <span className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={cambiarSonido}
-              aria-pressed={sonido}
-              aria-label="Sonido al pasar página"
-              className="text-base"
-            >
-              {sonido ? "🔊" : "🔇"}
-            </button>
+            {archivoSonido && (
+              <button
+                type="button"
+                onClick={cambiarSonido}
+                aria-pressed={sonido}
+                aria-label="Sonido al pasar página"
+                className="text-base"
+              >
+                {sonido ? "🔊" : "🔇"}
+              </button>
+            )}
             <SelectorIdioma className="relative" style={{ background: TINTA, color: PAPEL }} />
           </span>
         </div>
 
-        <article
-          key={pagina}
-          className={`mt-4 min-h-[60vh] rounded-sm bg-[#fbf7f0] px-5 pb-8 pt-6 shadow-[0_2px_0_#e2d8c8,0_20px_40px_rgba(60,40,20,0.15)] ${
-            sentido ? `hoja-${sentido}` : ""
-          }`}
+        <div
+          className="relative mt-4"
+          style={{ perspective: "2200px" }}
           onPointerDown={(e) => (toque.current = e.clientX)}
           onPointerUp={(e) => {
             if (toque.current === null) return;
@@ -165,56 +156,42 @@ export function TemaRevista({ restaurante, secciones, vistaPrevia, pie }: PropsT
             if (Math.abs(dx) > 60) irA(pagina + (dx < 0 ? 1 : -1));
           }}
         >
-          {hoja.tipo === "portada" ? (
-            <Portada restaurante={restaurante} secciones={secciones} paginas={paginas} irA={irA} />
-          ) : (
+          {/* Debajo queda la página que se ve al terminar el giro (al volver, la actual hasta que la tape la anterior). */}
+          <Hoja>
+            <Contenido indice={giro?.base ?? pagina} {...props} />
+          </Hoja>
+          {giro && (
             <>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.35em]" style={{ color: acento }}>
-                {hoja.destacada ? "★" : `${t("carta")} · ${String(hoja.numero).padStart(2, "0")}`}
-              </p>
-              <h2 className="f-playfair mt-1 border-b-2 border-current pb-3 text-4xl font-bold italic leading-tight @md:text-5xl">
-                {hoja.titulo}
-              </h2>
-              <ul className="mt-5 space-y-6">
-                {hoja.platos.map((plato, i) => (
-                  <li key={plato.id} className={i === 0 ? "" : "flex gap-4"}>
-                    {i === 0 ? (
-                      plato.foto_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={plato.foto_url} alt={plato.nombre} className="mb-3 aspect-[16/10] w-full object-cover" />
-                      ) : (
-                        <FotoRedonda plato={plato} className="float-right mb-2 ml-4 w-28 bg-[#efe4d2] text-6xl" />
-                      )
-                    ) : (
-                      <FotoRedonda plato={plato} className="w-20 shrink-0 self-start bg-[#efe4d2] text-4xl" />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline gap-2">
-                        <h3 className={`f-playfair font-bold leading-tight ${i === 0 ? "text-2xl" : "text-xl"}`}>
-                          {plato.nombre}
-                        </h3>
-                        <span className="mb-1 flex-1 border-b border-dotted border-black/30" />
-                        <span className="f-playfair shrink-0 text-lg font-bold tabular-nums" style={{ color: acento }}>
-                          {precio(plato, restaurante)}
-                        </span>
-                      </div>
-                      {plato.descripcion && (
-                        <p className="f-cormorant mt-1 text-lg leading-snug text-black/70">{plato.descripcion}</p>
-                      )}
-                      <div className="mt-1 flex items-center justify-between gap-3">
-                        <Etiquetas plato={plato} className="opacity-70" />
-                        <Agregar plato={plato} className="ml-auto" />
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <span
+                aria-hidden
+                className="hoja-sombra-base pointer-events-none absolute inset-0 rounded-sm"
+                style={{ background: "linear-gradient(90deg, rgba(40,25,10,0.35), rgba(40,25,10,0.08) 45%, transparent 75%)" }}
+              />
+              <div
+                aria-hidden
+                key={`${giro.hoja}-${giro.sentido}`}
+                className={`hoja-giro hoja-giro-${giro.sentido} pointer-events-none absolute inset-0`}
+              >
+                <div className="hoja-cara">
+                  <Hoja alto>
+                    <Contenido indice={giro.hoja} {...props} />
+                  </Hoja>
+                  <span
+                    className="hoja-sombra-cara absolute inset-0"
+                    style={{ background: "linear-gradient(270deg, rgba(0,0,0,0.28), rgba(0,0,0,0.05) 40%, transparent 70%)" }}
+                  />
+                </div>
+                <div
+                  className="hoja-cara hoja-dorso rounded-sm"
+                  style={{
+                    background: "linear-gradient(90deg, #efe6d6 0%, #f8f2e8 35%, #fbf7f0 70%, #e9dfcd 100%)",
+                    boxShadow: "inset -18px 0 30px rgba(120,90,50,0.18)",
+                  }}
+                />
+              </div>
             </>
           )}
-          <p className="clear-both mt-8 text-center text-[11px] tracking-[0.3em] text-black/45">
-            {pagina + 1} / {paginas.length}
-          </p>
-        </article>
+        </div>
 
         <div className="mt-4 flex items-center justify-between">
           <button
@@ -308,5 +285,84 @@ function Portada({
       </ol>
       <p className="mt-6 text-xs uppercase tracking-[0.3em] text-black/45">← →</p>
     </div>
+  );
+}
+
+// Hoja de papel: la de abajo crece con su contenido; la que gira copia su alto y recorta lo que sobra.
+function Hoja({ children, alto }: { children: React.ReactNode; alto?: boolean }) {
+  return (
+    <article
+      className={`min-h-[60vh] rounded-sm bg-[#fbf7f0] px-5 pb-8 pt-6 shadow-[0_2px_0_#e2d8c8,0_20px_40px_rgba(60,40,20,0.15)] ${
+        alto ? "h-full overflow-hidden" : ""
+      }`}
+      style={{ backgroundImage: "linear-gradient(90deg, rgba(120,90,50,0.10), transparent 6%)" }}
+    >
+      {children}
+    </article>
+  );
+}
+
+function Contenido({
+  indice,
+  paginas,
+  restaurante,
+  secciones,
+  irA,
+}: Pick<PropsTema, "restaurante" | "secciones"> & { indice: number; paginas: Pagina[]; irA: (i: number) => void }) {
+  const { t } = useCarta();
+  const acento = restaurante.color_primario;
+  const hoja = paginas[indice];
+  if (!hoja) return null;
+
+  return (
+    <>
+      {hoja.tipo === "portada" ? (
+        <Portada restaurante={restaurante} secciones={secciones} paginas={paginas} irA={irA} />
+      ) : (
+        <>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em]" style={{ color: acento }}>
+            {hoja.destacada ? "★" : `${t("carta")} · ${String(hoja.numero).padStart(2, "0")}`}
+          </p>
+          <h2 className="f-playfair mt-1 border-b-2 border-current pb-3 text-4xl font-bold italic leading-tight @md:text-5xl">
+            {hoja.titulo}
+          </h2>
+          <ul className="mt-5 space-y-6">
+            {hoja.platos.map((plato, i) => (
+              <li key={plato.id} className={i === 0 ? "" : "flex gap-4"}>
+                {i === 0 ? (
+                  plato.foto_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={plato.foto_url} alt={plato.nombre} className="mb-3 aspect-[16/10] w-full object-cover" />
+                  ) : (
+                    <FotoRedonda plato={plato} className="float-right mb-2 ml-4 w-28 bg-[#efe4d2] text-6xl" />
+                  )
+                ) : (
+                  <FotoRedonda plato={plato} className="w-20 shrink-0 self-start bg-[#efe4d2] text-4xl" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <h3 className={`f-playfair font-bold leading-tight ${i === 0 ? "text-2xl" : "text-xl"}`}>{plato.nombre}</h3>
+                    <span className="mb-1 flex-1 border-b border-dotted border-black/30" />
+                    <span className="f-playfair shrink-0 text-lg font-bold tabular-nums" style={{ color: acento }}>
+                      {precio(plato, restaurante)}
+                    </span>
+                  </div>
+                  {plato.descripcion && (
+                    <p className="f-cormorant mt-1 text-lg leading-snug text-black/70">{plato.descripcion}</p>
+                  )}
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <Etiquetas plato={plato} className="opacity-70" />
+                    <Agregar plato={plato} className="ml-auto" />
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className="clear-both mt-8 text-center text-[11px] tracking-[0.3em] text-black/45">
+        {indice + 1} / {paginas.length}
+      </p>
+    </>
   );
 }

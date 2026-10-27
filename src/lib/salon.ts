@@ -69,7 +69,12 @@ export type Ajustes = {
   estaciones: string[];
   // Minutos tras los que una comanda se pinta en amarillo y en rojo.
   alertas: { amarillo: number; rojo: number };
+  // Sonido al pasar de página en el diseño Revista (archivos en public/sonidos).
+  sonido_hoja: SonidoHoja;
 };
+
+export const SONIDOS_HOJA = ["papel", "hojas", "diario", "ninguno"] as const;
+export type SonidoHoja = (typeof SONIDOS_HOJA)[number];
 
 export const AJUSTES_BASE: Ajustes = {
   modulos: {
@@ -87,6 +92,7 @@ export const AJUSTES_BASE: Ajustes = {
   metodos_pago: ["Efectivo", "Tarjeta de débito", "Tarjeta de crédito", "Transferencia", "Mercado Pago"],
   estaciones: ["Cocina", "Barra"],
   alertas: { amarillo: 10, rojo: 20 },
+  sonido_hoja: "papel",
 };
 
 // Une lo guardado con los valores por defecto (lo que falte o venga mal se completa).
@@ -111,6 +117,7 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
     metodos_pago: listaTextos(g.metodos_pago, AJUSTES_BASE.metodos_pago),
     estaciones: listaTextos(g.estaciones, AJUSTES_BASE.estaciones),
     alertas: { ...AJUSTES_BASE.alertas, ...(g.alertas ?? {}) },
+    sonido_hoja: SONIDOS_HOJA.includes(g.sonido_hoja as SonidoHoja) ? (g.sonido_hoja as SonidoHoja) : AJUSTES_BASE.sonido_hoja,
   };
 }
 
