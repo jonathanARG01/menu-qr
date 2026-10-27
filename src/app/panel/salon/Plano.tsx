@@ -63,13 +63,13 @@ const PUNTOS: Record<Piso["norte"], [string, string, string, string]> = {
 
 const ESTILO_ELEMENTO: Record<string, string> = {
   pasillo:
-    "bg-[repeating-linear-gradient(45deg,#f5f5f4_0,#f5f5f4_6px,#e7e5e4_6px,#e7e5e4_12px)] text-stone-500 border-dashed border-stone-300",
+    "bg-[repeating-linear-gradient(45deg,var(--color-stone-100)_0,var(--color-stone-100)_6px,var(--color-stone-200)_6px,var(--color-stone-200)_12px)] text-stone-500 border-dashed border-stone-300",
   pared: "bg-stone-700 text-white border-stone-700",
-  barra: "bg-amber-900/85 text-amber-50 border-amber-900",
+  barra: "bg-[#78350f]/85 text-[#fffbeb] border-[#78350f]",
   bano: "bg-sky-100 text-sky-800 border-sky-200",
   cocina: "bg-orange-100 text-orange-800 border-orange-200",
   entrada: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  escalera: "bg-[repeating-linear-gradient(0deg,#e7e5e4_0,#e7e5e4_4px,#fafaf9_4px,#fafaf9_8px)] text-stone-600 border-stone-300",
+  escalera: "bg-[repeating-linear-gradient(0deg,var(--color-stone-200)_0,var(--color-stone-200)_4px,var(--color-stone-50)_4px,var(--color-stone-50)_8px)] text-stone-600 border-stone-300",
   caja: "bg-violet-100 text-violet-800 border-violet-200",
   planta: "bg-transparent text-xl border-transparent",
 };
