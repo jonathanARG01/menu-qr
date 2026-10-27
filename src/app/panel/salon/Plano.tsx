@@ -75,7 +75,8 @@ const ESTILO_ELEMENTO: Record<string, string> = {
 };
 
 function colorMesa(e?: EstadoMesa) {
-  if (!e?.ocupada) return "bg-white border-stone-300 text-stone-700";
+  if (!e?.ocupada) return "bg-superficie border-stone-300 text-stone-700";
+  if (e.aviso === "cuenta") return "bg-violet-50 border-violet-500 text-violet-900";
   if (e.aviso) return "bg-sky-50 border-sky-500 text-sky-900";
   if (e.listo) return "bg-emerald-50 border-emerald-500 text-emerald-900";
   return "bg-amber-50 border-amber-500 text-amber-900";
@@ -159,7 +160,7 @@ export function Plano({
     arrastre && arrastre.tipo === tipo && arrastre.id === id ? arrastre.caja : original;
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-borde bg-white p-3 sm:p-5">
+    <div className="overflow-x-auto rounded-2xl border border-borde bg-superficie p-3 sm:p-5">
       <div
         className="relative mx-auto min-w-[620px] px-5 py-5"
         // El plano entra entero en la pantalla: el ancho se limita según el alto disponible.
@@ -235,7 +236,13 @@ export function Plano({
                 {!editando && (est?.aviso || est?.listo || est?.pendiente) && (
                   <span
                     className={`absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white shadow ${
-                      est.aviso ? "animate-pulse bg-sky-600" : est.pendiente ? "animate-pulse bg-red-600" : "bg-emerald-600"
+                      est.aviso === "cuenta"
+                        ? "animate-pulse bg-violet-600"
+                        : est.aviso
+                          ? "animate-pulse bg-sky-600"
+                          : est.pendiente
+                            ? "animate-pulse bg-red-600"
+                            : "bg-emerald-600"
                     }`}
                   >
                     {est.aviso === "cuenta" ? "$" : est.aviso ? "!" : est.pendiente ? "●" : "✓"}

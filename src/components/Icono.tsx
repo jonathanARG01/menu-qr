@@ -89,6 +89,13 @@ const TRAZOS: Record<string, React.ReactNode> = {
   check: <path d="M5 12.5l4.5 4.5L19 7" />,
   sonido: <path d="M4 10v4h4l5 4V6L8 10zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" />,
   silencio: <path d="M4 10v4h4l5 4V6L8 10zM17 10l4 4M21 10l-4 4" />,
+  sol: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </>
+  ),
+  luna: <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />,
 };
 
 export function Icono({ nombre, className = "h-5 w-5" }: { nombre: string; className?: string }) {

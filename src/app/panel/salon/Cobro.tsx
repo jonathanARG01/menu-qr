@@ -6,7 +6,7 @@ import { consumoPorComensal, describirPropina, montoPropina, partesIguales, type
 import type { Ajustes, Pago, SolicitudCuenta } from "@/lib/salon";
 
 type Modo = "junto" | "iguales" | "consumo" | "libre";
-type Parte = { etiqueta: string; monto: number };
+type Parte = { etiqueta: string; monto: number; metodo?: string };
 
 export type NuevoPago = { parte: string; monto: number; propina: number; metodo: string; propina_metodo: string | null };
 
@@ -48,16 +48,23 @@ export function Cobro({
   const [cobrando, setCobrando] = useState<Parte | null>(null);
   const [propinaFinal, setPropinaFinal] = useState(false);
 
+  // Si la mesa pidió la cuenta con un medio de pago por persona, cada parte ya trae el suyo.
+  const metodoDe = (i: number) =>
+    (solicitud?.modo === modo && solicitud.metodos?.[i]) || (solicitud?.modo === modo ? solicitud.metodo : undefined);
   const lista = useMemo<Parte[]>(() => {
     if (modo === "iguales")
-      return partesIguales(total, partes).map((monto, i) => ({ etiqueta: `Parte ${i + 1} de ${partes}`, monto }));
+      return partesIguales(total, partes).map((monto, i) => ({
+        etiqueta: `Parte ${i + 1} de ${partes}`,
+        monto,
+        metodo: metodoDe(i),
+      }));
     if (modo === "consumo")
       return consumoPorComensal(lineas, comensales)
-        .map((monto, i) => ({ etiqueta: `Comensal ${i + 1}`, monto }))
+        .map((monto, i) => ({ etiqueta: `Comensal ${i + 1}`, monto, metodo: metodoDe(i) }))
         .filter((p) => p.monto > 0);
     if (modo === "libre") return [{ etiqueta: "Pago parcial", monto: falta }];
     return [{ etiqueta: "Cuenta completa", monto: falta }];
-  }, [modo, partes, total, lineas, comensales, falta]);
+  }, [modo, partes, total, lineas, comensales, falta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pagadaParte = (p: Parte) => modo !== "libre" && modo !== "junto" && pagos.some((x) => x.parte === p.etiqueta);
   const asignadas = lineas.filter((l) => l.comensal).length;
@@ -70,7 +77,7 @@ export function Cobro({
         maximo={falta}
         ajustes={ajustes}
         sugerida={solicitud?.propina}
-        metodoSugerido={solicitud?.metodo}
+        metodoSugerido={cobrando?.metodo ?? solicitud?.metodo}
         formato={formato}
         base={propinaFinal ? total : undefined}
         onVolver={() => {
@@ -97,11 +104,18 @@ export function Cobro({
       </div>
 
       {solicitud && (
-        <p className="rounded-xl bg-sky-50 p-3 text-sm text-sky-900">
+        <p className="rounded-xl bg-violet-50 p-3 text-sm text-violet-900">
           La mesa pidió: <strong>{MODOS.find((m) => m.id === solicitud.modo)?.titulo}</strong>
           {solicitud.partes ? ` en ${solicitud.partes}` : ""}
           {solicitud.propina ? ` · ${describirPropina(solicitud.propina, formato)}` : ""}
           {solicitud.metodo ? ` · ${solicitud.metodo}` : ""}
+          {solicitud.metodos?.some(Boolean) && (
+            <span className="mt-1 block">
+              {solicitud.metodos
+                .map((m, i) => `${solicitud.modo === "consumo" ? "Comensal" : "Persona"} ${i + 1}: ${m || "sin elegir"}`)
+                .join(" · ")}
+            </span>
+          )}
         </p>
       )}
 
@@ -127,7 +141,7 @@ export function Cobro({
           {modo === "iguales" && (
             <div className="flex items-center justify-between rounded-xl bg-stone-50 p-3">
               <span className="text-sm">¿Entre cuántos?</span>
-              <span className="flex items-center rounded-lg border border-borde bg-white">
+              <span className="flex items-center rounded-lg border border-borde bg-superficie">
                 <button
                   type="button"
                   className="h-9 w-9 text-lg"
@@ -160,7 +174,12 @@ export function Cobro({
               const hecha = pagadaParte(p);
               return (
                 <li key={p.etiqueta} className="flex items-center gap-3 px-3 py-2.5">
-                  <span className="flex-1 text-sm">{p.etiqueta}</span>
+                  <span className="min-w-0 flex-1 text-sm">
+                    {p.etiqueta}
+                    {p.metodo && (
+                      <span className="ml-2 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-suave">{p.metodo}</span>
+                    )}
+                  </span>
                   <span className={`font-semibold tabular-nums ${hecha ? "text-suave line-through" : ""}`}>
                     {formato(p.monto)}
                   </span>
@@ -299,7 +318,7 @@ function FormPago({
               key={m}
               type="button"
               onClick={() => setMetodo(m)}
-              className={`rounded-xl border px-3 py-2 text-sm font-medium ${metodo === m ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 bg-white"}`}
+              className={`rounded-xl border px-3 py-2 text-sm font-medium ${metodo === m ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 bg-superficie"}`}
             >
               {m}
             </button>

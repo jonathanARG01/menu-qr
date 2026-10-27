@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
+import { Icono } from "@/components/Icono";
 import { Interruptor } from "@/components/Interruptor";
 import { AJUSTES_BASE, PERMITIDAS, SECCIONES, type Ajustes, type Modulo, type Seccion } from "@/lib/salon";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
@@ -71,6 +72,9 @@ export function Personalizar({
   const formato = (n: number) => formatoPrecio(n, moneda);
 
   const set = (cambios: Partial<Ajustes>) => setA((x) => ({ ...x, ...cambios }));
+  // El atajo que coincide con los módulos encendidos queda marcado.
+  const coincide = (p: (typeof PERFILES)[number]) =>
+    (Object.keys(p.modulos) as Modulo[]).every((m) => !!a.modulos[m] === p.modulos[m]);
   const modulo = (id: Modulo, v: boolean) => set({ modulos: { ...a.modulos, [id]: v } });
 
   async function guardar() {
@@ -98,19 +102,33 @@ export function Personalizar({
       </div>
 
       <section className="space-y-3">
-        <h2 className="font-semibold">Empezar rápido</h2>
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="font-semibold">Empezar rápido</h2>
+          {!PERFILES.some(coincide) && <span className="text-sm text-suave">Ahora: a tu medida</span>}
+        </div>
         <div className="grid gap-2 sm:grid-cols-3">
-          {PERFILES.map((p) => (
-            <button
-              key={p.titulo}
-              type="button"
-              onClick={() => set({ modulos: { ...a.modulos, ...p.modulos } })}
-              className="tarjeta p-4 text-left transition hover:border-marca"
-            >
-              <span className="block font-semibold">{p.titulo}</span>
-              <span className="block text-sm text-suave">{p.ayuda}</span>
-            </button>
-          ))}
+          {PERFILES.map((p) => {
+            const elegido = coincide(p);
+            return (
+              <button
+                key={p.titulo}
+                type="button"
+                aria-pressed={elegido}
+                onClick={() => set({ modulos: { ...a.modulos, ...p.modulos } })}
+                className={`relative rounded-2xl border-2 p-4 text-left transition ${
+                  elegido ? "border-marca bg-marca/10" : "border-borde bg-superficie hover:border-marca/50"
+                }`}
+              >
+                {elegido && (
+                  <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-marca text-white">
+                    <Icono nombre="check" className="h-4 w-4" />
+                  </span>
+                )}
+                <span className={`block pr-7 font-semibold ${elegido ? "text-marca" : ""}`}>{p.titulo}</span>
+                <span className="block text-sm text-suave">{p.ayuda}</span>
+              </button>
+            );
+          })}
         </div>
       </section>
 

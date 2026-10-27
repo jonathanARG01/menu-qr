@@ -186,7 +186,7 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
         aria-modal="true"
         aria-label={`Mesa ${mesa.numero}`}
         onClick={(e) => e.stopPropagation()}
-        className={`flex h-full w-full ${ancho} flex-col bg-white shadow-2xl`}
+        className={`flex h-full w-full ${ancho} flex-col bg-superficie shadow-2xl`}
       >
         <div className="flex items-center gap-3 border-b border-borde px-5 py-4">
           <div className="min-w-0 flex-1">
@@ -208,7 +208,9 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4">
           {cuenta?.aviso && pantalla === "mesa" && (
-            <div className="mb-4 flex items-start gap-3 rounded-xl bg-sky-50 p-3 text-sky-900">
+            <div
+              className={`mb-4 flex items-start gap-3 rounded-xl p-3 ${cuenta.aviso.tipo === "cuenta" ? "bg-violet-50 text-violet-900" : "bg-sky-50 text-sky-900"}`}
+            >
               <Icono nombre="campana" className="mt-0.5 h-5 w-5 shrink-0" />
               <div className="min-w-0 flex-1 text-sm">
                 <p className="font-semibold">{cuenta.aviso.tipo === "cuenta" ? "Pide la cuenta" : "Llama al mesero"}</p>
@@ -223,10 +225,20 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
                     {cuenta.aviso.detalle.metodo ? ` · ${cuenta.aviso.detalle.metodo}` : ""}
                   </p>
                 )}
+                {cuenta.aviso.detalle?.metodos?.some(Boolean) && (
+                  <ul className="mt-1 space-y-0.5">
+                    {cuenta.aviso.detalle.metodos.map((m, i) => (
+                      <li key={i}>
+                        {cuenta.aviso!.detalle!.modo === "consumo" ? "Comensal" : "Persona"} {i + 1}:{" "}
+                        <strong>{m || "sin elegir"}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <button
                 type="button"
-                className="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold shadow-sm"
+                className="rounded-lg bg-superficie px-2.5 py-1 text-xs font-semibold shadow-sm"
                 onClick={() => hacer(supabase.from("cuentas").update({ aviso: null }).eq("id", cuenta.id), "Aviso atendido")}
               >
                 Atendido

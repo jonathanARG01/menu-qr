@@ -53,7 +53,7 @@ export default async function Estadisticas({ searchParams }: { searchParams: Pro
               key={d}
               href={`/panel/estadisticas?dias=${d}`}
               aria-current={d === dias ? "page" : undefined}
-              className={`rounded-lg px-3 py-1.5 font-medium ${d === dias ? "bg-white shadow-sm" : "text-suave hover:text-tinta"}`}
+              className={`rounded-lg px-3 py-1.5 font-medium ${d === dias ? "bg-superficie shadow-sm" : "text-suave hover:text-tinta"}`}
             >
               {d} días
             </Link>

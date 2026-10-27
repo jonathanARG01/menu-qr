@@ -5,6 +5,7 @@ import { Icono } from "@/components/Icono";
 import { useToast } from "@/components/Toast";
 import { NOMBRE_ESTADO, type Ajustes, type EstadoPedido, type Pedido, type PedidoItem, type Piso } from "@/lib/salon";
 import type { Mesa, Restaurante } from "@/lib/types";
+import { sonar } from "@/lib/sonidos";
 import { mensajeError } from "@/lib/utils";
 import { minutosDesde, useAhora, useServicio } from "@/lib/useServicio";
 
@@ -52,21 +53,6 @@ type Arrastre = {
   activo: boolean;
   orden: string[];
 };
-
-// Pitido corto para avisar que entró una comanda.
-function pitar() {
-  try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const vol = ctx.createGain();
-    osc.frequency.value = 880;
-    vol.gain.setValueAtTime(0.2, ctx.currentTime);
-    vol.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-    osc.connect(vol).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.5);
-  } catch {}
-}
 
 // Pantalla de cocina (o de barra): comandas en tiempo real, del más viejo al más nuevo.
 export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }: Props) {
@@ -128,7 +114,7 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
     }
     const llegaron = nuevos.filter((id) => !vistos.current!.has(id));
     nuevos.forEach((id) => vistos.current!.add(id));
-    if (llegaron.length && sonido) pitar();
+    if (llegaron.length && sonido) sonar("cocina");
   }, [pedidos, sonido]);
 
   function lugar(p: Pedido) {
@@ -161,7 +147,14 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
     if (!yo) return;
     const a = antes && posicion(antes, ordenLocal);
     const b = despues && posicion(despues, ordenLocal);
-    const valor = a !== undefined && b !== undefined ? (a + b) / 2 : a !== undefined ? a + 1000 : b !== undefined ? b - 1000 : posicion(yo, ordenLocal);
+    const valor =
+      a !== undefined && b !== undefined
+        ? (a + b) / 2
+        : a !== undefined
+          ? a + 1000
+          : b !== undefined
+            ? b - 1000
+            : posicion(yo, ordenLocal);
     if (valor === posicion(yo, ordenLocal)) return;
     setOrdenLocal((o) => ({ ...o, [id]: valor }));
 
@@ -252,7 +245,10 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
   const elegido = pedidos.find((p) => p.id === detalle);
 
   return (
-    <div ref={tablero} className="flex min-h-[calc(100vh-8rem)] flex-col gap-3 rounded-2xl bg-stone-900 p-3 text-white sm:p-4">
+    <div
+      ref={tablero}
+      className="tema-fijo flex min-h-[calc(100vh-8rem)] flex-col gap-3 rounded-2xl bg-stone-900 p-3 text-white sm:p-4"
+    >
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="mr-2 flex items-center gap-2 text-lg font-bold">
           <Icono nombre="cocina" /> {estacion === "Todas" ? "Comandas" : estacion}
@@ -271,7 +267,7 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
                 setEstacion(e);
                 guardar("cocina:estacion", e);
               }}
-              className={`rounded-full px-3 py-1 text-sm font-medium ${estacion === e ? "bg-white text-stone-900" : "bg-white/10 hover:bg-white/20"}`}
+              className={`rounded-full px-3 py-1 text-sm font-medium ${estacion === e ? "bg-superficie text-stone-900" : "bg-white/10 hover:bg-white/20"}`}
             >
               {e}
             </button>
@@ -281,7 +277,7 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
             onClick={() => {
               setSonido(!sonido);
               guardar("cocina:sonido", sonido ? "no" : "si");
-              if (!sonido) pitar();
+              if (!sonido) sonar("cocina");
             }}
             className="rounded-full bg-white/10 p-2 hover:bg-white/20"
             aria-label={sonido ? "Silenciar" : "Activar sonido"}
@@ -324,7 +320,7 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
               <article
                 key={p.id}
                 data-comanda={p.id}
-                className={`flex flex-col overflow-hidden rounded-xl bg-white text-stone-900 shadow-lg ${moviendo ? "opacity-30 outline-2 outline-dashed outline-white/70" : ""}`}
+                className={`flex flex-col overflow-hidden rounded-xl bg-superficie text-stone-900 shadow-lg ${moviendo ? "opacity-30 outline-2 outline-dashed outline-white/70" : ""}`}
               >
                 <button
                   type="button"
@@ -456,7 +452,7 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
             role="dialog"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-2xl bg-white p-5 text-stone-900 shadow-2xl"
+            className="w-full max-w-md rounded-2xl bg-superficie p-5 text-stone-900 shadow-2xl"
           >
             <div className="flex items-start justify-between gap-3">
               <div>

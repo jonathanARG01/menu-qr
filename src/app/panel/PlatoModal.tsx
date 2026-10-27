@@ -173,7 +173,7 @@ export function PlatoModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="titulo-plato"
-        className="flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
+        className="flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-2xl bg-superficie shadow-2xl sm:rounded-2xl"
       >
         <div className="flex items-center justify-between border-b border-borde px-5 py-4">
           <h2 id="titulo-plato" className="text-lg font-semibold">
@@ -204,7 +204,7 @@ export function PlatoModal({
                 <span>{subiendo ? "Subiendo…" : "+ Foto"}</span>
               )}
               {subiendo && fotoUrl && (
-                <span className="absolute inset-0 flex items-center justify-center bg-white/70">Subiendo…</span>
+                <span className="absolute inset-0 flex items-center justify-center bg-superficie/70">Subiendo…</span>
               )}
             </button>
             <input ref={inputFoto} type="file" accept="image/*" className="hidden" onChange={elegirFoto} />

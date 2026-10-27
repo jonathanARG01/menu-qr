@@ -185,7 +185,7 @@ export function GeneradorQR({
               className={`rounded-full border px-3 py-1 text-sm ${
                 s.id === sucursalId
                   ? "border-marca bg-marca text-white"
-                  : "border-borde bg-white text-suave hover:border-stone-400"
+                  : "border-borde bg-superficie text-suave hover:border-stone-400"
               }`}
             >
               {s.nombre}

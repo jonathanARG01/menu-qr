@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { Icono } from "@/components/Icono";
 import { ELEMENTOS, type Ajustes, type Elemento, type Piso, type TipoElemento } from "@/lib/salon";
 import type { Categoria, Mesa, Plato, Restaurante, Sucursal } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { totalLineas } from "@/lib/cuenta";
+import { sonar } from "@/lib/sonidos";
 import { minutosDesde, useAhora, useServicio, type DatosServicio } from "@/lib/useServicio";
 import { cajaMesa, lugarLibre, Plano, primerHueco, tamanoPara, type Caja, type EstadoMesa, type Seleccion } from "./Plano";
 import { MesaPanel } from "./MesaPanel";
@@ -52,6 +53,7 @@ export function Salon({
   const piso = pisosVisibles.find((p) => p.id === pisoId) ?? pisosVisibles[0] ?? null;
   const [vista, setVista] = useState<"plano" | "lista">(pisos.length ? "plano" : "lista");
   const [editando, setEditando] = useState(false);
+  const avisosOidos = useRef<Set<string> | null>(null);
 
   // En el teléfono se empieza por la lista: el plano completo se ve mejor en tableta o computadora.
   useEffect(() => {
@@ -81,6 +83,19 @@ export function Salon({
     }
     return mapa;
   }, [cuentas, pedidos, ahora]);
+
+  // Suena cuando una mesa llama al mesero o pide la cuenta (no al abrir la pantalla). Cada aviso suena distinto.
+  useEffect(() => {
+    const actuales = cuentas.filter((c) => c.aviso).map((c) => ({ clave: `${c.id}:${c.aviso!.at}`, tipo: c.aviso!.tipo }));
+    if (avisosOidos.current === null) {
+      avisosOidos.current = new Set(actuales.map((a) => a.clave));
+      return;
+    }
+    const nuevos = actuales.filter((a) => !avisosOidos.current!.has(a.clave));
+    nuevos.forEach((a) => avisosOidos.current!.add(a.clave));
+    if (nuevos.some((a) => a.tipo === "cuenta")) sonar("cuenta");
+    else if (nuevos.length) sonar("mozo");
+  }, [cuentas]);
 
   const ocupadas = mesasLocal.filter((m) => estados.get(m.id)?.ocupada).length;
   const avisos = mesasLocal.filter((m) => estados.get(m.id)?.aviso || estados.get(m.id)?.pendiente);
@@ -255,7 +270,7 @@ export function Salon({
               role="tab"
               aria-selected={vista === v}
               onClick={() => setVista(v)}
-              className={`rounded-lg px-3 py-1.5 font-medium ${vista === v ? "bg-white shadow-sm" : "text-suave hover:text-tinta"}`}
+              className={`rounded-lg px-3 py-1.5 font-medium ${vista === v ? "bg-superficie shadow-sm" : "text-suave hover:text-tinta"}`}
             >
               {v === "plano" ? "Plano" : "Lista"}
             </button>
@@ -286,10 +301,14 @@ export function Salon({
                 type="button"
                 onClick={() => setMesaAbierta(m.id)}
                 className={`inline-flex animate-pulse items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold text-white ${
-                  e.aviso ? "bg-sky-600" : "bg-red-600"
+                  e.aviso === "cuenta" ? "bg-violet-600" : e.aviso ? "bg-sky-600" : "bg-red-600"
                 }`}
               >
-                <Icono nombre="campana" className="h-4 w-4" />
+                {e.aviso === "cuenta" ? (
+                  <span className="text-base leading-none">$</span>
+                ) : (
+                  <Icono nombre="campana" className="h-4 w-4" />
+                )}
                 Mesa {m.numero}:{" "}
                 {e.aviso === "cuenta" ? "pide la cuenta" : e.aviso === "mozo" ? "llama al mesero" : "pedido por confirmar"}
               </button>
@@ -313,7 +332,7 @@ export function Salon({
                   className={`rounded-full border px-4 py-1.5 text-sm font-medium ${
                     piso?.id === p.id
                       ? "border-tinta bg-tinta text-white"
-                      : "border-borde bg-white text-stone-600 hover:border-stone-400"
+                      : "border-borde bg-superficie text-stone-600 hover:border-stone-400"
                   }`}
                 >
                   {p.nombre}
@@ -472,7 +491,7 @@ export function Salon({
 
 function Leyenda() {
   const items = [
-    ["bg-white border-stone-300", "Libre"],
+    ["bg-superficie border-stone-300", "Libre"],
     ["bg-amber-50 border-amber-500", "Ocupada"],
     ["bg-emerald-50 border-emerald-500", "Pedido listo para llevar"],
     ["bg-sky-50 border-sky-500", "Pide la cuenta o llama"],
@@ -508,12 +527,14 @@ function BotonMesa({
   grande?: boolean;
 }) {
   const color = !estado?.ocupada
-    ? "border-stone-200 bg-white"
-    : estado.aviso
-      ? "border-sky-500 bg-sky-50"
-      : estado.listo
-        ? "border-emerald-500 bg-emerald-50"
-        : "border-amber-500 bg-amber-50";
+    ? "border-stone-200 bg-superficie"
+    : estado.aviso === "cuenta"
+      ? "border-violet-500 bg-violet-50"
+      : estado.aviso
+        ? "border-sky-500 bg-sky-50"
+        : estado.listo
+          ? "border-emerald-500 bg-emerald-50"
+          : "border-amber-500 bg-amber-50";
   return (
     <button
       type="button"
@@ -726,7 +747,7 @@ function PanelEdicion({
               className="flex flex-col items-center gap-1 rounded-xl border border-borde p-2 text-[11px] hover:border-marca"
             >
               <span
-                className={`block border-2 border-stone-400 bg-white ${forma === "redonda" ? "h-6 w-6 rounded-full" : forma === "rectangular" ? "h-5 w-10 rounded" : "h-6 w-6 rounded"}`}
+                className={`block border-2 border-stone-400 bg-superficie ${forma === "redonda" ? "h-6 w-6 rounded-full" : forma === "rectangular" ? "h-5 w-10 rounded" : "h-6 w-6 rounded"}`}
               />
               {texto}
             </button>
