@@ -161,7 +161,7 @@ export async function prepararRestaurante(
 }
 
 // WhatsApp de ventas de Mesitto (para "quiero contratar"). Se configura en Vercel; sin él, no se muestra el botón.
-export const WHATSAPP_VENTAS = (process.env.NEXT_PUBLIC_WHATSAPP_VENTAS ?? "").replace(/\D/g, "");
+export const WHATSAPP_VENTAS = (process.env.NEXT_PUBLIC_WHATSAPP_VENTAS || "56941497083").replace(/\D/g, "");
 
 export const enlaceContratar = (restaurante: string, plan?: string) =>
   WHATSAPP_VENTAS
