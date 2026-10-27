@@ -16,14 +16,29 @@ export const NOMBRE_ROL: Record<Rol, string> = {
 export const esAdmin = (rol?: string | null) => rol === "dueno" || rol === "staff";
 
 // ── Secciones del panel ───────────────────────
-export type Seccion = "salon" | "cocina" | "carta" | "marca" | "qr" | "estadisticas" | "sucursales" | "equipo" | "personalizar";
+export type Seccion =
+  | "salon"
+  | "cocina"
+  | "reservas"
+  | "caja"
+  | "carta"
+  | "promos"
+  | "marca"
+  | "qr"
+  | "estadisticas"
+  | "sucursales"
+  | "equipo"
+  | "personalizar";
 
 export type InfoSeccion = { id: Seccion; href: string; texto: string; grupo: "Servicio" | "Carta" | "Negocio"; ayuda: string };
 
 export const SECCIONES: InfoSeccion[] = [
   { id: "salon", href: "/panel/salon", texto: "Salón", grupo: "Servicio", ayuda: "Plano de mesas, pedidos y cobros" },
   { id: "cocina", href: "/panel/cocina", texto: "Cocina", grupo: "Servicio", ayuda: "Comandas en tiempo real" },
+  { id: "reservas", href: "/panel/reservas", texto: "Reservas", grupo: "Servicio", ayuda: "Reservas y lista de espera" },
+  { id: "caja", href: "/panel/caja", texto: "Caja", grupo: "Servicio", ayuda: "Cierre de caja del turno" },
   { id: "carta", href: "/panel", texto: "Carta", grupo: "Carta", ayuda: "Platos, precios y categorías" },
+  { id: "promos", href: "/panel/promos", texto: "Promos", grupo: "Carta", ayuda: "Descuentos por día y hora" },
   { id: "marca", href: "/panel/marca", texto: "Marca", grupo: "Carta", ayuda: "Diseño, logo, idiomas" },
   { id: "qr", href: "/panel/qr", texto: "QR", grupo: "Carta", ayuda: "Códigos para imprimir" },
   { id: "estadisticas", href: "/panel/estadisticas", texto: "Estadísticas", grupo: "Negocio", ayuda: "Visitas y lo más pedido" },
@@ -41,12 +56,12 @@ export const SECCIONES: InfoSeccion[] = [
 // Lo que cada rol puede llegar a ver. El administrador elige, dentro de esto, qué le aparece a cada uno.
 // La base de datos aplica los permisos de verdad: un mesero no puede cambiar precios aunque llegue a la pantalla.
 export const PERMITIDAS: Record<"mesero" | "cocina", Seccion[]> = {
-  mesero: ["salon", "cocina", "estadisticas"],
+  mesero: ["salon", "cocina", "reservas", "caja", "estadisticas"],
   cocina: ["cocina", "salon"],
 };
 
 // ── Ajustes (restaurantes.ajustes) ─────────────
-export type Modulo = "salon" | "cocina" | "cobros" | "pedidos_mesa" | "estadisticas" | "sucursales" | "equipo";
+export type Modulo = "salon" | "cocina" | "cobros" | "pedidos_mesa" | "reservas" | "estadisticas" | "sucursales" | "equipo";
 
 export type Ajustes = {
   // Partes del sistema en uso. Lo apagado desaparece del panel (y de la carta, si corresponde).
@@ -71,6 +86,24 @@ export type Ajustes = {
   alertas: { amarillo: number; rojo: number };
   // Sonido al pasar de página en el diseño Revista (archivos en public/sonidos).
   sonido_hoja: SonidoHoja;
+  // Zona horaria del local: define el "día" de la caja, las promos y hasta cuándo dura un agotado.
+  zona_horaria: string;
+  reservas: {
+    // El cliente puede reservar desde la carta (queda pendiente hasta que lo confirmen).
+    online: boolean;
+    // Minutos que se guarda una mesa reservada antes de liberarla.
+    tolerancia: number;
+  };
+  resenas: {
+    // Al cerrar la mesa se le pregunta al cliente cómo estuvo todo.
+    pedir: boolean;
+    // Enlace para dejar una reseña en Google (a los que ponen 4 o 5 estrellas).
+    google_url: string;
+  };
+  cobro_online: {
+    // El cliente puede pagar desde la carta con Mercado Pago (requiere conectar la cuenta).
+    activo: boolean;
+  };
 };
 
 export const SONIDOS_HOJA = ["papel", "hojas", "diario", "ninguno"] as const;
@@ -82,6 +115,7 @@ export const AJUSTES_BASE: Ajustes = {
     cocina: true,
     cobros: true,
     pedidos_mesa: false,
+    reservas: false,
     estadisticas: true,
     sucursales: true,
     equipo: true,
@@ -93,6 +127,10 @@ export const AJUSTES_BASE: Ajustes = {
   estaciones: ["Cocina", "Barra"],
   alertas: { amarillo: 10, rojo: 20 },
   sonido_hoja: "papel",
+  zona_horaria: "America/Argentina/Buenos_Aires",
+  reservas: { online: false, tolerancia: 15 },
+  resenas: { pedir: true, google_url: "" },
+  cobro_online: { activo: false },
 };
 
 // Une lo guardado con los valores por defecto (lo que falte o venga mal se completa).
@@ -118,6 +156,10 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
     estaciones: listaTextos(g.estaciones, AJUSTES_BASE.estaciones),
     alertas: { ...AJUSTES_BASE.alertas, ...(g.alertas ?? {}) },
     sonido_hoja: SONIDOS_HOJA.includes(g.sonido_hoja as SonidoHoja) ? (g.sonido_hoja as SonidoHoja) : AJUSTES_BASE.sonido_hoja,
+    zona_horaria: typeof g.zona_horaria === "string" && g.zona_horaria ? g.zona_horaria : AJUSTES_BASE.zona_horaria,
+    reservas: { ...AJUSTES_BASE.reservas, ...(g.reservas ?? {}) },
+    resenas: { ...AJUSTES_BASE.resenas, ...(g.resenas ?? {}) },
+    cobro_online: { ...AJUSTES_BASE.cobro_online, ...(g.cobro_online ?? {}) },
   };
 }
 
@@ -125,6 +167,8 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
 const MODULO_DE: Partial<Record<Seccion, Modulo>> = {
   salon: "salon",
   cocina: "cocina",
+  reservas: "reservas",
+  caja: "cobros",
   estadisticas: "estadisticas",
   sucursales: "sucursales",
   equipo: "equipo",
@@ -169,6 +213,9 @@ export type Piso = {
   filas: number;
   norte: "arriba" | "derecha" | "abajo" | "izquierda";
   elementos: Elemento[];
+  // Foto o plano dibujado de fondo (migración 0009).
+  fondo_url?: string | null;
+  fondo_opacidad?: number;
 };
 
 // ── Servicio ──────────────────────────────────
@@ -183,7 +230,10 @@ export const NOMBRE_ESTADO: Record<EstadoPedido, string> = {
   cancelado: "Cancelado",
 };
 
-export type Aviso = { tipo: "cuenta" | "mozo"; detalle?: SolicitudCuenta | null; at: string };
+export type Aviso =
+  | { tipo: "cuenta" | "mozo"; detalle?: SolicitudCuenta | null; at: string }
+  // Pagó desde la carta con Mercado Pago (lo registra el servidor al confirmarse el pago).
+  | { tipo: "pago"; detalle?: { monto: number; propina: number } | null; at: string };
 
 export type Cuenta = {
   id: string;
@@ -239,6 +289,9 @@ export type Pago = {
   propina: number;
   metodo: string;
   propina_metodo: string | null;
+  // "online": lo pagó el cliente desde la carta (migración 0009).
+  origen?: "personal" | "online";
+  registrado_por?: string | null;
   created_at: string;
 };
 

@@ -2,6 +2,7 @@ import { requerirSeccion } from "@/lib/panel";
 import type { Pedido, Piso } from "@/lib/salon";
 import type { Mesa } from "@/lib/types";
 import { Cocina } from "./Cocina";
+import type { PlatoAgotable } from "./Agotados";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,7 @@ export default async function PanelCocina() {
   const { supabase, restaurante, ajustes } = await requerirSeccion("cocina");
   const desde = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
 
-  const [pedidos, mesas, pisos] = await Promise.all([
+  const [pedidos, mesas, pisos, platos, categorias] = await Promise.all([
     supabase
       .from("pedidos")
       .select("*, pedido_items(*)")
@@ -18,7 +19,14 @@ export default async function PanelCocina() {
       .order("created_at"),
     supabase.from("mesas").select("id, numero, piso_id, sucursal_id").eq("restaurante_id", restaurante.id),
     supabase.from("pisos").select("id, nombre").eq("restaurante_id", restaurante.id),
+    // Sin la migración 0009 no existe agotado_hasta: se piden solo los platos y no hay agotados.
+    supabase.from("platos").select("id, nombre, categoria_id, agotado_hasta").eq("restaurante_id", restaurante.id).order("orden"),
+    supabase.from("categorias").select("id, nombre").eq("restaurante_id", restaurante.id).order("orden"),
   ]);
+  const listaPlatos = platos.error
+    ? ((await supabase.from("platos").select("id, nombre, categoria_id").eq("restaurante_id", restaurante.id).order("orden"))
+        .data ?? [])
+    : (platos.data ?? []);
 
   if (pedidos.error) {
     return (
@@ -38,6 +46,8 @@ export default async function PanelCocina() {
       pedidosIniciales={(pedidos.data ?? []) as Pedido[]}
       mesas={(mesas.data ?? []) as Mesa[]}
       pisos={(pisos.data ?? []) as Pick<Piso, "id" | "nombre">[]}
+      platos={listaPlatos as PlatoAgotable[]}
+      categorias={(categorias.data ?? []) as { id: string; nombre: string }[]}
     />
   );
 }

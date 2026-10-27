@@ -66,7 +66,38 @@ export function MiMesa({
   const lineas = datos?.cuenta?.pedidos.flatMap((p) => p.items) ?? [];
   const total = totalLineas(lineas);
   const falta = Math.max(0, total - Number(datos?.cuenta?.pagado ?? 0));
-  const porParte = modo === "iguales" ? partesIguales(falta, partes)[0] : falta;
+  // Cada parte se calcula sobre el total (si alguno ya pagó, la parte no se achica), sin pasarse de lo que falta.
+  const porParte = modo === "iguales" ? Math.min(partesIguales(total, partes)[0], falta) : falta;
+  const online = cobros && ajustes.cobro_online.activo && modo !== "consumo" && falta > 0;
+  const [pagando, setPagando] = useState(false);
+  const [errorPago, setErrorPago] = useState<string | null>(null);
+
+  // Pago con Mercado Pago: el servidor arma el cobro con el monto de la base y se abre Mercado Pago.
+  async function pagarOnline() {
+    setPagando(true);
+    setErrorPago(null);
+    const volver = new URL(window.location.href);
+    volver.searchParams.delete("pago");
+    const res = await fetch("/api/pagos/crear", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        restaurante: restaurante.id,
+        sucursal: sucursal?.id ?? null,
+        mesa,
+        partes: modo === "iguales" ? partes : 1,
+        propina: montoPropina(porParte, propina),
+        volver: volver.pathname + volver.search,
+      }),
+    }).catch(() => null);
+    const datos = (await res?.json().catch(() => null)) as { url?: string } | null;
+    if (!datos?.url) {
+      setPagando(false);
+      setErrorPago(t("pagoRechazado"));
+      return;
+    }
+    window.location.href = datos.url;
+  }
 
   async function avisar(tipo: "mozo" | "cuenta") {
     setEnviando(true);
@@ -281,6 +312,24 @@ export function MiMesa({
                       {precio(porParte)} + {precio(montoPropina(porParte, propina))} {t("propina").toLowerCase()}
                     </p>
                   )}
+                </div>
+              )}
+
+              {online && (
+                <div className="rounded-2xl border border-sky-200 bg-sky-50 p-3">
+                  <button
+                    type="button"
+                    disabled={pagando}
+                    onClick={pagarOnline}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#009ee3] px-4 py-3 font-semibold text-white disabled:opacity-60"
+                  >
+                    {pagando ? t("cargando") : `${t("pagarOnline")} · ${precio(porParte + montoPropina(porParte, propina))}`}
+                  </button>
+                  <p className="mt-2 text-center text-xs text-sky-900">
+                    {modo === "iguales" ? `${t("pagarMiParte")} · ` : ""}
+                    {t("pagarOnlineAyuda")}
+                  </p>
+                  {errorPago && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorPago}</p>}
                 </div>
               )}
             </>

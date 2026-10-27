@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/components/Toast";
 import { Icono } from "@/components/Icono";
 import { ELEMENTOS, nombreMesa, type Ajustes, type Elemento, type Piso, type TipoElemento } from "@/lib/salon";
 import type { Categoria, Mesa, Plato, Restaurante, Sucursal } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { totalLineas } from "@/lib/cuenta";
+import { borrarFoto, subirFoto } from "@/lib/fotos";
 import { sonar } from "@/lib/sonidos";
 import { minutosDesde, useAhora, useServicio, type DatosServicio } from "@/lib/useServicio";
 import {
@@ -121,7 +124,7 @@ export function Salon({
     }
     const nuevos = actuales.filter((a) => !avisosOidos.current!.has(a.clave));
     nuevos.forEach((a) => avisosOidos.current!.add(a.clave));
-    if (nuevos.some((a) => a.tipo === "cuenta")) sonar("cuenta");
+    if (nuevos.some((a) => a.tipo === "cuenta" || a.tipo === "pago")) sonar("cuenta");
     else if (nuevos.length) sonar("mozo");
   }, [cuentas]);
 
@@ -160,6 +163,19 @@ export function Salon({
     const antes = pisos;
     setPisos((ps) => ps.map((p) => (p.id === piso.id ? { ...p, ...cambios } : p)));
     return guardar(supabase.from("pisos").update(cambios).eq("id", piso.id), () => setPisos(antes));
+  }
+
+  // Foto o plano real del local de fondo: se comprime, se sube y se borra la anterior.
+  async function cambiarFondo(archivo: File | null) {
+    if (!piso) return;
+    const anterior = piso.fondo_url;
+    try {
+      const url = archivo ? await subirFoto(supabase, restaurante.id, archivo, 1800) : null;
+      const ok = await actualizarPiso({ fondo_url: url });
+      borrarFoto(supabase, ok === false ? url : anterior).catch(() => {});
+    } catch (e) {
+      avisar(/fondo_url/.test(mensajeError(e)) ? "Falta ejecutar el SQL 0009 en Supabase." : mensajeError(e), "error");
+    }
   }
 
   async function borrarPiso() {
@@ -370,16 +386,28 @@ export function Salon({
                 type="button"
                 onClick={() => setMesaAbierta(m.id)}
                 className={`inline-flex animate-pulse items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold text-white ${
-                  e.aviso === "cuenta" ? "bg-violet-600" : e.aviso ? "bg-sky-600" : "bg-red-600"
+                  e.aviso === "cuenta"
+                    ? "bg-violet-600"
+                    : e.aviso === "pago"
+                      ? "bg-emerald-600"
+                      : e.aviso
+                        ? "bg-sky-600"
+                        : "bg-red-600"
                 }`}
               >
-                {e.aviso === "cuenta" ? (
+                {e.aviso === "cuenta" || e.aviso === "pago" ? (
                   <span className="text-base leading-none">$</span>
                 ) : (
                   <Icono nombre="campana" className="h-4 w-4" />
                 )}
                 {nombreMesa(m.numero)}:{" "}
-                {e.aviso === "cuenta" ? "pide la cuenta" : e.aviso === "mozo" ? "llama al mesero" : "pedido por confirmar"}
+                {e.aviso === "cuenta"
+                  ? "pide la cuenta"
+                  : e.aviso === "pago"
+                    ? "pagó online"
+                    : e.aviso === "mozo"
+                      ? "llama al mesero"
+                      : "pedido por confirmar"}
               </button>
             );
           })}
@@ -441,6 +469,7 @@ export function Salon({
           ) : (
             <div className={`grid gap-4 ${editando ? "xl:grid-cols-[1fr_300px]" : ""}`}>
               <div className="space-y-3">
+                {!editando && ajustes.modulos.reservas && <ProximasReservas supabase={supabase} restauranteId={restaurante.id} />}
                 <Plano
                   piso={piso}
                   mesas={mesas}
@@ -471,6 +500,7 @@ export function Salon({
                     setSeleccion(null);
                   }}
                   onBorrarMesa={borrarMesa}
+                  onFondo={cambiarFondo}
                   onAgregarElemento={agregarElemento}
                   onElemento={actualizarElemento}
                   onBorrarElemento={(id) => {
@@ -608,11 +638,13 @@ function BotonMesa({
     ? "border-stone-200 bg-superficie"
     : estado.aviso === "cuenta"
       ? "border-violet-500 bg-violet-50"
-      : estado.aviso
-        ? "border-sky-500 bg-sky-50"
-        : estado.listo
-          ? "border-emerald-500 bg-emerald-50"
-          : "border-amber-500 bg-amber-50";
+      : estado.aviso === "pago"
+        ? "border-emerald-600 bg-emerald-50"
+        : estado.aviso
+          ? "border-sky-500 bg-sky-50"
+          : estado.listo
+            ? "border-emerald-500 bg-emerald-50"
+            : "border-amber-500 bg-amber-50";
   return (
     <button
       type="button"
@@ -693,6 +725,7 @@ function PanelEdicion({
   onAgregarElemento,
   onElemento,
   onBorrarElemento,
+  onFondo,
 }: {
   piso: Piso;
   sinUbicar: Mesa[];
@@ -708,6 +741,7 @@ function PanelEdicion({
   onAgregarElemento: (t: TipoElemento) => void;
   onElemento: (id: string, c: Partial<Elemento>) => void;
   onBorrarElemento: (id: string) => void;
+  onFondo: (archivo: File | null) => Promise<unknown>;
 }) {
   return (
     <aside className="space-y-4">
@@ -920,10 +954,148 @@ function PanelEdicion({
             ))}
           </select>
         </label>
+        <FondoPiso key={piso.id} piso={piso} onPiso={onPiso} onFondo={onFondo} />
         <button type="button" onClick={onBorrarPiso} className="text-sm text-red-600 hover:underline">
           Borrar este piso
         </button>
       </div>
     </aside>
+  );
+}
+
+// Franja sobre el plano: quién espera en la puerta y qué reservas llegan en las próximas 2 horas.
+function ProximasReservas({ supabase, restauranteId }: { supabase: SupabaseClient; restauranteId: string }) {
+  const [datos, setDatos] = useState<{ espera: number; proximas: { nombre: string; personas: number; fecha: string }[] }>({
+    espera: 0,
+    proximas: [],
+  });
+  useEffect(() => {
+    let vivo = true;
+    const cargar = async () => {
+      const ahora = Date.now();
+      const [espera, reservas] = await Promise.all([
+        supabase
+          .from("reservas")
+          .select("id")
+          .eq("restaurante_id", restauranteId)
+          .eq("tipo", "espera")
+          .eq("estado", "pendiente")
+          .gte("created_at", new Date(ahora - 12 * 3600000).toISOString()),
+        supabase
+          .from("reservas")
+          .select("nombre, personas, fecha")
+          .eq("restaurante_id", restauranteId)
+          .eq("tipo", "reserva")
+          .in("estado", ["pendiente", "confirmada"])
+          .gte("fecha", new Date(ahora - 30 * 60000).toISOString())
+          .lte("fecha", new Date(ahora + 2 * 3600000).toISOString())
+          .order("fecha"),
+      ]);
+      if (vivo && !espera.error)
+        setDatos({ espera: espera.data?.length ?? 0, proximas: (reservas.data ?? []) as typeof datos.proximas });
+    };
+    cargar();
+    const id = setInterval(cargar, 60000);
+    return () => {
+      vivo = false;
+      clearInterval(id);
+    };
+  }, [supabase, restauranteId]);
+
+  if (!datos.espera && !datos.proximas.length) return null;
+  const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  return (
+    <Link
+      href="/panel/reservas"
+      className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm text-violet-950 hover:border-violet-400"
+    >
+      <Icono nombre="reservas" className="h-4 w-4" />
+      {datos.espera > 0 && (
+        <span>
+          <strong>{datos.espera}</strong> en la lista de espera
+        </span>
+      )}
+      {datos.proximas.slice(0, 4).map((r, i) => (
+        <span key={i}>
+          <strong>{hora(r.fecha)}</strong> {r.nombre} ({r.personas})
+        </span>
+      ))}
+      {datos.proximas.length > 4 && <span>y {datos.proximas.length - 4} más</span>}
+    </Link>
+  );
+}
+
+// Foto del local o plano del arquitecto debajo de la cuadrícula, para ubicar las mesas donde están de verdad.
+function FondoPiso({
+  piso,
+  onPiso,
+  onFondo,
+}: {
+  piso: Piso;
+  onPiso: (c: Partial<Piso>) => void;
+  onFondo: (archivo: File | null) => Promise<unknown>;
+}) {
+  const [subiendo, setSubiendo] = useState(false);
+  const [opacidad, setOpacidad] = useState(piso.fondo_opacidad ?? 60);
+  const guardarOpacidad = () => opacidad !== (piso.fondo_opacidad ?? 60) && onPiso({ fondo_opacidad: opacidad });
+
+  async function elegir(archivo: File | null) {
+    setSubiendo(true);
+    await onFondo(archivo);
+    setSubiendo(false);
+  }
+
+  return (
+    <div className="space-y-2 border-t border-borde pt-3">
+      <p className="flex items-center gap-1.5 text-sm font-medium">
+        <Icono nombre="foto" className="h-4 w-4" /> Foto o plano de fondo
+      </p>
+      {piso.fondo_url ? (
+        <>
+          <label className="block text-xs text-suave">
+            Transparencia: {opacidad}%
+            <input
+              type="range"
+              min={10}
+              max={100}
+              step={5}
+              value={opacidad}
+              onChange={(e) => setOpacidad(Number(e.target.value))}
+              onPointerUp={guardarOpacidad}
+              onKeyUp={guardarOpacidad}
+              onBlur={guardarOpacidad}
+              className="mt-1 w-full accent-[var(--color-marca)]"
+            />
+          </label>
+          <div className="flex gap-3 text-sm">
+            <label className="cursor-pointer text-marca hover:underline">
+              {subiendo ? "Subiendo…" : "Cambiar"}
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                disabled={subiendo}
+                onChange={(e) => e.target.files?.[0] && elegir(e.target.files[0])}
+              />
+            </label>
+            <button type="button" disabled={subiendo} onClick={() => elegir(null)} className="text-red-600 hover:underline">
+              Quitar
+            </button>
+          </div>
+        </>
+      ) : (
+        <label className="boton-secundario w-full cursor-pointer justify-center text-sm">
+          {subiendo ? "Subiendo…" : "Subir foto del local"}
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            disabled={subiendo}
+            onChange={(e) => e.target.files?.[0] && elegir(e.target.files[0])}
+          />
+        </label>
+      )}
+      <p className="text-xs text-suave">Una foto desde arriba o el plano del local. Las mesas se acomodan encima.</p>
+    </div>
   );
 }

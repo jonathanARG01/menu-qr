@@ -35,6 +35,8 @@ export function useMiMesa({
 }) {
   const [datos, setDatos] = useState<DatosMesa | null>(null);
   const [avisos, setAvisos] = useState<AvisoPedido[]>([]);
+  // La mesa tenía cuenta abierta y el mesero la cerró: momento de pedir la opinión.
+  const [cerrada, setCerrada] = useState(false);
   const previos = useRef<Map<number, EstadoPedido> | null>(null);
   const ultimo = useRef<DatosMesa | null>(null);
   const siguienteId = useRef(1);
@@ -49,6 +51,7 @@ export function useMiMesa({
     });
     if (error) return;
     const d = (data as DatosMesa | null) ?? { mesa, capacidad: 0, cuenta: null };
+    if (ultimo.current?.cuenta?.pedidos.length && !d.cuenta) setCerrada(true);
     ultimo.current = d;
     setDatos(d);
 
@@ -102,5 +105,5 @@ export function useMiMesa({
 
   const descartar = useCallback((id: number) => setAvisos((lista) => lista.filter((a) => a.id !== id)), []);
 
-  return { datos, recargar, avisos, descartar };
+  return { datos, recargar, avisos, descartar, cerrada, olvidarCierre: () => setCerrada(false) };
 }

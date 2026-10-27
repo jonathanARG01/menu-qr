@@ -1,14 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { Categoria, Plato } from "@/lib/types";
+import { useEffect, useMemo, useState } from "react";
+import { precioConPromo, promoVigente } from "@/lib/promos";
+import { createClient } from "@/lib/supabase/client";
+import type { Categoria, Plato, Promo } from "@/lib/types";
 
 export type LineaNueva = { clave: string; plato: Plato; cantidad: number; nota: string; comensal: number | null };
 
 // El mesero arma la comanda desde la carta: busca, suma platos, anota detalles y elige de quién es cada uno.
 export function TomarPedido({
   categorias,
-  platos,
+  platos: platosCarta,
+  zona,
   comensales,
   formato,
   onEnviar,
@@ -16,6 +19,8 @@ export function TomarPedido({
 }: {
   categorias: Categoria[];
   platos: Plato[];
+  // Zona horaria del restaurante, para mostrar el precio con las promos en horario.
+  zona: string;
   comensales: number;
   formato: (n: number) => string;
   onEnviar: (lineas: LineaNueva[]) => Promise<void>;
@@ -25,6 +30,29 @@ export function TomarPedido({
   const [categoria, setCategoria] = useState<string | null>(null);
   const [lineas, setLineas] = useState<LineaNueva[]>([]);
   const [enviando, setEnviando] = useState(false);
+  const [promos, setPromos] = useState<Promo[]>([]);
+
+  // Las promos en horario y los agotados se ven igual que en la carta (la base de datos cobra el mismo precio).
+  useEffect(() => {
+    const restaurante = platosCarta[0]?.restaurante_id;
+    if (!restaurante) return;
+    createClient()
+      .from("promos")
+      .select("*")
+      .eq("restaurante_id", restaurante)
+      .eq("activa", true)
+      .then(({ data }) => setPromos((data ?? []) as Promo[]));
+  }, [platosCarta]);
+
+  const platos = useMemo(() => {
+    const vigentes = promos.filter((p) => promoVigente(p, zona));
+    const ahora = Date.now();
+    return platosCarta.map((p) => ({
+      ...p,
+      precio: precioConPromo(p, vigentes),
+      agotado: !!p.agotado_hasta && Date.parse(p.agotado_hasta) > ahora,
+    }));
+  }, [platosCarta, promos, zona]);
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -84,7 +112,7 @@ export function TomarPedido({
               <li key={p.id}>
                 <button
                   type="button"
-                  disabled={!p.disponible}
+                  disabled={!p.disponible || p.agotado}
                   onClick={() => sumar(p)}
                   className={`flex w-full items-center gap-2 rounded-xl border p-2.5 text-left transition ${
                     n ? "border-marca bg-marca/5" : "border-borde bg-superficie hover:border-stone-300"
@@ -92,7 +120,9 @@ export function TomarPedido({
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{p.nombre}</span>
-                    <span className="text-xs text-suave">{p.disponible ? formato(Number(p.precio)) : "Agotado"}</span>
+                    <span className="text-xs text-suave">
+                      {p.disponible && !p.agotado ? formato(Number(p.precio)) : "Agotado"}
+                    </span>
                   </span>
                   {n > 0 && <span className="rounded-full bg-marca px-2 py-0.5 text-xs font-bold text-white">{n}</span>}
                 </button>

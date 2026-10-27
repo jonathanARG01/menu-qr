@@ -25,7 +25,18 @@ export default async function Estadisticas({ searchParams }: { searchParams: Pro
   const { supabase, restaurante } = await requerirSeccion("estadisticas");
   const pedido = Number((await searchParams).dias);
   const dias = RANGOS.includes(pedido) ? pedido : 30;
-  const { data, error } = await supabase.rpc("estadisticas", { p_restaurante: restaurante.id, p_dias: dias });
+  const desde = new Date(Date.now() - dias * 86400000).toISOString();
+  const [{ data, error }, { data: opiniones }] = await Promise.all([
+    supabase.rpc("estadisticas", { p_restaurante: restaurante.id, p_dias: dias }),
+    // Sin la migración 0009 no hay tabla de opiniones: la sección no aparece.
+    supabase
+      .from("opiniones")
+      .select("id, estrellas, comentario, mesa, created_at")
+      .eq("restaurante_id", restaurante.id)
+      .gte("created_at", desde)
+      .order("created_at", { ascending: false })
+      .limit(300),
+  ]);
 
   if (error) {
     return (
@@ -112,6 +123,7 @@ export default async function Estadisticas({ searchParams }: { searchParams: Pro
             vacio="Sin visitas en este período."
           />
         </section>
+        {opiniones && opiniones.length > 0 && <Opiniones lista={opiniones as Opinion[]} />}
         {r.por_sucursal.length > 1 && (
           <section className="tarjeta p-5 md:col-span-2">
             <h2 className="mb-4 font-semibold">Por sucursal</h2>
@@ -137,6 +149,58 @@ export default async function Estadisticas({ searchParams }: { searchParams: Pro
         )}
       </div>
     </div>
+  );
+}
+
+type Opinion = { id: string; estrellas: number; comentario: string | null; mesa: string | null; created_at: string };
+
+// Lo que dejaron los clientes al cerrar la mesa. Los comentarios con pocas estrellas solo los ves tú.
+function Opiniones({ lista }: { lista: Opinion[] }) {
+  const promedio = lista.reduce((s, o) => s + o.estrellas, 0) / lista.length;
+  const conteo = [5, 4, 3, 2, 1].map((n) => ({ n, cantidad: lista.filter((o) => o.estrellas === n).length }));
+  const comentarios = lista.filter((o) => o.comentario).slice(0, 20);
+  return (
+    <section className="tarjeta p-5 md:col-span-2">
+      <h2 className="font-semibold">Opiniones de los clientes</h2>
+      <div className="mt-3 flex flex-wrap items-center gap-6">
+        <div>
+          <p className="text-3xl font-bold tabular-nums">{promedio.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</p>
+          <p className="text-amber-500" aria-label={`${promedio.toFixed(1)} estrellas`}>
+            {"★".repeat(Math.round(promedio))}
+            <span className="text-stone-300">{"★".repeat(5 - Math.round(promedio))}</span>
+          </p>
+          <p className="text-xs text-suave">{lista.length} opiniones</p>
+        </div>
+        <div className="min-w-48 flex-1 space-y-1 text-xs">
+          {conteo.map(({ n, cantidad }) => (
+            <div key={n} className="flex items-center gap-2">
+              <span className="w-6 tabular-nums">{n}★</span>
+              <span className="h-2 flex-1 overflow-hidden rounded-full bg-stone-100">
+                <span
+                  className="block h-full rounded-full bg-amber-400"
+                  style={{ width: `${(cantidad / lista.length) * 100}%` }}
+                />
+              </span>
+              <span className="w-8 text-right tabular-nums text-suave">{cantidad}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {comentarios.length > 0 && (
+        <ul className="mt-4 divide-y divide-borde text-sm">
+          {comentarios.map((o) => (
+            <li key={o.id} className="py-2">
+              <span className="text-amber-500">{"★".repeat(o.estrellas)}</span>{" "}
+              <span className="text-xs text-suave">
+                {new Date(o.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}
+                {o.mesa ? ` · ${nombreMesa(o.mesa)}` : ""}
+              </span>
+              <p>{o.comentario}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

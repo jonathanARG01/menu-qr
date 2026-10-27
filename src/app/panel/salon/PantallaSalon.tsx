@@ -7,15 +7,22 @@ import type { Mesa } from "@/lib/types";
 import { minutosDesde } from "@/lib/useServicio";
 import { ESTILOS_PLANO, Plano, type EstadoMesa, type EstiloPlano } from "./Plano";
 
-type Aviso = { id: string; mesa: Mesa; tipo: "cuenta" | "mozo" | "pendiente" | "listo"; desde: string; detalle?: string };
+type Aviso = {
+  id: string;
+  mesa: Mesa;
+  tipo: "cuenta" | "pago" | "mozo" | "pendiente" | "listo";
+  desde: string;
+  detalle?: string;
+};
 
 const AVISO: Record<Aviso["tipo"], { texto: string; clase: string; icono: string }> = {
   cuenta: { texto: "Pide la cuenta", clase: "bg-violet-600", icono: "$" },
+  pago: { texto: "Pagó online", clase: "bg-emerald-700", icono: "$" },
   mozo: { texto: "Llama al mesero", clase: "bg-sky-600", icono: "!" },
   pendiente: { texto: "Pedido por confirmar", clase: "bg-red-600", icono: "●" },
   listo: { texto: "Pedido listo para llevar", clase: "bg-emerald-600", icono: "✓" },
 };
-const PRIORIDAD: Aviso["tipo"][] = ["cuenta", "mozo", "pendiente", "listo"];
+const PRIORIDAD: Aviso["tipo"][] = ["cuenta", "pago", "mozo", "pendiente", "listo"];
 
 // Pantalla del salón: el plano y los avisos en grande, para una tele o tableta fija en el salón (como la de cocina).
 // Mantiene la pantalla encendida y, si hay varios pisos, puede ir pasando de uno a otro sola.
@@ -214,7 +221,7 @@ export function PantallaSalon({
                   <button
                     type="button"
                     onClick={() => onAbrirMesa(a.mesa.id)}
-                    className={`flex w-full items-center gap-3 rounded-xl p-3 text-left text-white ${s.clase} ${a.tipo !== "listo" ? "animate-pulse" : ""}`}
+                    className={`flex w-full items-center gap-3 rounded-xl p-3 text-left text-white ${s.clase} ${a.tipo !== "listo" && a.tipo !== "pago" ? "animate-pulse" : ""}`}
                   >
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/20 text-lg font-bold">
                       {s.icono}
