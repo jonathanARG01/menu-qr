@@ -122,7 +122,7 @@ export function PantallaSalon({
   return (
     <div
       ref={marco}
-      className="tema-oscuro fixed inset-0 z-30 flex flex-col gap-3 overflow-hidden bg-[#0f0c0a] p-3 text-stone-100 sm:p-4"
+      className="tema-oscuro fixed inset-0 z-30 flex flex-col gap-3 overflow-hidden bg-[#0d1016] p-3 text-stone-100 sm:p-4"
     >
       <header className="tema-fijo flex text-stone-100 flex-wrap items-center gap-2">
         <h1 className="mr-2 text-lg font-bold sm:text-xl">{nombre} · Salón</h1>

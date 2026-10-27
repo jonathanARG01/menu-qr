@@ -99,8 +99,8 @@ export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; punto
     puntos: ["Vista simple, a color o en 3D", "Pantalla completa para el mostrador", "Avisos con sonido distinto para cada caso"],
     imagen: "/inicio/salon-3d.webp",
     ancho: 1440,
-    alto: 740,
-    alt: "Plano 3D del salón con las mesas numeradas y avisos de la mesa 15",
+    alto: 1000,
+    alt: "Panel de Mesitto con el plano 3D del salón, las mesas numeradas y el aviso de la mesa 4 que pide la cuenta",
   },
   {
     etiqueta: "Cocina",
@@ -108,9 +108,9 @@ export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; punto
     texto: "Cada estación ve lo suyo: la barra las bebidas, la cocina los platos. Se ordenan arrastrando y con un toque el mesero sabe que está listo para llevar.",
     puntos: ["Separado por cocina y barra", "Tiempo de espera en cada comanda", "Funciona en cualquier tablet o televisor"],
     imagen: "/inicio/cocina.webp",
-    ancho: 1136,
-    alto: 772,
-    alt: "Pantalla de cocina con dos comandas de la mesa 15",
+    ancho: 1440,
+    alto: 900,
+    alt: "Pantalla de cocina en el panel de Mesitto con las comandas de las mesas 4 y 1",
   },
   {
     etiqueta: "Cuenta",
@@ -120,7 +120,7 @@ export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; punto
     imagen: "/inicio/cobro.webp",
     ancho: 512,
     alto: 900,
-    alt: "Cuenta de la mesa 15 dividida en seis partes iguales",
+    alt: "Cuenta de la mesa 4 dividida en seis partes iguales",
   },
   {
     etiqueta: "A tu medida",
@@ -128,9 +128,9 @@ export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; punto
     texto: "Un café chico no necesita lo mismo que un restaurante de dos pisos. Enciende o apaga cada parte del sistema y decide qué ve cada persona del equipo.",
     puntos: ["Solo carta, local chico o restaurante completo", "Roles para mesero, cocina y administración", "Se cambia cuando quieras"],
     imagen: "/inicio/personalizar.webp",
-    ancho: 1184,
+    ancho: 1440,
     alto: 900,
-    alt: "Pantalla Personalizar con los módulos del sistema encendidos",
+    alt: "Pantalla Personalizar del panel con los módulos del sistema encendidos",
   },
 ];
 

@@ -54,23 +54,25 @@ body {
    (pantalla de cocina, que ya es oscura, y la vista previa de la carta). */
 .tema-oscuro {
   color-scheme: dark;
+  /* Grafito con un toque del azul tinta de Mesitto (en vez del marrón cálido de antes). */
   --color-marca: #5b78c4;
   --color-marca-oscuro: #4a66ad;
-  --color-superficie: #1f1c1a;
-  --color-fondo: #141210;
-  --color-tinta: #f5f5f4;
-  --color-suave: #a8a29e;
-  --color-borde: #36312d;
-  --color-stone-50: oklch(14.7% 0.004 49.25);
-  --color-stone-950: oklch(98.5% 0.001 106.423);
-  --color-stone-100: oklch(21.6% 0.006 56.043);
-  --color-stone-900: oklch(97% 0.001 106.424);
-  --color-stone-200: oklch(26.8% 0.007 34.298);
-  --color-stone-800: oklch(92.3% 0.003 48.717);
-  --color-stone-300: oklch(37.4% 0.01 67.558);
-  --color-stone-700: oklch(86.9% 0.005 56.366);
-  --color-stone-400: oklch(44.4% 0.011 73.639);
-  --color-stone-600: oklch(70.9% 0.01 56.259);
+  --color-superficie: #1a1e27;
+  --color-fondo: #11141a;
+  --color-tinta: #f3f4f7;
+  --color-suave: #9aa2b3;
+  --color-borde: #2b313e;
+  --color-stone-50: oklch(19% 0.015 262);
+  --color-stone-950: oklch(98.5% 0.002 262);
+  --color-stone-100: oklch(25% 0.016 262);
+  --color-stone-900: oklch(97% 0.003 262);
+  --color-stone-200: oklch(29.5% 0.017 262);
+  --color-stone-800: oklch(92.5% 0.006 262);
+  --color-stone-300: oklch(38% 0.018 262);
+  --color-stone-700: oklch(87% 0.008 262);
+  --color-stone-400: oklch(48% 0.02 262);
+  --color-stone-600: oklch(72% 0.016 262);
+  --color-stone-500: oklch(60% 0.018 262);
   --color-emerald-50: oklch(26.2% 0.051 172.552);
   --color-emerald-950: oklch(97.9% 0.021 166.113);
   --color-emerald-100: oklch(37.8% 0.077 168.94);
@@ -133,8 +135,8 @@ body {
 }
 /* Barras oscuras sobre fondo claro (la de guardar, por ejemplo): en oscuro siguen oscuras, apenas más claras que el fondo. */
 .tema-oscuro .bg-tinta {
-  background-color: #2e2926;
-  box-shadow: 0 0 0 1px #46403b;
+  background-color: #262c38;
+  box-shadow: 0 0 0 1px #3a4252;
 }
 .tema-oscuro .tema-fijo {
   color-scheme: light;
@@ -153,6 +155,7 @@ body {
   --color-stone-700: oklch(37.4% 0.01 67.558);
   --color-stone-400: oklch(70.9% 0.01 56.259);
   --color-stone-600: oklch(44.4% 0.011 73.639);
+  --color-stone-500: oklch(55.3% 0.013 58.071);
   --color-emerald-50: oklch(97.9% 0.021 166.113);
   --color-emerald-950: oklch(26.2% 0.051 172.552);
   --color-emerald-100: oklch(95% 0.052 163.051);
@@ -216,6 +219,51 @@ body {
 .tema-oscuro .tema-fijo .bg-tinta {
   background-color: var(--color-tinta);
   box-shadow: none;
+}
+
+/* ── Estilo del panel (.panel-ui) ──
+   Tarjetas más redondeadas y con relieve suave, botones y campos más redondos. Solo dentro del panel,
+   para no cambiar el sitio de venta ni la carta pública. */
+.panel-ui .tarjeta {
+  @apply rounded-3xl;
+  box-shadow:
+    0 1px 2px rgb(16 24 40 / 0.04),
+    0 8px 24px -16px rgb(16 24 40 / 0.18);
+}
+.panel-ui .boton,
+.panel-ui .boton-secundario,
+.panel-ui .boton-acento {
+  @apply rounded-xl;
+}
+.panel-ui .campo {
+  @apply rounded-xl;
+}
+.tema-oscuro.panel-ui .tarjeta,
+.tema-oscuro .panel-ui .tarjeta {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.025), rgb(255 255 255 / 0));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.04),
+    0 12px 32px -18px rgb(0 0 0 / 0.7);
+}
+.tema-oscuro .tema-fijo .tarjeta {
+  background-image: none;
+  box-shadow: none;
+}
+/* Fondo del panel: un brillo azul muy tenue arriba, como en las apps de gestión modernas. */
+.panel-fondo {
+  background: radial-gradient(1200px 500px at 85% -10%, rgb(35 52 92 / 0.08), transparent 60%), var(--color-fondo);
+}
+.tema-oscuro.panel-fondo {
+  background:
+    radial-gradient(1100px 520px at 85% -12%, rgb(91 120 196 / 0.14), transparent 60%),
+    radial-gradient(700px 380px at -5% 105%, rgb(242 163 58 / 0.06), transparent 60%), var(--color-fondo);
+}
+/* Fila de chips con desplazamiento lateral sin barra visible. */
+.sin-barra {
+  scrollbar-width: none;
+}
+.sin-barra::-webkit-scrollbar {
+  display: none;
 }
 
 /* Aviso emergente del pedido en el celular del comensal */

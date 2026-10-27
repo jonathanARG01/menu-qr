@@ -23,9 +23,12 @@ import type { Categoria, Plato, Restaurante } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { useToast } from "@/components/Toast";
 import { Interruptor } from "@/components/Interruptor";
+import { Icono } from "@/components/Icono";
 import { revalidarCarta } from "./actions";
 import { PlatoModal } from "./PlatoModal";
 import { IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
+import { imagenDefecto } from "@/components/carta/comun";
+import Link from "next/link";
 
 type Props = {
   restaurante: Restaurante;
@@ -165,118 +168,270 @@ export function EditorCarta({ restaurante, estaciones, categoriasIniciales, plat
     });
   }
 
+  // Lleva a una categoría desde los chips de arriba (y la abre si estaba plegada).
+  function irACategoria(id: string) {
+    setCerradas((s) => {
+      const n = new Set(s);
+      n.delete(id);
+      return n;
+    });
+    requestAnimationFrame(() =>
+      document.getElementById(`categoria-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      {categorias.length === 0 && (
-        <div className="tarjeta p-6 text-center">
-          <p className="font-semibold">Tu carta está vacía</p>
-          <p className="mt-1 text-sm text-suave">Empieza creando una categoría, por ejemplo “Entradas” o “Bebidas”.</p>
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="min-w-0 space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Carta</h1>
+            <p className="text-sm text-suave">
+              <span className="font-semibold text-amber-600">{platos.length} platos</span> en {categorias.length}{" "}
+              {categorias.length === 1 ? "categoría" : "categorías"}
+            </p>
+          </div>
+          {categorias.length > 0 && (
+            <button type="button" onClick={() => setModal({ plato: null, categoriaId: categorias[0].id })} className="boton">
+              + Nuevo plato
+            </button>
+          )}
         </div>
-      )}
 
-      <DndContext id="categorias" sensors={sensores} collisionDetection={closestCenter} onDragEnd={alSoltarCategoria}>
-        <SortableContext items={categorias.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-          {categorias.map((cat) => {
-            const deCategoria = platos.filter((p) => p.categoria_id === cat.id);
-            return (
-              <BloqueCategoria
-                key={cat.id}
-                categoria={cat}
-                cantidad={deCategoria.length}
-                cerrada={cerradas.has(cat.id)}
-                onAlternar={() => alternar(cat.id)}
-                onRenombrar={(nombre) => actualizarCategoria(cat.id, { nombre })}
-                onTraducir={idiomas.length ? () => setTraduciendo(cat) : undefined}
-                onVisible={(visible) => actualizarCategoria(cat.id, { visible })}
-                estaciones={cat.estacion !== undefined ? estaciones : undefined}
-                onEstacion={(estacion) => actualizarCategoria(cat.id, { estacion })}
-                onBorrar={() => borrarCategoria(cat)}
-              >
-                <DndContext
-                  id={`platos-${cat.id}`}
-                  sensors={sensores}
-                  collisionDetection={closestCenter}
-                  onDragEnd={alSoltarPlato(cat.id)}
+        {categorias.length > 1 && <ChipsCategorias categorias={categorias} platos={platos} onElegir={irACategoria} />}
+
+        {categorias.length === 0 && (
+          <div className="tarjeta p-6 text-center">
+            <p className="font-semibold">Tu carta está vacía</p>
+            <p className="mt-1 text-sm text-suave">Empieza creando una categoría, por ejemplo “Entradas” o “Bebidas”.</p>
+          </div>
+        )}
+
+        <DndContext id="categorias" sensors={sensores} collisionDetection={closestCenter} onDragEnd={alSoltarCategoria}>
+          <SortableContext items={categorias.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+            {categorias.map((cat) => {
+              const deCategoria = platos.filter((p) => p.categoria_id === cat.id);
+              return (
+                <BloqueCategoria
+                  key={cat.id}
+                  categoria={cat}
+                  cantidad={deCategoria.length}
+                  cerrada={cerradas.has(cat.id)}
+                  onAlternar={() => alternar(cat.id)}
+                  onRenombrar={(nombre) => actualizarCategoria(cat.id, { nombre })}
+                  onTraducir={idiomas.length ? () => setTraduciendo(cat) : undefined}
+                  onVisible={(visible) => actualizarCategoria(cat.id, { visible })}
+                  estaciones={cat.estacion !== undefined ? estaciones : undefined}
+                  onEstacion={(estacion) => actualizarCategoria(cat.id, { estacion })}
+                  onBorrar={() => borrarCategoria(cat)}
                 >
-                  <SortableContext items={deCategoria.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-                    <ul className="divide-y divide-borde">
-                      {deCategoria.map((plato) => (
-                        <FilaPlato
-                          key={plato.id}
-                          plato={plato}
-                          moneda={restaurante.moneda}
-                          onPrecio={(precio) => actualizarPlato(plato.id, { precio }, "Precio actualizado")}
-                          onDisponible={(disponible) =>
-                            actualizarPlato(plato.id, { disponible }, disponible ? "Visible en la carta" : "Marcado como agotado")
-                          }
-                          onDestacar={
-                            "destacado" in plato
-                              ? (destacado) =>
-                                  actualizarPlato(
-                                    plato.id,
-                                    { destacado },
-                                    destacado ? "Ahora sale en Destacados" : "Quitado de Destacados",
-                                  )
-                              : undefined
-                          }
-                          onEditar={() => setModal({ plato, categoriaId: cat.id })}
-                        />
-                      ))}
-                    </ul>
-                  </SortableContext>
-                </DndContext>
-                <button
-                  type="button"
-                  onClick={() => setModal({ plato: null, categoriaId: cat.id })}
-                  className="w-full border-t border-borde px-4 py-3 text-left text-sm font-medium text-marca hover:bg-stone-50"
-                >
-                  + Añadir plato
-                </button>
-              </BloqueCategoria>
-            );
-          })}
-        </SortableContext>
-      </DndContext>
+                  <DndContext
+                    id={`platos-${cat.id}`}
+                    sensors={sensores}
+                    collisionDetection={closestCenter}
+                    onDragEnd={alSoltarPlato(cat.id)}
+                  >
+                    <SortableContext items={deCategoria.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+                      <ul className="divide-y divide-borde">
+                        {deCategoria.map((plato) => (
+                          <FilaPlato
+                            key={plato.id}
+                            plato={plato}
+                            moneda={restaurante.moneda}
+                            onPrecio={(precio) => actualizarPlato(plato.id, { precio }, "Precio actualizado")}
+                            onDisponible={(disponible) =>
+                              actualizarPlato(
+                                plato.id,
+                                { disponible },
+                                disponible ? "Visible en la carta" : "Marcado como agotado",
+                              )
+                            }
+                            onDestacar={
+                              "destacado" in plato
+                                ? (destacado) =>
+                                    actualizarPlato(
+                                      plato.id,
+                                      { destacado },
+                                      destacado ? "Ahora sale en Destacados" : "Quitado de Destacados",
+                                    )
+                                : undefined
+                            }
+                            onEditar={() => setModal({ plato, categoriaId: cat.id })}
+                          />
+                        ))}
+                      </ul>
+                    </SortableContext>
+                  </DndContext>
+                  <button
+                    type="button"
+                    onClick={() => setModal({ plato: null, categoriaId: cat.id })}
+                    className="w-full border-t border-borde px-4 py-3 text-left text-sm font-medium text-marca hover:bg-stone-50"
+                  >
+                    + Añadir plato
+                  </button>
+                </BloqueCategoria>
+              );
+            })}
+          </SortableContext>
+        </DndContext>
 
-      <form onSubmit={agregarCategoria} className="flex gap-2">
-        <input
-          value={nuevaCategoria}
-          onChange={(e) => setNuevaCategoria(e.target.value)}
-          placeholder="Nueva categoría"
-          maxLength={60}
-          className="campo"
-          aria-label="Nombre de la nueva categoría"
-        />
-        <button type="submit" className="boton shrink-0" disabled={!nuevaCategoria.trim()}>
-          Añadir
-        </button>
-      </form>
+        <form onSubmit={agregarCategoria} className="flex gap-2">
+          <input
+            value={nuevaCategoria}
+            onChange={(e) => setNuevaCategoria(e.target.value)}
+            placeholder="Nueva categoría"
+            maxLength={60}
+            className="campo"
+            aria-label="Nombre de la nueva categoría"
+          />
+          <button type="submit" className="boton shrink-0" disabled={!nuevaCategoria.trim()}>
+            Añadir
+          </button>
+        </form>
 
-      {traduciendo && (
-        <TraducirCategoria
-          categoria={traduciendo}
-          idiomas={idiomas}
-          onCerrar={() => setTraduciendo(null)}
-          onGuardar={(traducciones) => {
-            actualizarCategoria(traduciendo.id, { traducciones });
-            setTraduciendo(null);
-          }}
-        />
-      )}
+        {traduciendo && (
+          <TraducirCategoria
+            categoria={traduciendo}
+            idiomas={idiomas}
+            onCerrar={() => setTraduciendo(null)}
+            onGuardar={(traducciones) => {
+              actualizarCategoria(traduciendo.id, { traducciones });
+              setTraduciendo(null);
+            }}
+          />
+        )}
 
-      {modal && (
-        <PlatoModal
-          restaurante={restaurante}
-          categorias={categorias}
-          plato={modal.plato}
-          categoriaId={modal.categoriaId}
-          contarPlatos={(id) => platos.filter((p) => p.categoria_id === id).length}
-          onCerrar={() => setModal(null)}
-          onGuardado={alGuardarModal}
-          onBorrado={alBorrarModal}
-        />
-      )}
+        {modal && (
+          <PlatoModal
+            restaurante={restaurante}
+            categorias={categorias}
+            plato={modal.plato}
+            categoriaId={modal.categoriaId}
+            contarPlatos={(id) => platos.filter((p) => p.categoria_id === id).length}
+            onCerrar={() => setModal(null)}
+            onGuardado={alGuardarModal}
+            onBorrado={alBorrarModal}
+          />
+        )}
+      </div>
+      <ResumenCarta restaurante={restaurante} platos={platos} />
     </div>
+  );
+}
+
+// Fila de categorías con la foto de su primer plato (o la ilustración por defecto), como accesos rápidos.
+function ChipsCategorias({
+  categorias,
+  platos,
+  onElegir,
+}: {
+  categorias: Categoria[];
+  platos: Plato[];
+  onElegir: (id: string) => void;
+}) {
+  return (
+    <div className="sin-barra -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+      {categorias.map((cat) => {
+        const deCategoria = platos.filter((p) => p.categoria_id === cat.id);
+        const conFoto = deCategoria.find((p) => p.foto_url);
+        const primero = deCategoria[0];
+        const imagen = conFoto?.foto_url ?? (primero ? imagenDefecto(primero.nombre, primero.descripcion) : null);
+        return (
+          <button
+            key={cat.id}
+            type="button"
+            onClick={() => onElegir(cat.id)}
+            className="group flex w-20 shrink-0 flex-col items-center gap-1.5 text-center"
+          >
+            <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-borde bg-stone-100 shadow-sm ring-marca-claro/70 transition group-hover:ring-2">
+              {imagen ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imagen}
+                  alt=""
+                  className={conFoto ? "h-full w-full object-cover" : "h-[70%] w-[70%] object-contain drop-shadow"}
+                />
+              ) : (
+                <span className="text-lg font-bold text-suave">{cat.nombre.charAt(0)}</span>
+              )}
+            </span>
+            <span className="w-full truncate text-xs font-medium">{cat.nombre}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Columna derecha en pantallas anchas: cómo está la carta de un vistazo y atajos a lo que se hace después.
+function ResumenCarta({ restaurante, platos }: { restaurante: Restaurante; platos: Plato[] }) {
+  const visibles = platos.filter((p) => p.disponible).length;
+  const datos = [
+    { texto: "Visibles", valor: visibles, color: "text-emerald-600" },
+    { texto: "Agotados", valor: platos.length - visibles, color: "text-red-600" },
+    { texto: "Destacados", valor: platos.filter((p) => p.destacado).length, color: "text-amber-600" },
+    { texto: "Sin foto", valor: platos.filter((p) => !p.foto_url).length, color: "text-sky-600" },
+  ];
+  const precios = platos.map((p) => Number(p.precio)).filter((n) => n > 0);
+  const promedio = precios.length ? precios.reduce((a, b) => a + b, 0) / precios.length : 0;
+  const atajos = [
+    { href: "/panel/marca", texto: "Cambiar el diseño", icono: "marca" },
+    { href: "/panel/qr", texto: "Imprimir los QR", icono: "qr" },
+    { href: "/panel/promos", texto: "Crear una promo", icono: "promos" },
+  ];
+
+  return (
+    <aside className="hidden xl:block">
+      <div className="tarjeta sticky top-4 overflow-hidden">
+        <div className="bg-stone-100 px-5 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-suave">Resumen</p>
+          <p className="mt-1 truncate text-lg font-bold">{restaurante.nombre}</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 p-4">
+          {datos.map((d) => (
+            <div key={d.texto} className="rounded-2xl bg-stone-100 px-3 py-2.5">
+              <p className={`text-xl font-bold tabular-nums ${d.color}`}>{d.valor}</p>
+              <p className="text-xs text-suave">{d.texto}</p>
+            </div>
+          ))}
+        </div>
+        {/* Corte tipo ticket */}
+        <div className="relative px-4" aria-hidden>
+          <span className="absolute top-1/2 -left-3 h-6 w-6 -translate-y-1/2 rounded-full bg-fondo" />
+          <span className="absolute top-1/2 -right-3 h-6 w-6 -translate-y-1/2 rounded-full bg-fondo" />
+          <div className="border-t border-dashed border-borde" />
+        </div>
+        <dl className="space-y-2 px-5 py-4 text-sm">
+          <div className="flex justify-between gap-2">
+            <dt className="text-suave">Precio promedio</dt>
+            <dd className="font-semibold tabular-nums">{formatoPrecio(Math.round(promedio), restaurante.moneda)}</dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt className="text-suave">Precio más alto</dt>
+            <dd className="font-semibold tabular-nums">
+              {formatoPrecio(precios.length ? Math.max(...precios) : 0, restaurante.moneda)}
+            </dd>
+          </div>
+        </dl>
+        <div className="space-y-1.5 border-t border-borde p-3">
+          {atajos.map((a) => (
+            <Link
+              key={a.href}
+              href={a.href}
+              className="flex items-center gap-3 rounded-xl px-2 py-2 text-sm font-medium hover:bg-stone-100"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-suave">
+                <Icono nombre={a.icono} className="h-4 w-4" />
+              </span>
+              {a.texto}
+            </Link>
+          ))}
+          <a href={`/${restaurante.slug}`} target="_blank" className="boton-acento mt-2 w-full rounded-2xl py-3">
+            Ver carta pública
+          </a>
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -338,9 +493,10 @@ function BloqueCategoria({
 
   return (
     <section
+      id={`categoria-${categoria.id}`}
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={`tarjeta overflow-hidden ${isDragging ? "relative z-10 shadow-xl" : ""} ${categoria.visible ? "" : "opacity-70"}`}
+      className={`tarjeta scroll-mt-4 overflow-hidden ${isDragging ? "relative z-10 shadow-xl" : ""} ${categoria.visible ? "" : "opacity-70"}`}
     >
       <div className="flex items-center gap-1 bg-stone-50 px-2 py-2">
         <Asa {...attributes} {...listeners} />
@@ -435,12 +591,14 @@ function FilaPlato({
       className={`flex items-center gap-2 bg-superficie px-2 py-2 ${isDragging ? "relative z-10 shadow-lg" : ""}`}
     >
       <Asa {...attributes} {...listeners} />
-      <button type="button" onClick={onEditar} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+      <button type="button" onClick={onEditar} className="flex min-w-0 flex-1 items-center gap-2.5 text-left sm:gap-3">
         {plato.foto_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={plato.foto_url} alt="" className="h-11 w-11 shrink-0 rounded-lg object-cover" />
+          <img src={plato.foto_url} alt="" className="h-10 w-10 shrink-0 rounded-xl object-cover sm:h-11 sm:w-11" />
         ) : (
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-400">◌</span>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-stone-400 sm:h-11 sm:w-11">
+            ◌
+          </span>
         )}
         <span className="min-w-0">
           <span className={`block truncate font-medium ${plato.disponible ? "" : "text-suave line-through"}`}>
@@ -459,7 +617,7 @@ function FilaPlato({
         onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
         onFocus={(e) => e.currentTarget.select()}
         aria-label={`Precio de ${plato.nombre}`}
-        className="w-20 shrink-0 rounded-lg border border-borde px-2 py-1.5 text-right text-sm tabular-nums outline-none focus:border-marca focus:ring-2 focus:ring-marca/20"
+        className="w-16 shrink-0 rounded-lg border border-borde px-2 py-1.5 sm:w-20 text-right text-sm tabular-nums outline-none focus:border-marca focus:ring-2 focus:ring-marca/20"
       />
       {onDestacar && (
         <button
