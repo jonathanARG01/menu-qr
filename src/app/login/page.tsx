@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AuthShell } from "@/components/AuthShell";
 import { LoginForm } from "./LoginForm";
 
-export const metadata = { title: "Entrar · Menús QR" };
+export const metadata = { title: "Entrar · Mesitto" };
 
 export default function LoginPage() {
   return (

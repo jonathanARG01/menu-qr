@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function Inicio() {
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-16">
-      <p className="text-sm font-semibold uppercase tracking-wider text-marca">Menús QR</p>
+      <p className="text-sm font-semibold uppercase tracking-wider text-marca">Mesitto</p>
       <h1 className="mt-3 font-serif text-4xl font-semibold leading-tight sm:text-5xl">
         La carta de tu restaurante, siempre al día.
       </h1>

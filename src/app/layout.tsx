@@ -3,10 +3,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Menús QR · Cartas digitales para restaurantes",
+    default: "Mesitto · Carta digital y gestión para restaurantes",
     template: "%s",
   },
-  description: "Carta digital con QR que el restaurante actualiza desde su móvil en segundos.",
+  description: "Mesitto: carta digital con QR, pedidos desde la mesa y gestión del salón para restaurantes.",
+  applicationName: "Mesitto",
 };
 
 export const viewport: Viewport = {
