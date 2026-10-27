@@ -6,7 +6,9 @@ import { traducir } from "@/lib/i18n";
 import type { Restaurante } from "@/lib/types";
 import { formatoPrecio } from "@/lib/utils";
 import { useCarta } from "./contexto";
+import { AvisoEmergente } from "./AvisoEmergente";
 import { MiMesa } from "./MiMesa";
+import { useMiMesa } from "./useMiMesa";
 
 // Barra inferior de la carta: mesa, sucursal, contacto por WhatsApp y el pedido en curso.
 // Los colores salen de las variables de cada diseño (--pie-bg, --pie-text, --acento, --sobre-acento).
@@ -18,6 +20,7 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
   const whatsapp = sucursal?.whatsapp || restaurante.whatsapp;
   const unidades = lineas.reduce((n, l) => n + l.cantidad, 0);
   const total = lineas.reduce((n, l) => n + l.cantidad * Number(l.plato.precio), 0);
+  const miMesa = useMiMesa({ restauranteId: restaurante.id, sucursalId: sucursal?.id ?? null, mesa, activo: pedidosMesa });
 
   useEffect(() => {
     if (!aviso) return;
@@ -81,8 +84,27 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
           )}
         </div>
       </div>
-      {abierto && <HojaPedido restaurante={restaurante} total={total} onCerrar={() => setAbierto(false)} onEnviado={setAviso} />}
-      {mesaAbierta && <MiMesa restaurante={restaurante} onCerrar={() => setMesaAbierta(false)} onAviso={setAviso} />}
+      {abierto && (
+        <HojaPedido
+          restaurante={restaurante}
+          total={total}
+          onCerrar={() => setAbierto(false)}
+          onEnviado={(texto) => {
+            setAviso(texto);
+            miMesa.recargar();
+          }}
+        />
+      )}
+      {mesaAbierta && (
+        <MiMesa
+          restaurante={restaurante}
+          datos={miMesa.datos}
+          recargar={miMesa.recargar}
+          onCerrar={() => setMesaAbierta(false)}
+          onAviso={setAviso}
+        />
+      )}
+      <AvisoEmergente avisos={miMesa.avisos} onDescartar={miMesa.descartar} t={t} />
     </>
   );
 }

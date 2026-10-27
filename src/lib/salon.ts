@@ -217,6 +217,8 @@ export type Pedido = {
   estado: EstadoPedido;
   nombre: string | null;
   nota: string | null;
+  // Orden manual en la pantalla de cocina (migración 0005); sin valor va por hora de llegada.
+  orden?: number | null;
   created_at: string;
   actualizado_at: string;
   pedido_items?: PedidoItem[];

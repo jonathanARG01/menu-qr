@@ -35,6 +35,24 @@ const guardar = (clave: string, valor: string) => {
   } catch {}
 };
 
+// Posición de una comanda en el tablero: su orden manual (si la movieron) o la hora de llegada.
+const posicion = (p: Pedido, local: Record<string, number>) => local[p.id] ?? p.orden ?? Date.parse(p.created_at);
+
+const sinClave = (o: Record<string, number>, id: string) => Object.fromEntries(Object.entries(o).filter(([x]) => x !== id));
+
+type Arrastre = {
+  id: string;
+  x0: number;
+  y0: number;
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+  ancho: number;
+  activo: boolean;
+  orden: string[];
+};
+
 // Pitido corto para avisar que entró una comanda.
 function pitar() {
   try {
@@ -65,10 +83,18 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
   const [verEntregados, setVerEntregados] = useState(false);
   const [detalle, setDetalle] = useState<string | null>(null);
   const vistos = useRef<Set<string> | null>(null);
+  // Orden movido en esta pantalla que todavía no volvió de la base (o que no se puede guardar sin la migración 0005).
+  const [ordenLocal, setOrdenLocal] = useState<Record<string, number>>({});
+  const [arrastre, setArrastre] = useState<Arrastre | null>(null);
+  const recienArrastrado = useRef(false);
+  const avisadoSinColumna = useRef(false);
 
   useEffect(() => {
     setEstacion(leer("cocina:estacion") ?? "Todas");
     setSonido(leer("cocina:sonido") !== "no");
+    try {
+      setOrdenLocal(JSON.parse(leer("cocina:orden") ?? "{}"));
+    } catch {}
   }, []);
 
   const estaciones = useMemo(
@@ -76,7 +102,16 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
     [ajustes.estaciones, pedidos],
   );
   const deEstacion = pedidos.filter((p) => estacion === "Todas" || p.estacion === estacion);
-  const activos = deEstacion.filter((p) => p.estado === "nuevo" || p.estado === "preparando");
+  const activos = deEstacion
+    .filter((p) => p.estado === "nuevo" || p.estado === "preparando")
+    .sort((a, b) => posicion(a, ordenLocal) - posicion(b, ordenLocal) || a.numero - b.numero);
+  // Mientras se arrastra, el tablero muestra dónde quedaría la comanda.
+  const tarjetas = arrastre?.activo
+    ? [
+        ...arrastre.orden.map((id) => activos.find((p) => p.id === id)).filter((p): p is Pedido => !!p),
+        ...activos.filter((p) => !arrastre.orden.includes(p.id)),
+      ]
+    : activos;
   const listos = deEstacion.filter((p) => p.estado === "listo");
   const pendientes = deEstacion.filter((p) => p.estado === "pendiente");
   const entregados = deEstacion
@@ -114,6 +149,101 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
     const { error } = await supabase.from("pedido_items").update({ listo: !i.listo }).eq("id", i.id);
     if (error) return avisar(mensajeError(error), "error");
     recargar();
+  }
+
+  // Guarda la nueva posición como un número entre sus vecinas: una sola fila cambia y las demás pantallas lo ven en vivo.
+  async function ubicar(id: string, lista: string[]) {
+    const k = lista.indexOf(id);
+    const buscar = (x?: string) => activos.find((p) => p.id === x);
+    const antes = buscar(lista[k - 1]);
+    const despues = buscar(lista[k + 1]);
+    const yo = buscar(id);
+    if (!yo) return;
+    const a = antes && posicion(antes, ordenLocal);
+    const b = despues && posicion(despues, ordenLocal);
+    const valor = a !== undefined && b !== undefined ? (a + b) / 2 : a !== undefined ? a + 1000 : b !== undefined ? b - 1000 : posicion(yo, ordenLocal);
+    if (valor === posicion(yo, ordenLocal)) return;
+    setOrdenLocal((o) => ({ ...o, [id]: valor }));
+
+    const { error } = await supabase.from("pedidos").update({ orden: valor }).eq("id", id);
+    if (error && (error.code === "PGRST204" || /orden/.test(error.message))) {
+      // Falta la migración 0005: el orden queda guardado solo en esta pantalla.
+      const vigentes = new Set(pedidos.filter((p) => p.estado !== "entregado").map((p) => p.id));
+      setOrdenLocal((o) => {
+        const limpio = Object.fromEntries(Object.entries({ ...o, [id]: valor }).filter(([x]) => vigentes.has(x)));
+        guardar("cocina:orden", JSON.stringify(limpio));
+        return limpio;
+      });
+      if (!avisadoSinColumna.current) {
+        avisadoSinColumna.current = true;
+        avisar("El orden se guardó solo en esta pantalla. Ejecuta 0005_orden_comandas.sql para compartirlo.");
+      }
+      return;
+    }
+    if (error) {
+      setOrdenLocal((o) => sinClave(o, id));
+      return avisar(mensajeError(error), "error");
+    }
+    await recargar();
+    setOrdenLocal((o) => sinClave(o, id));
+  }
+
+  function mover(id: string, paso: -1 | 1) {
+    const lista = activos.map((p) => p.id);
+    const k = lista.indexOf(id);
+    const j = k + paso;
+    if (k < 0 || j < 0 || j >= lista.length) return;
+    [lista[k], lista[j]] = [lista[j], lista[k]];
+    ubicar(id, lista);
+  }
+
+  // Arrastrar desde la cabecera de la comanda; un toque sin mover abre el detalle.
+  function empezarArrastre(e: React.PointerEvent<HTMLButtonElement>, p: Pedido) {
+    if (e.button !== 0) return;
+    const r = e.currentTarget.closest("article")!.getBoundingClientRect();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setArrastre({
+      id: p.id,
+      x0: e.clientX,
+      y0: e.clientY,
+      x: e.clientX,
+      y: e.clientY,
+      dx: e.clientX - r.left,
+      dy: e.clientY - r.top,
+      ancho: r.width,
+      activo: false,
+      orden: activos.map((x) => x.id),
+    });
+  }
+
+  function moverArrastre(e: React.PointerEvent) {
+    if (!arrastre) return;
+    const { clientX: x, clientY: y } = e;
+    if (!arrastre.activo && Math.hypot(x - arrastre.x0, y - arrastre.y0) < 6) return;
+    let orden = arrastre.orden;
+    const sobre = document
+      .elementsFromPoint(x, y)
+      .map((n) => n.closest<HTMLElement>("[data-comanda]"))
+      .find((n) => n && n.dataset.comanda !== arrastre.id);
+    if (sobre) {
+      const r = sobre.getBoundingClientRect();
+      // En una sola columna (celular) se ordena de arriba abajo; en la grilla, de izquierda a derecha.
+      const columna = r.width > (sobre.parentElement?.clientWidth ?? 0) * 0.6;
+      const despues = columna ? y > r.top + r.height / 2 : x > r.left + r.width / 2;
+      const sinMi = orden.filter((id) => id !== arrastre.id);
+      const k = sinMi.indexOf(sobre.dataset.comanda!) + (despues ? 1 : 0);
+      orden = [...sinMi.slice(0, k), arrastre.id, ...sinMi.slice(k)];
+    }
+    setArrastre({ ...arrastre, x, y, activo: true, orden });
+  }
+
+  function soltar() {
+    if (arrastre?.activo) {
+      recienArrastrado.current = true;
+      setTimeout(() => (recienArrastrado.current = false), 0);
+      ubicar(arrastre.id, arrastre.orden);
+    }
+    setArrastre(null);
   }
 
   const color = (min: number) =>
@@ -185,13 +315,27 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
               No hay comandas pendientes. Las nuevas aparecen solas aquí.
             </p>
           )}
-          {activos.map((p) => {
+          {tarjetas.map((p) => {
             const min = minutosDesde(p.created_at, ahora);
             const { mesa, piso } = lugar(p);
             const sig = SIGUIENTE[p.estado]!;
+            const moviendo = arrastre?.activo && arrastre.id === p.id;
             return (
-              <article key={p.id} className="flex flex-col overflow-hidden rounded-xl bg-white text-stone-900 shadow-lg">
-                <button type="button" onClick={() => setDetalle(p.id)} className={`px-3 py-2 text-left text-white ${color(min)}`}>
+              <article
+                key={p.id}
+                data-comanda={p.id}
+                className={`flex flex-col overflow-hidden rounded-xl bg-white text-stone-900 shadow-lg ${moviendo ? "opacity-30 outline-2 outline-dashed outline-white/70" : ""}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => !recienArrastrado.current && setDetalle(p.id)}
+                  onPointerDown={(e) => empezarArrastre(e, p)}
+                  onPointerMove={moverArrastre}
+                  onPointerUp={soltar}
+                  onPointerCancel={() => setArrastre(null)}
+                  title="Toca para ver el detalle · arrastra para cambiar el orden"
+                  className={`cursor-grab touch-none select-none px-3 py-2 text-left text-white active:cursor-grabbing ${color(min)}`}
+                >
                   <span className="flex items-center justify-between gap-2">
                     <span className="text-lg font-bold">{mesa}</span>
                     <span className="flex items-center gap-1 text-sm font-semibold tabular-nums" suppressHydrationWarning>
@@ -244,6 +388,24 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
             );
           })}
         </div>
+
+        {arrastre?.activo &&
+          (() => {
+            const p = activos.find((x) => x.id === arrastre.id);
+            if (!p) return null;
+            return (
+              <div
+                aria-hidden
+                className={`pointer-events-none fixed z-50 rotate-2 rounded-xl px-3 py-2 text-white shadow-2xl ${color(minutosDesde(p.created_at, ahora))}`}
+                style={{ left: arrastre.x - arrastre.dx, top: arrastre.y - arrastre.dy, width: arrastre.ancho }}
+              >
+                <span className="block text-lg font-bold">{lugar(p).mesa}</span>
+                <span className="block truncate text-xs opacity-90">
+                  {(p.pedido_items ?? []).map((i) => `${i.cantidad} ${i.nombre}`).join(", ")}
+                </span>
+              </div>
+            );
+          })()}
 
         <aside className="space-y-2 rounded-xl bg-white/5 p-3">
           <p className="text-sm font-semibold text-emerald-300">Listos para llevar ({listos.length})</p>
@@ -338,6 +500,28 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
             </ul>
             {elegido.nota && <p className="mt-3 rounded-lg bg-amber-50 p-2 text-sm text-amber-900">Nota: {elegido.nota}</p>}
             <div className="mt-5 flex flex-wrap gap-2">
+              {activos.length > 1 && activos.some((p) => p.id === elegido.id) && (
+                <span className="flex overflow-hidden rounded-lg border border-stone-200 text-sm font-medium">
+                  <button
+                    type="button"
+                    className="px-3 py-2 hover:bg-stone-100 disabled:opacity-40"
+                    disabled={activos[0].id === elegido.id}
+                    onClick={() => mover(elegido.id, -1)}
+                    title="Mover antes"
+                  >
+                    ← Antes
+                  </button>
+                  <button
+                    type="button"
+                    className="border-l border-stone-200 px-3 py-2 hover:bg-stone-100 disabled:opacity-40"
+                    disabled={activos[activos.length - 1].id === elegido.id}
+                    onClick={() => mover(elegido.id, 1)}
+                    title="Mover después"
+                  >
+                    Después →
+                  </button>
+                </span>
+              )}
               {elegido.estado !== "nuevo" && elegido.estado !== "pendiente" && (
                 <button
                   type="button"
