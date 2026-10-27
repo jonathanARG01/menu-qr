@@ -4,8 +4,17 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { Icono } from "@/components/Icono";
 import { describirPropina, totalLineas } from "@/lib/cuenta";
-import { NOMBRE_ESTADO, type Ajustes, type EstadoPedido, type Pedido, type PedidoItem, nombreMesa } from "@/lib/salon";
+import {
+  NOMBRE_ESTADO,
+  type Ajustes,
+  type EstadoPedido,
+  type Pedido,
+  type PedidoItem,
+  type SolicitudCuenta,
+  nombreMesa,
+} from "@/lib/salon";
 import { avisarComensal } from "@/lib/push";
+import { fechaCorta, imprimirTicket } from "@/lib/imprimir";
 import type { Categoria, Mesa, Plato, Restaurante } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { minutosDesde, tiempo, useAhora, type useServicio } from "@/lib/useServicio";
@@ -143,6 +152,49 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
     if (quedan === 0) await estadoPedido(pedido, "cancelado");
   }
 
+  // Precuenta para llevar a la mesa: lo consumido agrupado, lo pagado y lo que falta.
+  function imprimirCuenta() {
+    const agrupado = new Map<string, { cantidad: number; importe: number }>();
+    for (const i of lineas) {
+      const a = agrupado.get(i.nombre) ?? { cantidad: 0, importe: 0 };
+      agrupado.set(i.nombre, { cantidad: a.cantidad + i.cantidad, importe: a.importe + Number(i.precio) * i.cantidad });
+    }
+    const sugerida = ajustes.propinas.activas && ajustes.propinas.sugerida ? ajustes.propinas.sugerida : null;
+    imprimirTicket([
+      { tipo: "titulo", texto: restaurante.nombre },
+      {
+        tipo: "texto",
+        texto: `${nombreMesa(mesa.numero)} · ${cuenta?.comensales ?? 1} pers. · ${fechaCorta(Date.now())}`,
+        chico: true,
+      },
+      { tipo: "separador" },
+      ...[...agrupado].map(([nombre, a]) => ({
+        tipo: "fila" as const,
+        izq: `${a.cantidad} × ${nombre}`,
+        der: formato(a.importe),
+      })),
+      { tipo: "separador" },
+      { tipo: "fila", izq: "Total", der: formato(total), fuerte: true },
+      ...(pagado > 0
+        ? [
+            { tipo: "fila" as const, izq: "Pagado", der: formato(pagado) },
+            { tipo: "fila" as const, izq: "Falta", der: formato(Math.max(0, total - pagado)), fuerte: true },
+          ]
+        : []),
+      ...(sugerida
+        ? [
+            {
+              tipo: "texto" as const,
+              texto: `Propina sugerida ${sugerida}%: ${formato(Math.round((total * sugerida) / 100))}`,
+              chico: true,
+            },
+          ]
+        : []),
+      { tipo: "separador" },
+      { tipo: "texto", texto: "No válido como factura. ¡Gracias!", chico: true },
+    ]);
+  }
+
   async function registrarPago(p: NuevoPago) {
     if (!cuenta) return false;
     return hacer(
@@ -213,31 +265,31 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4">
           {cuenta?.aviso && pantalla === "mesa" && (
             <div
-              className={`mb-4 flex items-start gap-3 rounded-xl p-3 ${cuenta.aviso.tipo === "cuenta" ? "bg-violet-50 text-violet-900" : "bg-sky-50 text-sky-900"}`}
+              className={`mb-4 flex items-start gap-3 rounded-xl p-3 ${
+                cuenta.aviso.tipo === "cuenta"
+                  ? "bg-violet-50 text-violet-900"
+                  : cuenta.aviso.tipo === "pago"
+                    ? "bg-emerald-50 text-emerald-900"
+                    : "bg-sky-50 text-sky-900"
+              }`}
             >
               <Icono nombre="campana" className="mt-0.5 h-5 w-5 shrink-0" />
               <div className="min-w-0 flex-1 text-sm">
-                <p className="font-semibold">{cuenta.aviso.tipo === "cuenta" ? "Pide la cuenta" : "Llama al mesero"}</p>
-                {cuenta.aviso.detalle && (
-                  <p>
-                    {cuenta.aviso.detalle.modo === "iguales"
-                      ? `Dividir en ${cuenta.aviso.detalle.partes} partes iguales`
-                      : cuenta.aviso.detalle.modo === "consumo"
-                        ? "Cada uno paga lo suyo"
-                        : "Todo junto"}
-                    {cuenta.aviso.detalle.propina ? ` · ${describirPropina(cuenta.aviso.detalle.propina, formato)}` : ""}
-                    {cuenta.aviso.detalle.metodo ? ` · ${cuenta.aviso.detalle.metodo}` : ""}
-                  </p>
-                )}
-                {cuenta.aviso.detalle?.metodos?.some(Boolean) && (
-                  <ul className="mt-1 space-y-0.5">
-                    {cuenta.aviso.detalle.metodos.map((m, i) => (
-                      <li key={i}>
-                        {cuenta.aviso!.detalle!.modo === "consumo" ? "Comensal" : "Persona"} {i + 1}:{" "}
-                        <strong>{m || "sin elegir"}</strong>
-                      </li>
-                    ))}
-                  </ul>
+                {cuenta.aviso.tipo === "pago" ? (
+                  <>
+                    <p className="font-semibold">Pagó online con Mercado Pago</p>
+                    {cuenta.aviso.detalle && (
+                      <p>
+                        {formato(Number(cuenta.aviso.detalle.monto))}
+                        {Number(cuenta.aviso.detalle.propina) > 0
+                          ? ` + ${formato(Number(cuenta.aviso.detalle.propina))} de propina`
+                          : ""}
+                        . Ya quedó registrado en la cuenta.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <AvisoCliente aviso={cuenta.aviso} formato={formato} />
                 )}
               </div>
               <button
@@ -270,6 +322,7 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
             <TomarPedido
               categorias={categorias}
               platos={platos}
+              zona={ajustes.zona_horaria}
               comensales={cuenta.comensales}
               formato={formato}
               onEnviar={enviarPedido}
@@ -282,7 +335,7 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
               comensales={cuenta.comensales}
               lineas={lineas}
               ajustes={ajustes}
-              solicitud={cuenta.aviso?.tipo === "cuenta" ? cuenta.aviso.detalle : null}
+              solicitud={cuenta.aviso?.tipo === "cuenta" ? (cuenta.aviso.detalle ?? null) : null}
               formato={formato}
               onPagar={registrarPago}
               onCerrarMesa={cerrarMesa}
@@ -415,6 +468,16 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
                   Anular
                 </button>
               )}
+              <button
+                type="button"
+                className="boton-secundario px-3"
+                onClick={imprimirCuenta}
+                disabled={total <= 0}
+                aria-label="Imprimir la cuenta"
+                title="Imprimir la cuenta (precuenta)"
+              >
+                <Icono nombre="impresora" className="h-4 w-4" />
+              </button>
               {ajustes.modulos.cobros ? (
                 <button
                   type="button"
@@ -448,5 +511,41 @@ function Contador({ valor, onChange }: { valor: number; onChange: (n: number) =>
         +
       </button>
     </span>
+  );
+}
+
+// Lo que pidió el cliente desde la carta: llamar al mesero o la cuenta (cómo dividirla, propina y medios).
+function AvisoCliente({
+  aviso,
+  formato,
+}: {
+  aviso: { tipo: "cuenta" | "mozo"; detalle?: SolicitudCuenta | null };
+  formato: (n: number) => string;
+}) {
+  const d = aviso.detalle;
+  return (
+    <>
+      <p className="font-semibold">{aviso.tipo === "cuenta" ? "Pide la cuenta" : "Llama al mesero"}</p>
+      {d && (
+        <p>
+          {d.modo === "iguales"
+            ? `Dividir en ${d.partes} partes iguales`
+            : d.modo === "consumo"
+              ? "Cada uno paga lo suyo"
+              : "Todo junto"}
+          {d.propina ? ` · ${describirPropina(d.propina, formato)}` : ""}
+          {d.metodo ? ` · ${d.metodo}` : ""}
+        </p>
+      )}
+      {d?.metodos?.some(Boolean) && (
+        <ul className="mt-1 space-y-0.5">
+          {d.metodos.map((m, i) => (
+            <li key={i}>
+              {d.modo === "consumo" ? "Comensal" : "Persona"} {i + 1}: <strong>{m || "sin elegir"}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   );
 }

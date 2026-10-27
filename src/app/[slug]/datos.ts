@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { createPublicClient } from "@/lib/supabase/server";
-import type { Categoria, Plato, Restaurante, Sucursal } from "@/lib/types";
+import type { Categoria, Plato, Promo, Restaurante, Sucursal } from "@/lib/types";
 
 export const obtenerCarta = cache(async (slug: string) => {
   const supabase = createPublicClient();
@@ -8,7 +8,7 @@ export const obtenerCarta = cache(async (slug: string) => {
   if (!restaurante) return null;
 
   // RLS ya filtra categorías ocultas y platos agotados; se repite aquí por claridad.
-  const [{ data: categorias }, { data: platos }, { data: sucursales }] = await Promise.all([
+  const [{ data: categorias }, { data: platos }, { data: sucursales }, { data: promos }] = await Promise.all([
     supabase
       .from("categorias")
       .select("*")
@@ -31,6 +31,8 @@ export const obtenerCarta = cache(async (slug: string) => {
       .eq("activa", true)
       .order("orden")
       .order("created_at"),
+    // Promos por horario (migración 0009). La carta decide en el teléfono cuáles están vigentes.
+    supabase.from("promos").select("*").eq("restaurante_id", restaurante.id).eq("activa", true).order("orden"),
   ]);
 
   const lista = (platos ?? []) as Plato[];
@@ -38,5 +40,10 @@ export const obtenerCarta = cache(async (slug: string) => {
     .map((c) => ({ ...c, platos: lista.filter((p) => p.categoria_id === c.id) }))
     .filter((c) => c.platos.length > 0);
 
-  return { restaurante: restaurante as Restaurante, secciones, sucursales: (sucursales ?? []) as Sucursal[] };
+  return {
+    restaurante: restaurante as Restaurante,
+    secciones,
+    sucursales: (sucursales ?? []) as Sucursal[],
+    promos: (promos ?? []) as Promo[],
+  };
 });

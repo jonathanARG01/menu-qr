@@ -3,7 +3,7 @@ import type { Mesa, Sucursal } from "@/lib/types";
 import { GeneradorQR } from "./GeneradorQR";
 
 export default async function PanelQR({ searchParams }: { searchParams: Promise<{ sucursal?: string }> }) {
-  const { supabase, restaurante } = await requerirSeccion("qr");
+  const { supabase, restaurante, ajustes } = await requerirSeccion("qr");
   const [{ data: mesas }, { data: sucursales }] = await Promise.all([
     supabase.from("mesas").select("*").eq("restaurante_id", restaurante.id),
     // Sin la migración 0003 la tabla no existe y queda vacío.
@@ -15,6 +15,7 @@ export default async function PanelQR({ searchParams }: { searchParams: Promise<
       mesasIniciales={(mesas ?? []) as Mesa[]}
       sucursales={(sucursales ?? []) as Sucursal[]}
       sucursalInicial={(await searchParams).sucursal}
+      reservas={ajustes.modulos.reservas}
     />
   );
 }

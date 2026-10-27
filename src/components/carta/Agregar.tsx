@@ -10,6 +10,16 @@ export function Agregar({ plato, className = "" }: { plato: Plato; className?: s
   const n = cantidad(plato.id);
   const estilo = { background: "var(--acento)", color: "var(--sobre-acento)" };
 
+  if (plato.agotado && n === 0) {
+    return (
+      <span
+        className={`inline-flex h-8 shrink-0 items-center rounded-full border border-current/30 px-3 text-sm font-semibold opacity-60 ${className}`}
+      >
+        {t("agotado")}
+      </span>
+    );
+  }
+
   if (n === 0) {
     return (
       <button
@@ -43,8 +53,9 @@ export function Agregar({ plato, className = "" }: { plato: Plato; className?: s
       <button
         type="button"
         onClick={() => cambiar(plato.id, 1)}
+        disabled={plato.agotado}
         aria-label={`${t("agregar")}: ${plato.nombre}`}
-        className="h-8 w-8 text-lg leading-none"
+        className="h-8 w-8 text-lg leading-none disabled:opacity-40"
       >
         +
       </button>

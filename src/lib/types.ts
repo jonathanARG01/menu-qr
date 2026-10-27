@@ -77,6 +77,27 @@ export type Plato = {
   traducciones?: Traducciones;
   // Se muestra en la sección de destacados de la carta (migración 0007).
   destacado?: boolean;
+  // Agotado hasta esa hora (lo marca la cocina; migración 0009).
+  agotado_hasta?: string | null;
+  // Solo en la carta: precio de lista cuando hay una promo vigente, y si está agotado ahora.
+  precio_lista?: number;
+  agotado?: boolean;
+};
+
+export type Promo = {
+  id: string;
+  restaurante_id: string;
+  nombre: string;
+  descripcion: string | null;
+  // 0 = domingo … 6 = sábado; vacío = todos los días.
+  dias: number[];
+  desde: string;
+  hasta: string;
+  descuento: number;
+  categorias: string[];
+  platos: string[];
+  activa: boolean;
+  orden: number;
 };
 
 export type Mesa = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
@@ -15,6 +15,11 @@ const MODULOS: { id: Modulo; titulo: string; ayuda: string }[] = [
   { id: "cocina", titulo: "Pantalla de cocina", ayuda: "Comandas en tiempo real para cocina y barra" },
   { id: "cobros", titulo: "Cobros", ayuda: "Cuenta dividida, propinas y medios de pago" },
   { id: "pedidos_mesa", titulo: "Pedidos desde la mesa", ayuda: "El cliente pide y pide la cuenta desde el QR" },
+  {
+    id: "reservas",
+    titulo: "Reservas y lista de espera",
+    ayuda: "Reservas del día, lista de espera con QR y aviso por WhatsApp",
+  },
   { id: "estadisticas", titulo: "Estadísticas", ayuda: "Visitas, horarios y lo más pedido" },
   { id: "sucursales", titulo: "Sucursales", ayuda: "Varios locales con la misma carta" },
   { id: "equipo", titulo: "Equipo", ayuda: "Meseros y cocina con su propio usuario" },
@@ -45,6 +50,28 @@ const PERFILES: { titulo: string; ayuda: string; modulos: Partial<Record<Modulo,
     ayuda: "Todo encendido",
     modulos: { salon: true, cocina: true, cobros: true, pedidos_mesa: true, equipo: true, sucursales: true, estadisticas: true },
   },
+];
+
+const ZONAS: [string, string][] = [
+  ["America/Argentina/Buenos_Aires", "Argentina"],
+  ["America/Montevideo", "Uruguay"],
+  ["America/Santiago", "Chile"],
+  ["America/Asuncion", "Paraguay"],
+  ["America/La_Paz", "Bolivia"],
+  ["America/Lima", "Perú"],
+  ["America/Bogota", "Colombia"],
+  ["America/Guayaquil", "Ecuador"],
+  ["America/Caracas", "Venezuela"],
+  ["America/Sao_Paulo", "Brasil (São Paulo)"],
+  ["America/Mexico_City", "México (Centro)"],
+  ["America/Cancun", "México (Cancún)"],
+  ["America/Tijuana", "México (Tijuana)"],
+  ["America/Costa_Rica", "Costa Rica"],
+  ["America/Panama", "Panamá"],
+  ["America/Santo_Domingo", "República Dominicana"],
+  ["America/New_York", "Estados Unidos (Este)"],
+  ["America/Los_Angeles", "Estados Unidos (Pacífico)"],
+  ["Europe/Madrid", "España"],
 ];
 
 const numeros = (texto: string) =>
@@ -282,8 +309,92 @@ export function Personalizar({
             onChange={(metodos_pago) => set({ metodos_pago })}
             ejemplo="Cuenta DNI"
           />
+
+          <CobroOnline
+            restauranteId={restauranteId}
+            activo={a.cobro_online.activo}
+            onActivo={(activo) => set({ cobro_online: { ...a.cobro_online, activo } })}
+            pedidosMesa={a.modulos.pedidos_mesa}
+          />
         </>
       )}
+
+      {a.modulos.reservas && (
+        <section className="tarjeta space-y-4 p-5">
+          <div className="flex items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <h2 className="font-semibold">Reservas desde internet</h2>
+              <p className="text-sm text-suave">
+                Encendido: en la carta aparece “Reservar” y cualquiera puede pedir una mesa. Tú las confirmas en Reservas.
+              </p>
+            </div>
+            <Interruptor
+              activo={a.reservas.online}
+              onChange={(online) => set({ reservas: { ...a.reservas, online } })}
+              etiqueta="Reservas desde internet"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            Se avisa que la reserva no llegó a los
+            <input
+              type="number"
+              min={5}
+              max={120}
+              value={a.reservas.tolerancia}
+              onChange={(e) => set({ reservas: { ...a.reservas, tolerancia: Number(e.target.value) || 15 } })}
+              className="w-16 rounded-lg border border-borde px-2 py-1"
+            />
+            minutos
+          </label>
+        </section>
+      )}
+
+      <section className="tarjeta space-y-4 p-5">
+        <div className="flex items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <h2 className="font-semibold">Reseñas en Google</h2>
+            <p className="text-sm text-suave">
+              Cuando el mesero cierra la mesa, el cliente califica con estrellas. Con 4 o 5 lo invitamos a dejar la reseña en
+              Google; con menos, el comentario te llega solo a ti (en Estadísticas).
+            </p>
+          </div>
+          <Interruptor
+            activo={a.resenas.pedir}
+            onChange={(pedir) => set({ resenas: { ...a.resenas, pedir } })}
+            etiqueta="Pedir opinión"
+          />
+        </div>
+        {a.resenas.pedir && (
+          <label className="block text-sm">
+            Link para dejar reseña en Google
+            <input
+              value={a.resenas.google_url}
+              onChange={(e) => set({ resenas: { ...a.resenas, google_url: e.target.value.trim() } })}
+              placeholder="https://g.page/r/…/review"
+              className="campo mt-1"
+              inputMode="url"
+            />
+            <span className="mt-1 block text-xs text-suave">
+              En Google Maps busca tu local → “Pedir reseñas” (o en tu Perfil de Empresa → “Compartir formulario de reseñas”) y
+              copia el link. Sin link, igual recibes las opiniones privadas.
+            </span>
+          </label>
+        )}
+      </section>
+
+      <section className="tarjeta p-5">
+        <label className="block text-sm">
+          <span className="font-semibold">Zona horaria</span>
+          <span className="block text-suave">Para las promos por horario, los platos agotados y el cierre de caja.</span>
+          <select value={a.zona_horaria} onChange={(e) => set({ zona_horaria: e.target.value })} className="campo mt-2">
+            {ZONAS.map(([valor, texto]) => (
+              <option key={valor} value={valor}>
+                {texto}
+              </option>
+            ))}
+          </select>
+        </label>
+      </section>
 
       {a.modulos.cocina && (
         <>
@@ -338,6 +449,110 @@ export function Personalizar({
         </div>
       </div>
     </div>
+  );
+}
+
+// Conectar Mercado Pago: el dueño pega su Access Token. Se guarda en la base y nunca vuelve al navegador.
+function CobroOnline({
+  restauranteId,
+  activo,
+  onActivo,
+  pedidosMesa,
+}: {
+  restauranteId: string;
+  activo: boolean;
+  onActivo: (v: boolean) => void;
+  pedidosMesa: boolean;
+}) {
+  const supabase = useMemo(() => createClient(), []);
+  const avisar = useToast();
+  const [conectado, setConectado] = useState<boolean | null>(null);
+  const [servidor, setServidor] = useState<boolean | null>(null);
+  const [token, setToken] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .rpc("cobro_online_conectado", { p_restaurante: restauranteId })
+      .then(({ data, error }) => setConectado(error ? null : Boolean(data)));
+    fetch("/api/pagos/crear")
+      .then((r) => r.json())
+      .then((d: { listo?: boolean }) => setServidor(Boolean(d.listo)))
+      .catch(() => setServidor(null));
+  }, [supabase, restauranteId]);
+
+  async function guardar(valor: string) {
+    setGuardando(true);
+    const { data, error } = await supabase.rpc("guardar_cobro_online", { p_restaurante: restauranteId, p_token: valor });
+    setGuardando(false);
+    if (error) {
+      return avisar(
+        /guardar_cobro_online/.test(error.message) ? "Falta ejecutar el SQL 0009 en Supabase." : mensajeError(error),
+        "error",
+      );
+    }
+    setConectado(Boolean(data));
+    setToken("");
+    avisar(data ? "Mercado Pago conectado" : "Mercado Pago desconectado");
+    if (!data && activo) onActivo(false);
+  }
+
+  return (
+    <section className="tarjeta space-y-4 p-5">
+      <div className="flex items-center gap-4">
+        <div className="min-w-0 flex-1">
+          <h2 className="font-semibold">Cobro online con Mercado Pago</h2>
+          <p className="text-sm text-suave">
+            El cliente paga la cuenta (o su parte, con propina) desde el QR. La plata va directo a tu cuenta de Mercado Pago y el
+            pago queda anotado en la mesa.
+          </p>
+        </div>
+        <Interruptor activo={activo} onChange={onActivo} etiqueta="Cobro online" />
+      </div>
+      {activo && !pedidosMesa && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Enciende también “Pedidos desde la mesa”: el botón de pago aparece en “Mi mesa”.
+        </p>
+      )}
+      {servidor === false && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Falta un paso en Vercel: agregar la variable <code>SUPABASE_SERVICE_ROLE_KEY</code> (ver la guía).
+        </p>
+      )}
+      <div className="flex items-center gap-2 text-sm">
+        <span className={`h-2.5 w-2.5 rounded-full ${conectado ? "bg-emerald-500" : "bg-stone-300"}`} />
+        {conectado === null ? "Revisando…" : conectado ? "Cuenta de Mercado Pago conectada" : "Sin conectar"}
+        {conectado && (
+          <button type="button" disabled={guardando} onClick={() => guardar("")} className="ml-auto text-red-600 hover:underline">
+            Desconectar
+          </button>
+        )}
+      </div>
+      <form
+        className="flex flex-wrap gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (token.trim()) guardar(token.trim());
+        }}
+      >
+        <input
+          type="password"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          placeholder={conectado ? "Pegar otro Access Token para cambiarlo" : "APP_USR-…"}
+          autoComplete="off"
+          aria-label="Access Token de Mercado Pago"
+          className="campo min-w-0 flex-1 py-2"
+        />
+        <button type="submit" className="boton-secundario" disabled={guardando || token.trim().length < 20}>
+          {guardando ? "Guardando…" : "Conectar"}
+        </button>
+      </form>
+      <p className="text-xs text-suave">
+        Dónde está: mercadopago.com.ar/developers → Tus integraciones → crear una aplicación (Checkout Pro) → Credenciales de
+        producción → Access Token. Empieza con APP_USR-.
+      </p>
+    </section>
   );
 }
 

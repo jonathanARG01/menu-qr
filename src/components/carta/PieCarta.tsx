@@ -8,17 +8,35 @@ import { formatoPrecio } from "@/lib/utils";
 import { useCarta } from "./contexto";
 import { AvisoEmergente } from "./AvisoEmergente";
 import { MiMesa } from "./MiMesa";
+import { Opinion } from "./Opinion";
 import { useMiMesa } from "./useMiMesa";
 import { CLAVE_PUBLICA, iphoneSinInstalar, soportaPush, suscribirAvisos } from "@/lib/push";
+
+// Lo que agrega Mercado Pago a la dirección al volver.
+const DE_MP = new Set([
+  "collection_id",
+  "collection_status",
+  "payment_id",
+  "status",
+  "external_reference",
+  "payment_type",
+  "merchant_order_id",
+  "preference_id",
+  "site_id",
+  "processing_mode",
+  "merchant_account_id",
+]);
 
 // Barra inferior de la carta: mesa, sucursal, contacto por WhatsApp y el pedido en curso.
 // Los colores salen de las variables de cada diseño (--pie-bg, --pie-text, --acento, --sobre-acento).
 export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
-  const { pedidos, pedidosMesa, lineas, mesa, sucursal, idioma, t } = useCarta();
+  const { pedidos, pedidosMesa, lineas, mesa, sucursal, idioma, ajustes, t } = useCarta();
   const [ofrecer, setOfrecer] = useState<null | "pedir" | "iphone">(null);
   const [abierto, setAbierto] = useState(false);
   const [mesaAbierta, setMesaAbierta] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [errorPago, setErrorPago] = useState<string | null>(null);
+  const [opinar, setOpinar] = useState(false);
   const whatsapp = sucursal?.whatsapp || restaurante.whatsapp;
   const unidades = lineas.reduce((n, l) => n + l.cantidad, 0);
   const total = lineas.reduce((n, l) => n + l.cantidad * Number(l.plato.precio), 0);
@@ -29,6 +47,42 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
     const id = setTimeout(() => setAviso(null), 6000);
     return () => clearTimeout(id);
   }, [aviso]);
+
+  // El mesero cerró la mesa: se pide la opinión una sola vez.
+  const { cerrada, olvidarCierre } = miMesa;
+  useEffect(() => {
+    if (cerrada && ajustes.resenas.pedir) setOpinar(true);
+  }, [cerrada, ajustes.resenas.pedir]);
+
+  // Vuelta de Mercado Pago (?pago=…): se confirma el pago con el servidor y se limpia la dirección.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const id = url.searchParams.get("pago");
+    if (!id) return;
+    const mpPago = url.searchParams.get("payment_id") ?? url.searchParams.get("collection_id") ?? "";
+    for (const p of [...url.searchParams.keys()]) if (p === "pago" || DE_MP.has(p)) url.searchParams.delete(p);
+    window.history.replaceState(null, "", url.pathname + url.search);
+    let intentos = 0;
+    let vivo = true;
+    const consultar = async () => {
+      const res = await fetch(`/api/pagos/estado?id=${encodeURIComponent(id)}&payment_id=${encodeURIComponent(mpPago)}`).catch(
+        () => null,
+      );
+      const { estado } = ((await res?.json().catch(() => null)) ?? {}) as { estado?: string | null };
+      if (!vivo) return;
+      if (estado === "aprobado") return (setAviso(t("pagoAprobado")), miMesa.recargar());
+      if (estado === "rechazado") return setErrorPago(t("pagoRechazado"));
+      setAviso(t("pagoPendiente"));
+      // Mercado Pago a veces tarda unos segundos en confirmar.
+      if (++intentos < 6) setTimeout(consultar, 4000);
+    };
+    consultar();
+    return () => {
+      vivo = false;
+    };
+    // Solo al abrir la carta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Para que en iPhone se pueda "Agregar a inicio" con la mesa incluida (requisito de Apple para los avisos).
   useEffect(() => {
@@ -69,7 +123,8 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
     else noOfrecer();
   }
 
-  if (!mesa && !whatsapp && !sucursal && unidades === 0) return null;
+  const reservar = !mesa && ajustes.modulos.reservas && ajustes.reservas.online;
+  if (!mesa && !whatsapp && !sucursal && unidades === 0 && !reservar) return null;
 
   const contexto = [mesa && `${t("mesa")} ${mesa}`, sucursal?.nombre].filter(Boolean).join(" · ");
   const saludo = mesa ? `Hola ${restaurante.nombre}, estoy en la mesa ${mesa}.` : `Hola ${restaurante.nombre}.`;
@@ -110,11 +165,29 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
             {aviso}
           </p>
         )}
+        {errorPago && (
+          <button
+            type="button"
+            role="alert"
+            onClick={() => setErrorPago(null)}
+            className="mx-auto mb-2 block w-full max-w-2xl rounded-2xl bg-red-600 px-4 py-3 text-left text-sm font-semibold text-white shadow-xl"
+          >
+            {errorPago}
+          </button>
+        )}
         <div
           className="mx-auto flex max-w-2xl items-center gap-3 rounded-2xl p-2 pl-4 shadow-xl ring-1 ring-black/10"
           style={{ background: "var(--pie-bg)", color: "var(--pie-text)" }}
         >
           <span className="min-w-0 flex-1 truncate text-sm font-medium">{contexto || restaurante.nombre}</span>
+          {reservar && unidades === 0 && (
+            <a
+              href={`/${restaurante.slug}/reservar${sucursal ? `?s=${encodeURIComponent(sucursal.slug)}` : ""}`}
+              className="rounded-xl px-3 py-2.5 text-sm font-semibold ring-1 ring-current/30"
+            >
+              {t("reservar")}
+            </a>
+          )}
           {pedidosMesa && (
             <button
               type="button"
@@ -172,6 +245,19 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
         />
       )}
       <AvisoEmergente avisos={miMesa.avisos} onDescartar={miMesa.descartar} t={t} />
+      {opinar && (
+        <Opinion
+          restauranteId={restaurante.id}
+          sucursalId={sucursal?.id ?? null}
+          mesa={mesa}
+          googleUrl={ajustes.resenas.google_url}
+          t={t}
+          onCerrar={() => {
+            setOpinar(false);
+            olvidarCierre();
+          }}
+        />
+      )}
     </>
   );
 }
@@ -238,7 +324,7 @@ function HojaPedido({
     });
     setEnviando(false);
     if (error) {
-      setError(error.message.includes("Demasiados") ? error.message : t("errorEnvio"));
+      setError(/Demasiados|se agotó/.test(error.message) ? error.message : t("errorEnvio"));
       return;
     }
     onEnviado((data as { pendiente?: boolean } | null)?.pendiente ? t("pedidoPorConfirmar") : t("pedidoEnviado"));
