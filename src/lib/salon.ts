@@ -104,6 +104,8 @@ export type Ajustes = {
     // El cliente puede pagar desde la carta con Mercado Pago (requiere conectar la cuenta).
     activo: boolean;
   };
+  // Los platos sin foto muestran una imagen ilustrada según lo que son (archivos en public/defecto).
+  imagenes_defecto: boolean;
 };
 
 export const SONIDOS_HOJA = ["papel", "hojas", "diario", "ninguno"] as const;
@@ -131,6 +133,7 @@ export const AJUSTES_BASE: Ajustes = {
   reservas: { online: false, tolerancia: 15 },
   resenas: { pedir: true, google_url: "" },
   cobro_online: { activo: false },
+  imagenes_defecto: false,
 };
 
 // Une lo guardado con los valores por defecto (lo que falte o venga mal se completa).
@@ -155,6 +158,7 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
     metodos_pago: listaTextos(g.metodos_pago, AJUSTES_BASE.metodos_pago),
     estaciones: listaTextos(g.estaciones, AJUSTES_BASE.estaciones),
     alertas: { ...AJUSTES_BASE.alertas, ...(g.alertas ?? {}) },
+    imagenes_defecto: g.imagenes_defecto === true,
     sonido_hoja: SONIDOS_HOJA.includes(g.sonido_hoja as SonidoHoja) ? (g.sonido_hoja as SonidoHoja) : AJUSTES_BASE.sonido_hoja,
     zona_horaria: typeof g.zona_horaria === "string" && g.zona_horaria ? g.zona_horaria : AJUSTES_BASE.zona_horaria,
     reservas: { ...AJUSTES_BASE.reservas, ...(g.reservas ?? {}) },
