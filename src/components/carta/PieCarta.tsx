@@ -9,11 +9,13 @@ import { useCarta } from "./contexto";
 import { AvisoEmergente } from "./AvisoEmergente";
 import { MiMesa } from "./MiMesa";
 import { useMiMesa } from "./useMiMesa";
+import { CLAVE_PUBLICA, iphoneSinInstalar, soportaPush, suscribirAvisos } from "@/lib/push";
 
 // Barra inferior de la carta: mesa, sucursal, contacto por WhatsApp y el pedido en curso.
 // Los colores salen de las variables de cada diseño (--pie-bg, --pie-text, --acento, --sobre-acento).
 export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
-  const { pedidos, pedidosMesa, lineas, mesa, sucursal, t } = useCarta();
+  const { pedidos, pedidosMesa, lineas, mesa, sucursal, idioma, t } = useCarta();
+  const [ofrecer, setOfrecer] = useState<null | "pedir" | "iphone">(null);
   const [abierto, setAbierto] = useState(false);
   const [mesaAbierta, setMesaAbierta] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -28,6 +30,45 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
     return () => clearTimeout(id);
   }, [aviso]);
 
+  // Para que en iPhone se pueda "Agregar a inicio" con la mesa incluida (requisito de Apple para los avisos).
+  useEffect(() => {
+    if (!pedidosMesa || !mesa || document.querySelector("link[rel=manifest]")) return;
+    const enlace = document.createElement("link");
+    enlace.rel = "manifest";
+    enlace.href = `/${restaurante.slug}/manifest.webmanifest?mesa=${encodeURIComponent(mesa)}${sucursal ? `&s=${encodeURIComponent(sucursal.slug)}` : ""}`;
+    document.head.appendChild(enlace);
+  }, [pedidosMesa, mesa, sucursal, restaurante.slug]);
+
+  // Después de cada pedido: si ya aceptó los avisos, se renueva solo; si no, se le ofrece una vez.
+  async function despuesDePedir() {
+    if (!mesa) return;
+    const datos = { restauranteId: restaurante.id, sucursalId: sucursal?.id ?? null, mesa, idioma };
+    if (soportaPush()) {
+      if (Notification.permission === "granted") return void suscribirAvisos(datos, false);
+      if (Notification.permission === "default" && !yaOfrecido()) setOfrecer("pedir");
+    } else if (CLAVE_PUBLICA && iphoneSinInstalar() && !yaOfrecido()) setOfrecer("iphone");
+  }
+  const yaOfrecido = () => {
+    try {
+      return sessionStorage.getItem("carta:avisos") === "no";
+    } catch {
+      return false;
+    }
+  };
+  function noOfrecer() {
+    setOfrecer(null);
+    try {
+      sessionStorage.setItem("carta:avisos", "no");
+    } catch {}
+  }
+  async function activarAvisos() {
+    if (!mesa) return;
+    setOfrecer(null);
+    const ok = await suscribirAvisos({ restauranteId: restaurante.id, sucursalId: sucursal?.id ?? null, mesa, idioma });
+    if (ok) setAviso(t("avisosActivados"));
+    else noOfrecer();
+  }
+
   if (!mesa && !whatsapp && !sucursal && unidades === 0) return null;
 
   const contexto = [mesa && `${t("mesa")} ${mesa}`, sucursal?.nombre].filter(Boolean).join(" · ");
@@ -36,6 +77,31 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 z-20 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {ofrecer && (
+          <div className="mx-auto mb-2 flex max-w-2xl items-start gap-3 rounded-2xl bg-white p-3 text-sm text-stone-800 shadow-xl ring-1 ring-black/10">
+            <span className="text-xl leading-none" aria-hidden>
+              🔔
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">{ofrecer === "pedir" ? t("avisosPregunta") : t("avisosIphone")}</p>
+              <div className="mt-2 flex gap-2">
+                {ofrecer === "pedir" && (
+                  <button
+                    type="button"
+                    onClick={activarAvisos}
+                    className="rounded-xl px-3 py-1.5 font-semibold"
+                    style={{ background: "var(--acento)", color: "var(--sobre-acento)" }}
+                  >
+                    {t("activarAvisos")}
+                  </button>
+                )}
+                <button type="button" onClick={noOfrecer} className="rounded-xl px-3 py-1.5 text-stone-500 hover:bg-stone-100">
+                  {ofrecer === "pedir" ? t("ahoraNo") : t("cerrar")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {aviso && (
           <p
             role="status"
@@ -92,6 +158,7 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
           onEnviado={(texto) => {
             setAviso(texto);
             miMesa.recargar();
+            despuesDePedir();
           }}
         />
       )}

@@ -21,7 +21,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: `${restaurante.nombre} · Carta`,
     description: restaurante.descripcion ?? `Carta de ${restaurante.nombre}`,
     openGraph: { title: restaurante.nombre, images: restaurante.logo_url ? [restaurante.logo_url] : [] },
-    icons: restaurante.logo_url ? { icon: restaurante.logo_url } : undefined,
+    icons: restaurante.logo_url ? { icon: restaurante.logo_url, apple: restaurante.logo_url } : undefined,
+    // Se puede "Agregar a inicio" como app (en iPhone es lo que habilita los avisos del pedido).
+    appleWebApp: { capable: true, title: restaurante.nombre, statusBarStyle: "default" },
   };
 }
 

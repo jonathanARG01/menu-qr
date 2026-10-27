@@ -1,16 +1,28 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { Icono } from "@/components/Icono";
-import { ELEMENTOS, type Ajustes, type Elemento, type Piso, type TipoElemento } from "@/lib/salon";
+import { ELEMENTOS, nombreMesa, type Ajustes, type Elemento, type Piso, type TipoElemento } from "@/lib/salon";
 import type { Categoria, Mesa, Plato, Restaurante, Sucursal } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { totalLineas } from "@/lib/cuenta";
 import { sonar } from "@/lib/sonidos";
 import { minutosDesde, useAhora, useServicio, type DatosServicio } from "@/lib/useServicio";
-import { cajaMesa, lugarLibre, Plano, primerHueco, tamanoPara, type Caja, type EstadoMesa, type Seleccion } from "./Plano";
+import {
+  cajaMesa,
+  ESTILOS_PLANO,
+  lugarLibre,
+  Plano,
+  primerHueco,
+  tamanoPara,
+  type Caja,
+  type EstadoMesa,
+  type EstiloPlano,
+  type Seleccion,
+} from "./Plano";
 import { MesaPanel } from "./MesaPanel";
+import { PantallaSalon } from "./PantallaSalon";
 
 type Props = {
   restaurante: Restaurante;
@@ -53,7 +65,23 @@ export function Salon({
   const piso = pisosVisibles.find((p) => p.id === pisoId) ?? pisosVisibles[0] ?? null;
   const [vista, setVista] = useState<"plano" | "lista">(pisos.length ? "plano" : "lista");
   const [editando, setEditando] = useState(false);
+  const [estilo, setEstilo] = useState<EstiloPlano>("simple");
+  const [pantalla, setPantalla] = useState(false);
   const avisosOidos = useRef<Set<string> | null>(null);
+
+  // El estilo del plano se recuerda en cada pantalla (la del salón puede ir en 3D y el teléfono del mesero en simple).
+  useEffect(() => {
+    try {
+      const guardado = localStorage.getItem("salon:estilo") as EstiloPlano | null;
+      if (guardado && ESTILOS_PLANO.some((e) => e.id === guardado)) setEstilo(guardado);
+    } catch {}
+  }, []);
+  function elegirEstilo(e: EstiloPlano) {
+    setEstilo(e);
+    try {
+      localStorage.setItem("salon:estilo", e);
+    } catch {}
+  }
 
   // En el teléfono se empieza por la lista: el plano completo se ve mejor en tableta o computadora.
   useEffect(() => {
@@ -234,6 +262,21 @@ export function Salon({
   const mesaElegida = seleccion?.tipo === "mesa" ? mesas.find((m) => m.id === seleccion.id) : undefined;
   const elementoElegido = seleccion?.tipo === "elemento" ? piso?.elementos.find((e) => e.id === seleccion.id) : undefined;
   const abierta = mesas.find((m) => m.id === mesaAbierta);
+  const salirPantalla = useCallback(() => setPantalla(false), []);
+  const fichaMesa = abierta && (
+    <MesaPanel
+      key={abierta.id}
+      mesa={abierta}
+      piso={pisos.find((p) => p.id === abierta.piso_id)?.nombre}
+      restaurante={restaurante}
+      ajustes={ajustes}
+      admin={admin}
+      categorias={categorias}
+      platos={platos}
+      servicio={servicioVivo}
+      onCerrar={() => setMesaAbierta(null)}
+    />
+  );
 
   return (
     <div className="space-y-4">
@@ -276,6 +319,32 @@ export function Salon({
             </button>
           ))}
         </div>
+        {vista === "plano" && piso && !editando && (
+          <div className="flex rounded-xl bg-stone-100 p-1 text-sm" role="group" aria-label="Estilo del plano">
+            {ESTILOS_PLANO.map((e) => (
+              <button
+                key={e.id}
+                type="button"
+                aria-pressed={estilo === e.id}
+                onClick={() => elegirEstilo(e.id)}
+                className={`rounded-lg px-3 py-1.5 font-medium ${estilo === e.id ? "bg-superficie shadow-sm" : "text-suave hover:text-tinta"}`}
+              >
+                {e.texto}
+              </button>
+            ))}
+          </div>
+        )}
+        {!editando && (
+          <button
+            type="button"
+            onClick={() => setPantalla(true)}
+            className="boton-secundario"
+            title="Para una tele o tableta fija en el salón: plano y avisos en grande"
+          >
+            <Icono nombre="pantalla" className="h-4 w-4" />
+            Pantalla completa
+          </button>
+        )}
         {admin && vista === "plano" && piso && (
           <button
             type="button"
@@ -309,7 +378,7 @@ export function Salon({
                 ) : (
                   <Icono nombre="campana" className="h-4 w-4" />
                 )}
-                Mesa {m.numero}:{" "}
+                {nombreMesa(m.numero)}:{" "}
                 {e.aviso === "cuenta" ? "pide la cuenta" : e.aviso === "mozo" ? "llama al mesero" : "pedido por confirmar"}
               </button>
             );
@@ -382,6 +451,7 @@ export function Salon({
                   onMover={mover}
                   onAbrirMesa={setMesaAbierta}
                   formato={formato}
+                  estilo={estilo}
                 />
                 {!editando && <Leyenda />}
               </div>
@@ -471,19 +541,26 @@ export function Salon({
         </div>
       )}
 
-      {abierta && (
-        <MesaPanel
-          key={abierta.id}
-          mesa={abierta}
-          piso={pisos.find((p) => p.id === abierta.piso_id)?.nombre}
-          restaurante={restaurante}
-          ajustes={ajustes}
-          admin={admin}
-          categorias={categorias}
-          platos={platos}
-          servicio={servicioVivo}
-          onCerrar={() => setMesaAbierta(null)}
-        />
+      {pantalla ? (
+        <PantallaSalon
+          nombre={restaurante.nombre}
+          pisos={pisosVisibles}
+          mesas={mesasLocal}
+          estados={estados}
+          cuentas={cuentas}
+          pedidos={pedidos}
+          estilo={estilo}
+          onEstilo={elegirEstilo}
+          onAbrirMesa={setMesaAbierta}
+          onSalir={salirPantalla}
+          enVivo={servicioVivo.enVivo}
+          ahora={ahora}
+          formato={formato}
+        >
+          {fichaMesa}
+        </PantallaSalon>
+      ) : (
+        fichaMesa
       )}
     </div>
   );
@@ -494,7 +571,8 @@ function Leyenda() {
     ["bg-superficie border-stone-300", "Libre"],
     ["bg-amber-50 border-amber-500", "Ocupada"],
     ["bg-emerald-50 border-emerald-500", "Pedido listo para llevar"],
-    ["bg-sky-50 border-sky-500", "Pide la cuenta o llama"],
+    ["bg-sky-50 border-sky-500", "Llama al mesero"],
+    ["bg-violet-50 border-violet-500", "Pide la cuenta"],
   ];
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-suave">
@@ -541,7 +619,7 @@ function BotonMesa({
       onClick={onClick}
       className={`relative rounded-xl border-2 px-3 text-left transition hover:shadow-md ${color} ${grande ? "py-3" : "py-1.5"}`}
     >
-      <span className="block font-bold">Mesa {mesa.numero}</span>
+      <span className="block font-bold">{nombreMesa(mesa.numero)}</span>
       <span className="block text-xs text-suave" suppressHydrationWarning>
         {estado?.ocupada
           ? `${estado.comensales} pers. · ${estado.minutos} min${estado.total ? ` · ${formato(estado.total)}` : ""}`
@@ -624,7 +702,7 @@ function PanelEdicion({
   onBorrarPiso: () => void;
   onAgregarMesa: (forma: NonNullable<Mesa["forma"]>, capacidad: number) => void;
   onUbicar: (m: Mesa) => void;
-  onMesa: (m: Mesa, c: Partial<Mesa>) => void;
+  onMesa: (m: Mesa, c: Partial<Mesa>) => unknown;
   onQuitarMesa: (m: Mesa) => void;
   onBorrarMesa: (m: Mesa) => void;
   onAgregarElemento: (t: TipoElemento) => void;
@@ -635,7 +713,7 @@ function PanelEdicion({
     <aside className="space-y-4">
       {mesa ? (
         <div className="tarjeta space-y-3 p-4">
-          <p className="font-semibold">Mesa {mesa.numero}</p>
+          <p className="font-semibold">{nombreMesa(mesa.numero)}</p>
           <label className="block text-sm">
             Número o nombre
             <input
@@ -755,19 +833,43 @@ function PanelEdicion({
         </div>
         {sinUbicar.length > 0 && (
           <div>
-            <p className="mb-1 text-xs text-suave">Mesas sin lugar (toca para ubicarlas):</p>
-            <div className="flex flex-wrap gap-1.5">
+            <p className="mb-1.5 text-xs text-suave">Mesas sin lugar en el plano: cámbiales el nombre o ubícalas.</p>
+            <ul className="space-y-1.5">
               {sinUbicar.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => onUbicar(m)}
-                  className="rounded-lg border border-dashed border-stone-300 px-2 py-1 text-xs hover:border-marca"
-                >
-                  {m.numero}
-                </button>
+                <li key={m.id} className="flex items-center gap-1.5">
+                  <input
+                    defaultValue={m.numero}
+                    maxLength={12}
+                    aria-label={`Nombre de ${nombreMesa(m.numero)}`}
+                    onBlur={async (e) => {
+                      const campo = e.currentTarget;
+                      const numero = campo.value.trim();
+                      if (!numero || numero === m.numero) return void (campo.value = m.numero);
+                      // Si no se pudo guardar (por ejemplo, el nombre ya existe) vuelve al nombre anterior.
+                      if ((await onMesa(m, { numero })) === false) campo.value = m.numero;
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                    className="campo min-w-0 flex-1 py-1 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onUbicar(m)}
+                    className="rounded-lg border border-borde px-2.5 py-1 text-xs font-medium hover:border-marca"
+                  >
+                    Ubicar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onBorrarMesa(m)}
+                    className="rounded-lg p-1 text-suave hover:text-red-600"
+                    aria-label={`Borrar ${nombreMesa(m.numero)}`}
+                    title="Borrar mesa"
+                  >
+                    <Icono nombre="cerrar" className="h-4 w-4" />
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         )}
         <p className="pt-1 text-sm font-semibold">Agregar al plano</p>

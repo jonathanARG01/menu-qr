@@ -1,5 +1,7 @@
 "use client";
 
+import { nombreMesa as rotuloMesa } from "@/lib/salon";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -262,7 +264,7 @@ export function GeneradorQR({
             {mesas.map((mesa) => (
               <li key={mesa.id} className="rounded-xl border border-borde p-3 text-center">
                 <TarjetaQR url={url(mesa.numero)} estilo={estilo} />
-                <p className="mt-2 font-semibold">Mesa {mesa.numero}</p>
+                <p className="mt-2 font-semibold">{rotuloMesa(mesa.numero)}</p>
                 <div className="mt-1 flex justify-center gap-3 text-xs">
                   <BotonPng
                     url={url(mesa.numero)}
