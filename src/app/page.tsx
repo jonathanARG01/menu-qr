@@ -4,7 +4,7 @@ import { Icono } from "@/components/Icono";
 import { Logo } from "@/components/Logo";
 import { PreciosPlanes } from "@/components/inicio/Precios";
 import {
-  ARMADO,
+  ARMADOS,
   DEMOS,
   DIAS_PRUEBA,
   MODULOS,
@@ -361,12 +361,34 @@ function Precios() {
           texto={`Precios en pesos chilenos, IVA incluido. Prueba gratis ${DIAS_PRUEBA} días con todo incluido.`}
         />
         <PreciosPlanes />
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-stone-300 bg-superficie/60 px-6 py-4">
-          <p>
-            <span className="font-semibold">¿No tienes tiempo de cargar la carta?</span>{" "}
-            <span className="text-suave">{ARMADO.texto}</span>
-          </p>
-          <p className="font-semibold tabular-nums">{clp(ARMADO.precio)} pago único</p>
+        <div className="mt-14">
+          <h3 className="text-xl font-bold">¿No tienes tiempo de cargar la carta? La armamos por ti</h3>
+          <p className="mt-1 text-suave">Pago único y opcional. Si prefieres hacerlo tú, la armas en minutos desde el panel.</p>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {ARMADOS.map((a) => {
+              const destacado = "destacado" in a && a.destacado;
+              return (
+                <div
+                  key={a.id}
+                  className={`flex flex-col rounded-2xl border bg-superficie p-6 ${destacado ? "border-marca ring-1 ring-marca" : "border-borde"}`}
+                >
+                  <p className="flex items-baseline justify-between gap-3">
+                    <span className="font-bold">Armado {a.nombre}</span>
+                    <span className="font-semibold tabular-nums">{clp(a.precio)}</span>
+                  </p>
+                  <p className="mt-1 text-sm text-suave">{a.para}</p>
+                  <ul className="mt-4 space-y-2 border-t border-borde pt-4 text-sm">
+                    {a.incluye.map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <Icono nombre="check" className="mt-0.5 h-4 w-4 shrink-0 text-marca" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </Contenedor>
     </section>
