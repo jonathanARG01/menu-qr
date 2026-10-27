@@ -1,7 +1,7 @@
 import type { Restaurante, Seccion } from "@/lib/types";
 import { Agregar } from "./Agregar";
 import { Carrusel } from "./Carrusel";
-import { emojiPlato, precio } from "./comun";
+import { SinFoto, precio } from "./comun";
 import { useCarta } from "./contexto";
 
 // Fila de platos destacados (los marcados con ★ en el panel). Toma los colores del diseño:
@@ -43,7 +43,7 @@ export function Destacados({
               <img src={plato.foto_url} alt={plato.nombre} loading="lazy" className="aspect-[4/3] w-full object-cover" />
             ) : (
               <span aria-hidden className="flex aspect-[4/3] w-full items-center justify-center bg-black/5 text-6xl">
-                {emojiPlato(plato.nombre, plato.descripcion)}
+                <SinFoto plato={plato} />
               </span>
             )}
             <div className="flex flex-1 flex-col gap-1 p-3">

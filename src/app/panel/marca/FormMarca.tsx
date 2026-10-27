@@ -83,6 +83,10 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
   // Los ajustes existen desde la migración 0004.
   const tieneAjustes = "ajustes" in restaurante;
   const [sonidoHoja, setSonidoHoja] = useState<SonidoHoja>(leerAjustes(restaurante.ajustes).sonido_hoja);
+  const [imagenesDefecto, setImagenesDefecto] = useState(leerAjustes(restaurante.ajustes).imagenes_defecto);
+  const ajustesGuardados = leerAjustes(restaurante.ajustes);
+  const ajustesNuevos = { ...ajustesGuardados, sonido_hoja: sonidoHoja, imagenes_defecto: imagenesDefecto };
+  const cambiaronAjustes = sonidoHoja !== ajustesGuardados.sonido_hoja || imagenesDefecto !== ajustesGuardados.imagenes_defecto;
   const [grupo, setGrupo] = useState<GrupoTema>(TEMA_INFO[restaurante.tema ?? "clasico"]?.grupo ?? "sencillos");
   const [whatsapp, setWhatsapp] = useState(restaurante.whatsapp ?? "");
   const [idiomas, setIdiomas] = useState<string[]>(restaurante.idiomas ?? []);
@@ -133,9 +137,7 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
         whatsapp: telefono || null,
         tema,
         ...(tieneExtras ? { idiomas, traducciones, pedidos_whatsapp: pedidos } : {}),
-        ...(tieneAjustes && sonidoHoja !== leerAjustes(restaurante.ajustes).sonido_hoja
-          ? { ajustes: { ...leerAjustes(restaurante.ajustes), sonido_hoja: sonidoHoja } }
-          : {}),
+        ...(tieneAjustes && cambiaronAjustes ? { ajustes: ajustesNuevos } : {}),
       })
       .eq("id", restaurante.id);
     setGuardando(false);
@@ -169,7 +171,7 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
     idiomas,
     traducciones,
     pedidos_whatsapp: pedidos,
-    ajustes: { ...leerAjustes(restaurante.ajustes), sonido_hoja: sonidoHoja },
+    ajustes: ajustesNuevos,
   };
 
   return (
@@ -256,6 +258,31 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
                 ))}
               </div>
               <p className="text-xs text-suave">Tocá uno para escucharlo. El cliente también puede silenciarlo desde la carta.</p>
+            </div>
+          )}
+          {tieneAjustes && (
+            <div className="space-y-3 rounded-xl border border-borde p-4">
+              <label className="flex items-center justify-between gap-4">
+                <span>
+                  <span className="block text-sm font-semibold">Imágenes por defecto</span>
+                  <span className="block text-xs text-suave">
+                    Los productos sin foto muestran una ilustración según lo que son (pizza, café, cerveza…). Si subís una foto,
+                    se usa la foto.
+                  </span>
+                </span>
+                <Interruptor activo={imagenesDefecto} onChange={setImagenesDefecto} etiqueta="Imágenes por defecto" />
+              </label>
+              <div className="flex gap-1.5" aria-hidden>
+                {["pizza", "hamburguesa", "pasta", "ensalada", "cafe", "cerveza", "trago", "torta"].map((a) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={a}
+                    src={`/defecto/${a}.webp`}
+                    alt=""
+                    className={`h-9 w-9 rounded-lg bg-stone-100 p-1 transition ${imagenesDefecto ? "" : "opacity-40 grayscale"}`}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>

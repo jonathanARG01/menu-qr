@@ -194,7 +194,19 @@ export function Etiquetas({ plato, className = "" }: { plato: Plato; className?:
 }
 
 export function Foto({ plato, className }: { plato: Plato; className: string }) {
-  if (!plato.foto_url) return null;
+  const { ajustes } = useCarta();
+  if (!plato.foto_url) {
+    if (!ajustes.imagenes_defecto) return null;
+    return (
+      <span
+        aria-hidden
+        className={`flex items-center justify-center ${className}`}
+        style={{ background: "color-mix(in srgb, currentColor 8%, transparent)" }}
+      >
+        <SinFoto plato={plato} />
+      </span>
+    );
+  }
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={plato.foto_url} alt={plato.nombre} loading="lazy" decoding="async" className={className} />;
 }
@@ -202,12 +214,13 @@ export function Foto({ plato, className }: { plato: Plato; className: string }) 
 // Emoji de reserva para los diseños de platos redondos cuando el plato no tiene foto.
 const TRAGOS: [RegExp, string][] = [
   [/martini|cosmopolitan/, "🍸"],
-  [/negroni|fernet|whisky|sour/, "🥃"],
+  [/negroni|fernet|whisky|sour|vermu|campari|aperol|spritz/, "🥃"],
   [/caipi|daiquiri|colada|pitufo|mojito|sunrise|fizz|lagoon|panther|beach|jungle|paraguayo|trago|coctel/, "🍹"],
 ];
 
 const EMOJIS: [RegExp, string][] = [
   [/risotto/, "🍛"],
+  [/milanesa|matambre|asado|vacio|entrana/, "🥩"],
   [
     /pizza|margarit[ah]|pepperoni|prosciutto|cuatro quesos|carnes|hongos|mussarela|muzzarella|calabresa|hawaiana|suprema|marinara|diavola|capricciosa|caprese/,
     "🍕",
@@ -217,6 +230,8 @@ const EMOJIS: [RegExp, string][] = [
   [/pancho|hot dog|salchicha/, "🌭"],
   [/quesadilla|taco|burrito|nacho/, "🌮"],
   [/papas/, "🍟"],
+  [/medialuna|croissant/, "🥐"],
+  [/sandwich|sanguch|tostado|lomito|wrap|chivito/, "🥪"],
   [/panqueque|waffle/, "🥞"],
   ...TRAGOS,
   [/ roll|sushi|philadelphia|california|tuna|maki/, "🍣"],
@@ -229,19 +244,27 @@ const EMOJIS: [RegExp, string][] = [
   [/kabab|falafel|medall/, "🧆"],
   [/bruschetta| pan /, "🥖"],
   [/langostin|camar|shrimp/, "🍤"],
+  [/pescado|salmon|merluza|trucha|atun|abadejo/, "🐟"],
+  [/huevo|omelette|revuelto/, "🍳"],
   [/pollo|alita|ayam/, "🍗"],
   [/carne|daging|teriyaki|bife/, "🥩"],
   [/edamame|arveja/, "🫛"],
   [/tofu/, "🥢"],
   [/mochi/, "🍡"],
   [/cheesecake|torta|tarta|tiramisu|mil hojas/, "🍰"],
+  [/brownie|chocolate/, "🍫"],
+  [/galleta|cookie|alfajor/, "🍪"],
+  [/dona|donut|berlin|bola de fraile/, "🍩"],
   [/helado|affogato/, "🍨"],
   [/gulab|rasmalai|flan/, "🍮"],
   [/bubble/, "🧋"],
   [/cafe|capuch|cappuccino|espresso|v60/, "☕"],
   [/matcha| te |latte/, "🍵"],
-  [/batido|shake|licuado|smoothie/, "🥤"],
-  [/ (verde|tropical|conga|purace|rojo|mixto|detox|naranja|zanahoria) |limonada|jugo/, "🧃"],
+  [/batido|shake|licuado|smoothie|leche/, "🥛"],
+  [/limonada|jugo de limon/, "🍋"],
+  [/ (verde|tropical|conga|purace|rojo|mixto|detox|naranja|zanahoria) |jugo/, "🧃"],
+  [/cerveza| pinta| ipa |lager|stout|porron|chopp/, "🍺"],
+  [/ agua /, "💧"],
   [/gaseosa|cola|lima-limon|soda/, "🥤"],
   [/cactus/, "🌵"],
   [/planta|calathea|pothos|monstera|haworthia|dracaena|croton|helecho/, "🪴"],
@@ -262,7 +285,77 @@ export const emojiPlato = (nombre: string, descripcion?: string | null) => {
   return buscar(nombre) ?? porDescripcion ?? (descripcion ? buscar(descripcion) : undefined) ?? "🍽️";
 };
 
-// Foto circular del plato; sin foto, un plato con un emoji para que el diseño no quede vacío.
+// Imágenes por defecto para platos sin foto (Fluent Emoji 3D de Microsoft, licencia MIT; en public/defecto).
+const ARCHIVO: Record<string, string> = {
+  "🍕": "pizza",
+  "🥟": "empanada",
+  "🍔": "hamburguesa",
+  "🌭": "pancho",
+  "🌮": "taco",
+  "🍟": "papas",
+  "🥞": "panqueque",
+  "🥐": "medialuna",
+  "🥪": "sandwich",
+  "🍸": "coctel",
+  "🥃": "vaso",
+  "🍹": "trago",
+  "🍣": "sushi",
+  "🍜": "fideos",
+  "🍲": "sopa",
+  "🍛": "curry",
+  "🍝": "pasta",
+  "🧀": "queso",
+  "🍷": "vino",
+  "🧆": "falafel",
+  "🥖": "pan",
+  "🍤": "langostino",
+  "🐟": "pescado",
+  "🍳": "huevo",
+  "🍗": "pollo",
+  "🥩": "carne",
+  "🫛": "arveja",
+  "🥢": "palillos",
+  "🍡": "dango",
+  "🍰": "torta",
+  "🍫": "chocolate",
+  "🍪": "galleta",
+  "🍩": "dona",
+  "🍨": "helado",
+  "🍮": "flan",
+  "🧋": "bubble",
+  "☕": "cafe",
+  "🍵": "te",
+  "🥛": "batido",
+  "🍋": "limon",
+  "🧃": "jugo",
+  "🍺": "cerveza",
+  "💧": "agua",
+  "🥤": "gaseosa",
+  "🌵": "cactus",
+  "🪴": "planta",
+  "🥗": "ensalada",
+};
+
+export const imagenDefecto = (nombre: string, descripcion?: string | null) =>
+  `/defecto/${ARCHIVO[emojiPlato(nombre, descripcion)] ?? "plato"}.webp`;
+
+// Lo que va en el lugar de la foto: la imagen por defecto si el restaurante la activó, si no el emoji.
+export function SinFoto({ plato }: { plato: Plato }) {
+  const { ajustes } = useCarta();
+  if (!ajustes.imagenes_defecto) return <>{emojiPlato(plato.nombre, plato.descripcion)}</>;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={imagenDefecto(plato.nombre, plato.descripcion)}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      className="h-[68%] w-[68%] object-contain drop-shadow-md"
+    />
+  );
+}
+
+// Foto circular del plato; sin foto, la imagen por defecto o un emoji para que el diseño no quede vacío.
 export function FotoRedonda({ plato, className, style }: { plato: Plato; className: string; style?: React.CSSProperties }) {
   if (plato.foto_url) {
     return (
@@ -279,7 +372,7 @@ export function FotoRedonda({ plato, className, style }: { plato: Plato; classNa
   }
   return (
     <span aria-hidden className={`flex aspect-square items-center justify-center rounded-full ${className}`} style={style}>
-      {emojiPlato(plato.nombre, plato.descripcion)}
+      <SinFoto plato={plato} />
     </span>
   );
 }

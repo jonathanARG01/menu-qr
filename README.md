@@ -62,3 +62,7 @@ src/app/auth/confirm/    enlaces de correo (confirmar cuenta, recuperar contrase
 src/lib/                 clientes de Supabase, tipos, QR/PDF, fotos
 supabase/                migración SQL y datos de ejemplo
 ```
+
+## Imágenes por defecto
+
+Si el restaurante activa **Marca → Imágenes por defecto**, los platos sin foto muestran una ilustración según su nombre o descripción (pizza, café, cerveza, etc.). Se guarda en `restaurantes.ajustes.imagenes_defecto`, así que no necesita SQL. Las imágenes de `public/defecto` son [Fluent Emoji](https://github.com/microsoft/fluentui-emoji) de Microsoft, con licencia MIT (ver `public/defecto/LICENSE.txt`), que permite el uso comercial.
