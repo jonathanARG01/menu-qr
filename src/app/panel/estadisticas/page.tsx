@@ -1,3 +1,4 @@
+import { nombreMesa } from "@/lib/salon";
 import Link from "next/link";
 import { requerirSeccion } from "@/lib/panel";
 import { NOMBRE_IDIOMA, type Idioma } from "@/lib/i18n";
@@ -95,7 +96,7 @@ export default async function Estadisticas({ searchParams }: { searchParams: Pro
         <section className="tarjeta p-5">
           <h2 className="mb-4 font-semibold">Mesas con más visitas</h2>
           <BarrasHorizontales
-            datos={r.por_mesa.map((m) => ({ etiqueta: `Mesa ${m.mesa}`, valor: m.visitas }))}
+            datos={r.por_mesa.map((m) => ({ etiqueta: nombreMesa(m.mesa), valor: m.visitas }))}
             unidad="visitas"
             vacio="Aparece cuando los clientes escanean el QR de una mesa."
           />

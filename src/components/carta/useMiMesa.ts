@@ -18,8 +18,7 @@ export type AvisoPedido = { id: number; estado: EstadoAvisado; pedidos: number[]
 
 const RANGO: Record<EstadoPedido, number> = { pendiente: 0, nuevo: 1, preparando: 2, listo: 3, entregado: 4, cancelado: -1 };
 const AVISADOS: EstadoAvisado[] = ["preparando", "listo", "entregado"];
-const enCurso = (d: DatosMesa | null) =>
-  !!d?.cuenta?.pedidos.some((p) => p.estado !== "entregado" && p.estado !== "cancelado");
+const enCurso = (d: DatosMesa | null) => !!d?.cuenta?.pedidos.some((p) => p.estado !== "entregado" && p.estado !== "cancelado");
 
 // La mesa del cliente siempre al día: consulta seguido mientras hay algo en la cocina y más espaciado si no,
 // y arma un aviso cada vez que un pedido avanza (no al abrir la carta).
@@ -74,9 +73,7 @@ export function useMiMesa({
     const tocados = new Set(nuevos.flatMap((a) => a.pedidos));
     // Un aviso viejo del mismo pedido ya no sirve (si no vio "en preparación" y ya está listo, solo ve "listo").
     setAvisos((lista) => [
-      ...lista
-        .map((a) => ({ ...a, pedidos: a.pedidos.filter((n) => !tocados.has(n)) }))
-        .filter((a) => a.pedidos.length),
+      ...lista.map((a) => ({ ...a, pedidos: a.pedidos.filter((n) => !tocados.has(n)) })).filter((a) => a.pedidos.length),
       ...nuevos,
     ]);
   }, [activo, restauranteId, sucursalId, mesa]);

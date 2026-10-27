@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { Icono } from "@/components/Icono";
 import { describirPropina, totalLineas } from "@/lib/cuenta";
-import { NOMBRE_ESTADO, type Ajustes, type EstadoPedido, type Pedido, type PedidoItem } from "@/lib/salon";
+import { NOMBRE_ESTADO, type Ajustes, type EstadoPedido, type Pedido, type PedidoItem, nombreMesa } from "@/lib/salon";
+import { avisarComensal } from "@/lib/push";
 import type { Categoria, Mesa, Plato, Restaurante } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { minutosDesde, tiempo, useAhora, type useServicio } from "@/lib/useServicio";
@@ -74,7 +75,7 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
         mesa_numero: mesa.numero,
         comensales: comensalesNuevos,
       }),
-      `Mesa ${mesa.numero} abierta`,
+      `${nombreMesa(mesa.numero)} abierta`,
     );
 
   async function enviarPedido(nuevas: LineaNueva[]) {
@@ -121,8 +122,11 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
     setPantalla("mesa");
   }
 
-  const estadoPedido = (p: Pedido, estado: EstadoPedido, ok?: string) =>
-    hacer(supabase.from("pedidos").update({ estado }).eq("id", p.id), ok);
+  const estadoPedido = async (p: Pedido, estado: EstadoPedido, ok?: string) => {
+    const hecho = await hacer(supabase.from("pedidos").update({ estado }).eq("id", p.id), ok);
+    if (hecho) avisarComensal(p.id);
+    return hecho;
+  };
 
   function cambiarItem(item: PedidoItem, cambios: Partial<PedidoItem>) {
     return hacer(supabase.from("pedido_items").update(cambios).eq("id", item.id));
@@ -157,7 +161,7 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
           .from("cuentas")
           .update({ estado: "cerrada", cerrada_at: new Date().toISOString(), aviso: null })
           .eq("id", cuenta.id),
-        `Mesa ${mesa.numero} cerrada`,
+        `${nombreMesa(mesa.numero)} cerrada`,
       )
     )
       onCerrar();
@@ -184,13 +188,13 @@ export function MesaPanel({ mesa, piso, restaurante, ajustes, admin, categorias,
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`Mesa ${mesa.numero}`}
+        aria-label={nombreMesa(mesa.numero)}
         onClick={(e) => e.stopPropagation()}
         className={`flex h-full w-full ${ancho} flex-col bg-superficie shadow-2xl`}
       >
         <div className="flex items-center gap-3 border-b border-borde px-5 py-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xl font-bold">Mesa {mesa.numero}</p>
+            <p className="text-xl font-bold">{nombreMesa(mesa.numero)}</p>
             <p className="text-sm text-suave" suppressHydrationWarning>
               {[
                 piso,

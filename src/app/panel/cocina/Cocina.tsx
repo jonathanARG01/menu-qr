@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icono } from "@/components/Icono";
 import { useToast } from "@/components/Toast";
-import { NOMBRE_ESTADO, type Ajustes, type EstadoPedido, type Pedido, type PedidoItem, type Piso } from "@/lib/salon";
+import { NOMBRE_ESTADO, type Ajustes, type EstadoPedido, type Pedido, type PedidoItem, type Piso, nombreMesa } from "@/lib/salon";
 import type { Mesa, Restaurante } from "@/lib/types";
+import { avisarComensal } from "@/lib/push";
 import { sonar } from "@/lib/sonidos";
 import { mensajeError } from "@/lib/utils";
 import { minutosDesde, useAhora, useServicio } from "@/lib/useServicio";
@@ -122,12 +123,13 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
       (m) => m.numero === p.mesa_numero && (!p.sucursal_id || !m.sucursal_id || m.sucursal_id === p.sucursal_id),
     );
     const piso = pisos.find((x) => x.id === mesa?.piso_id)?.nombre;
-    return { mesa: p.mesa_numero ? `Mesa ${p.mesa_numero}` : "Mostrador", piso };
+    return { mesa: nombreMesa(p.mesa_numero), piso };
   }
 
   async function cambiar(p: Pedido, estado: EstadoPedido) {
     const { error } = await supabase.from("pedidos").update({ estado }).eq("id", p.id);
     if (error) return avisar(mensajeError(error), "error");
+    avisarComensal(p.id);
     recargar();
   }
 

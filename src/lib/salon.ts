@@ -252,3 +252,7 @@ export type SolicitudCuenta = {
   metodos?: string[];
   monto?: number;
 };
+
+// "5" → "Mesa 5"; si ya la llamaron "Mesa 5", "Terraza 2" o "Barra", queda como está.
+export const nombreMesa = (numero: string | null | undefined) =>
+  !numero ? "Mostrador" : /^\d+$/.test(numero.trim()) ? `Mesa ${numero.trim()}` : numero.trim();
