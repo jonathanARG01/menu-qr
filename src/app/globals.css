@@ -62,7 +62,7 @@ body {
   --color-tinta: #f3f4f7;
   --color-suave: #9aa2b3;
   --color-borde: #2b313e;
-  --color-stone-50: oklch(17.5% 0.014 262);
+  --color-stone-50: oklch(19% 0.015 262);
   --color-stone-950: oklch(98.5% 0.002 262);
   --color-stone-100: oklch(25% 0.016 262);
   --color-stone-900: oklch(97% 0.003 262);
