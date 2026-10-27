@@ -1,6 +1,7 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, FotoRedonda, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
+import { useCarta } from "./contexto";
 import { Destacados } from "./Destacados";
 import { NavCategorias } from "./NavCategorias";
 import { SelectorIdioma } from "./SelectorIdioma";
@@ -14,6 +15,7 @@ const brillo = (color: string) => `0 0 4px #fff, 0 0 10px ${color}, 0 0 22px ${c
 export function TemaNeon({ restaurante, secciones, vistaPrevia, pie }: PropsTema) {
   const acento = restaurante.color_primario;
   const colores = [acento, ...OTROS];
+  const { ajustes } = useCarta();
 
   return (
     <div
@@ -103,8 +105,8 @@ export function TemaNeon({ restaurante, secciones, vistaPrevia, pie }: PropsTema
               <ul className="space-y-3">
                 {seccion.platos.map((plato) => (
                   <li key={plato.id} className="flex items-center gap-3">
-                    {plato.foto_url && (
-                      <FotoRedonda plato={plato} className="w-14 shrink-0" style={{ border: `2px solid ${color}` }} />
+                    {(plato.foto_url || ajustes.imagenes_defecto) && (
+                      <FotoRedonda plato={plato} className="w-14 shrink-0 bg-white/5" style={{ border: `2px solid ${color}` }} />
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-2">

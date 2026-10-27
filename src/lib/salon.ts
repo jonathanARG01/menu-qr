@@ -82,6 +82,8 @@ export type Ajustes = {
   alertas: { amarillo: number; rojo: number };
   // Sonido al pasar de página en el diseño Revista (archivos en public/sonidos).
   sonido_hoja: SonidoHoja;
+  // Los platos sin foto muestran una imagen ilustrada según lo que son (archivos en public/defecto).
+  imagenes_defecto: boolean;
 };
 
 export const SONIDOS_HOJA = ["papel", "hojas", "diario", "ninguno"] as const;
@@ -104,6 +106,7 @@ export const AJUSTES_BASE: Ajustes = {
   estaciones: ["Cocina", "Barra"],
   alertas: { amarillo: 10, rojo: 20 },
   sonido_hoja: "papel",
+  imagenes_defecto: false,
 };
 
 // Une lo guardado con los valores por defecto (lo que falte o venga mal se completa).
@@ -128,6 +131,7 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
     metodos_pago: listaTextos(g.metodos_pago, AJUSTES_BASE.metodos_pago),
     estaciones: listaTextos(g.estaciones, AJUSTES_BASE.estaciones),
     alertas: { ...AJUSTES_BASE.alertas, ...(g.alertas ?? {}) },
+    imagenes_defecto: g.imagenes_defecto === true,
     sonido_hoja: SONIDOS_HOJA.includes(g.sonido_hoja as SonidoHoja) ? (g.sonido_hoja as SonidoHoja) : AJUSTES_BASE.sonido_hoja,
   };
 }
