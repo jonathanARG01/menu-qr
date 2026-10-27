@@ -33,6 +33,9 @@ export default async function Admin() {
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
           <span className="rounded-lg bg-stone-900 px-2.5 py-1 text-xs font-semibold text-white">Admin</span>
           <h1 className="flex-1 font-semibold">Todos los restaurantes</h1>
+          <Link href="/admin/referidos" className="text-sm text-suave hover:text-tinta">
+            Referidos
+          </Link>
           <Link href="/panel" className="text-sm text-suave hover:text-tinta">
             Ir a mi panel
           </Link>

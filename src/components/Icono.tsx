@@ -59,6 +59,12 @@ const TRAZOS: Record<string, React.ReactNode> = {
       <circle cx="18" cy="18" r="2" />
     </>
   ),
+  referidos: (
+    <>
+      <path d="M4 11h16v9H4zM3 7h18v4H3zM12 7v13" />
+      <path d="M12 7c-1.5-3-5-3.5-5-1.5S10 7 12 7zM12 7c1.5-3 5-3.5 5-1.5S14 7 12 7z" />
+    </>
+  ),
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
   cerrar: <path d="M6 6l12 12M18 6L6 18" />,
   mas: (

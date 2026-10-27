@@ -28,7 +28,8 @@ export type Seccion =
   | "estadisticas"
   | "sucursales"
   | "equipo"
-  | "personalizar";
+  | "personalizar"
+  | "referidos";
 
 export type InfoSeccion = { id: Seccion; href: string; texto: string; grupo: "Servicio" | "Carta" | "Negocio"; ayuda: string };
 
@@ -51,6 +52,7 @@ export const SECCIONES: InfoSeccion[] = [
     grupo: "Negocio",
     ayuda: "Qué se ve y cómo se cobra",
   },
+  { id: "referidos", href: "/panel/referidos", texto: "Invitar y ahorrar", grupo: "Negocio", ayuda: "Tu link y tus descuentos" },
 ];
 
 // Lo que cada rol puede llegar a ver. El administrador elige, dentro de esto, qué le aparece a cada uno.

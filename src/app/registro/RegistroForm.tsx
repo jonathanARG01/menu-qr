@@ -8,7 +8,8 @@ import { Aviso } from "@/components/AuthShell";
 import { CamposRestaurante } from "@/components/CamposRestaurante";
 
 // Con "equipo" es el alta de un mesero o cocinero invitado: no crea restaurante, entra al del administrador que lo invitó.
-export function RegistroForm({ equipo = false }: { equipo?: boolean }) {
+// "referido" es la dirección del restaurante que lo invitó: se guarda en la cuenta y la base la anota al crear el restaurante.
+export function RegistroForm({ equipo = false, referido }: { equipo?: boolean; referido?: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [revisarCorreo, setRevisarCorreo] = useState(false);
@@ -29,7 +30,7 @@ export function RegistroForm({ equipo = false }: { equipo?: boolean }) {
       options: {
         emailRedirectTo: `${urlSitio()}/auth/confirm?next=/panel`,
         // Se guardan para terminar el alta tras confirmar el correo.
-        data: equipo ? {} : { restaurante_nombre: nombre, restaurante_slug: slug },
+        data: equipo ? {} : { restaurante_nombre: nombre, restaurante_slug: slug, ...(referido ? { ref: referido } : {}) },
       },
     });
 
