@@ -70,7 +70,9 @@ export function Opinion({
                 aria-checked={estrellas === n}
                 aria-label={`${n}`}
                 onClick={() => elegir(n)}
-                className={`text-4xl transition active:scale-90 ${n <= estrellas ? "text-amber-400" : "text-stone-300"}`}
+                className="text-4xl transition active:scale-90"
+                // Color fijo: algunos diseños de carta cambian la paleta de Tailwind.
+                style={{ color: n <= estrellas ? "#f59e0b" : "#d6d3d1" }}
               >
                 ★
               </button>
