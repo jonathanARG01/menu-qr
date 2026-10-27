@@ -7,7 +7,7 @@ export const PLANES = [
   {
     id: "carta",
     nombre: "Carta",
-    precio: 12990,
+    precio: 17990,
     para: "Para mostrar la carta con QR y olvidarte de reimprimir.",
     incluye: [
       "Carta QR ilimitada con fotos",
@@ -34,7 +34,7 @@ export const PLANES = [
   {
     id: "grupo",
     nombre: "Grupo",
-    precio: 44990,
+    precio: 46990,
     para: "Para marcas con varios locales.",
     incluye: [
       "Todo lo del plan Pro",
