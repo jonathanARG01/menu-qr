@@ -60,12 +60,12 @@ function Titulo({ etiqueta, titulo, texto }: { etiqueta: string; titulo: string;
 
 function Cabecera() {
   return (
-    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0e1a14]/90 text-green-50 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0f1626]/90 text-slate-50 backdrop-blur">
       <Contenedor className="flex h-16 items-center gap-6">
         <Link href="/" aria-label="Mesitto, inicio">
           <Logo oscuro className="text-2xl" />
         </Link>
-        <nav className="hidden items-center gap-6 text-sm text-green-100/80 md:flex">
+        <nav className="hidden items-center gap-6 text-sm text-slate-200/80 md:flex">
           {NAV.map(([href, texto]) => (
             <a key={href} href={href} className="hover:text-white">
               {texto}
@@ -73,10 +73,10 @@ function Cabecera() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2">
-          <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-green-100/90 hover:text-white">
+          <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-200/90 hover:text-white">
             Entrar
           </Link>
-          <Link href="/registro" className="boton">
+          <Link href="/registro" className="boton-acento">
             Crear cuenta
           </Link>
         </div>
@@ -87,41 +87,41 @@ function Cabecera() {
 
 function Portada() {
   return (
-    <section className="relative overflow-hidden bg-[#0e1a14] text-green-50">
+    <section className="relative overflow-hidden bg-[#0f1626] text-slate-50">
       {/* Luz cálida y trama de puntos, como un salón de noche (la misma de las pantallas de acceso) */}
       <div
         aria-hidden
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at 15% 0%, rgb(111 207 151 / 0.22), transparent 55%), radial-gradient(ellipse at 95% 100%, rgb(36 112 74 / 0.5), transparent 55%), radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px) 0 0/22px 22px",
+            "radial-gradient(ellipse at 15% 0%, rgb(242 163 58 / 0.18), transparent 55%), radial-gradient(ellipse at 95% 100%, rgb(42 56 88 / 0.7), transparent 55%), radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px) 0 0/22px 22px",
         }}
       />
       <Contenedor className="relative grid items-center gap-12 py-16 lg:grid-cols-[1.15fr_1fr] lg:py-24">
         <div>
-          <p className="inline-flex rounded-full bg-white/10 px-3 py-1 text-sm text-green-200 ring-1 ring-white/15">
+          <p className="inline-flex rounded-full bg-white/10 px-3 py-1 text-sm text-slate-300 ring-1 ring-white/15">
             Carta QR + gestión del salón, en un solo sistema
           </p>
           <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-tight text-balance sm:text-5xl lg:text-6xl">
             Tu restaurante, <span className="text-marca-claro">en un solo lugar.</span>
           </h1>
-          <p className="mt-5 max-w-xl text-lg text-green-100/80">
+          <p className="mt-5 max-w-xl text-lg text-slate-200/80">
             Tus clientes escanean el QR, ven la carta en su idioma y piden desde la mesa. Tú ves el salón, la cocina y la caja
             en vivo, desde el celular. Sin reimprimir cartas ni pagar comisiones por pedido.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/registro" className="boton px-5 py-3 text-base">
+            <Link href="/registro" className="boton-acento px-5 py-3 text-base">
               Probar gratis {DIAS_PRUEBA} días
             </Link>
             <Link
               href={CARTA_EJEMPLO}
               target="_blank"
-              className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-5 py-3 text-base font-medium text-green-50 hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-5 py-3 text-base font-medium text-slate-50 hover:bg-white/10"
             >
               Ver carta de ejemplo <Icono nombre="externo" className="h-4 w-4" />
             </Link>
           </div>
-          <p className="mt-4 text-sm text-green-100/60">Sin tarjeta de crédito. Sin permanencia.</p>
+          <p className="mt-4 text-sm text-slate-200/60">Sin tarjeta de crédito. Sin permanencia.</p>
         </div>
 
         <div className="relative mx-auto w-full max-w-[260px] sm:max-w-[320px]">
@@ -217,7 +217,7 @@ function Modulos() {
         <div className="mt-12 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
           {MODULOS.map((m) => (
             <div key={m.titulo} className="flex gap-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-50 text-marca ring-1 ring-green-200">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-marca ring-1 ring-slate-300">
                 <Icono nombre={m.icono} />
               </span>
               <div className="min-w-0">
@@ -285,7 +285,7 @@ function Precios() {
               <div
                 key={p.id}
                 className={`relative flex flex-col rounded-2xl border p-7 ${
-                  destacado ? "border-marca bg-green-50/60 shadow-xl shadow-green-900/10" : "border-borde bg-fondo"
+                  destacado ? "border-marca bg-slate-50/60 shadow-xl shadow-slate-900/10" : "border-borde bg-fondo"
                 }`}
               >
                 {destacado && (
@@ -353,14 +353,14 @@ function Testimonios() {
   if (TESTIMONIOS.length === 0) return null;
   const sonEjemplo = TESTIMONIOS.some((t) => t.ejemplo);
   return (
-    <section className="border-y border-borde bg-[#0e1a14] py-20 text-green-50">
+    <section className="border-y border-borde bg-[#0f1626] py-20 text-slate-50">
       <Contenedor>
         <p className="text-sm font-semibold uppercase tracking-wider text-marca-claro">Testimonios</p>
         <h2 className="mt-2 max-w-2xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
           Lo que cambia en el día a día
         </h2>
         {sonEjemplo && (
-          <p className="mt-3 text-sm text-green-100/60">Textos de ejemplo mientras reunimos los de nuestros primeros clientes.</p>
+          <p className="mt-3 text-sm text-slate-200/60">Textos de ejemplo mientras reunimos los de nuestros primeros clientes.</p>
         )}
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {TESTIMONIOS.map((t) => (
@@ -368,9 +368,9 @@ function Testimonios() {
               <blockquote className="flex-1 text-lg leading-relaxed">“{t.texto}”</blockquote>
               <figcaption className="mt-5 text-sm">
                 <span className="block font-semibold">{t.nombre}</span>
-                <span className="text-green-100/60">{t.local}</span>
+                <span className="text-slate-200/60">{t.local}</span>
                 {t.ejemplo && (
-                  <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-xs text-green-100/70">Ejemplo</span>
+                  <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-xs text-slate-200/70">Ejemplo</span>
                 )}
               </figcaption>
             </figure>
@@ -412,7 +412,7 @@ function Cierre() {
             Crea tu cuenta, carga tu carta y pega el primer QR hoy. Los primeros {DIAS_PRUEBA} días van por nuestra cuenta.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/registro" className="rounded-lg bg-white px-5 py-3 font-semibold text-marca-oscuro hover:bg-green-50">
+            <Link href="/registro" className="rounded-lg bg-white px-5 py-3 font-semibold text-marca-oscuro hover:bg-slate-50">
               Crear cuenta gratis
             </Link>
             <Link href="/login" className="rounded-lg border border-white/40 px-5 py-3 font-medium hover:bg-white/10">
