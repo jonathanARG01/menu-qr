@@ -1,11 +1,20 @@
 import { cache } from "react";
 import { createPublicClient } from "@/lib/supabase/server";
 import type { Categoria, Plato, Promo, Restaurante, Sucursal } from "@/lib/types";
+import { leerAjustes } from "@/lib/salon";
+import { limitarAjustes, moduloIncluido, pedidosWhatsappIncluido, pruebaVencida } from "@/lib/planes";
 
 export const obtenerCarta = cache(async (slug: string) => {
   const supabase = createPublicClient();
-  const { data: restaurante } = await supabase.from("restaurantes").select("*").eq("slug", slug).eq("activo", true).maybeSingle();
-  if (!restaurante) return null;
+  const { data: guardado } = await supabase.from("restaurantes").select("*").eq("slug", slug).eq("activo", true).maybeSingle();
+  // Al vencer la prueba deja de verse al momento, aunque el envío diario todavía no lo haya pausado.
+  if (!guardado || pruebaVencida(guardado)) return null;
+  // Lo que el plan no incluye (pedidos, reservas, cobro online…) no aparece en la carta.
+  const restaurante: Restaurante = {
+    ...guardado,
+    ajustes: guardado.ajustes == null ? guardado.ajustes : limitarAjustes(leerAjustes(guardado.ajustes), guardado.plan),
+    pedidos_whatsapp: Boolean(guardado.pedidos_whatsapp) && pedidosWhatsappIncluido(guardado.plan),
+  };
 
   // RLS ya filtra categorías ocultas y platos agotados; se repite aquí por claridad.
   const [{ data: categorias }, { data: platos }, { data: sucursales }, { data: promos }] = await Promise.all([
@@ -41,9 +50,20 @@ export const obtenerCarta = cache(async (slug: string) => {
     .filter((c) => c.platos.length > 0);
 
   return {
-    restaurante: restaurante as Restaurante,
+    restaurante,
     secciones,
-    sucursales: (sucursales ?? []) as Sucursal[],
+    sucursales: moduloIncluido(restaurante.plan, "sucursales") ? ((sucursales ?? []) as Sucursal[]) : [],
     promos: (promos ?? []) as Promo[],
   };
+});
+
+// Restaurante que existe pero no muestra su carta ahora (pausado o con la prueba vencida). Sin la migración 0016: null.
+export const obtenerPausada = cache(async (slug: string) => {
+  const { data } = await createPublicClient().rpc("carta_pausada", { p_slug: slug });
+  const fila = (Array.isArray(data) ? data[0] : null) as {
+    nombre: string;
+    logo_url: string | null;
+    color_primario: string;
+  } | null;
+  return fila ?? null;
 });

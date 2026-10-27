@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { borrarFoto, subirFoto } from "@/lib/fotos";
 import { TEMAS, type Restaurante, type Seccion, type Tema } from "@/lib/types";
@@ -15,7 +16,9 @@ import { Interruptor } from "@/components/Interruptor";
 import { banderaIdioma, IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
 import { enlaceRed, INFO_RED, REDES, type Redes } from "@/lib/redes";
 import { revalidarCarta } from "../actions";
-import { leerAjustes, SONIDOS_HOJA, type SonidoHoja } from "@/lib/salon";
+import { leerAjustes, SONIDOS_HOJA, type Ajustes, type SonidoHoja } from "@/lib/salon";
+import { Icono } from "@/components/Icono";
+import { NOMBRE_PLAN, PLAN_PEDIDOS_WHATSAPP, pedidosWhatsappIncluido } from "@/lib/planes";
 
 const PALETAS = [
   { primario: "#b45309", fondo: "#fffbf5" },
@@ -69,7 +72,16 @@ const SQL_TEMA = (t: Tema) =>
       ? "0006_temas_nuevos.sql"
       : "0007_destacados_y_temas.sql";
 
-export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante; secciones: Seccion[] }) {
+export function FormMarca({
+  restaurante,
+  secciones,
+  guardados,
+}: {
+  restaurante: Restaurante;
+  secciones: Seccion[];
+  // Ajustes guardados sin el límite del plan (ver lib/planes.ts).
+  guardados?: Ajustes;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const avisar = useToast();
@@ -102,6 +114,8 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
   const [pedidos, setPedidos] = useState(restaurante.pedidos_whatsapp ?? false);
   // Las columnas nuevas solo se guardan si ya se ejecutó la migración 0003.
   const tieneExtras = "idiomas" in restaurante;
+  // En el plan Carta no hay pedidos: no se toca lo guardado (vuelve como estaba si sube de plan).
+  const conPedidos = pedidosWhatsappIncluido(restaurante.plan);
   const [subiendo, setSubiendo] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const inputLogo = useRef<HTMLInputElement>(null);
@@ -142,8 +156,18 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
         moneda,
         whatsapp: telefono || null,
         tema,
-        ...(tieneExtras ? { idiomas, traducciones, pedidos_whatsapp: pedidos } : {}),
-        ...(tieneAjustes && cambiaronAjustes ? { ajustes: ajustesNuevos } : {}),
+        ...(tieneExtras ? { idiomas, traducciones, ...(conPedidos ? { pedidos_whatsapp: pedidos } : {}) } : {}),
+        ...(tieneAjustes && cambiaronAjustes
+          ? // Sobre lo guardado sin el límite del plan, para no apagar módulos que el plan no incluye.
+            {
+              ajustes: {
+                ...(guardados ?? ajustesGuardados),
+                sonido_hoja: sonidoHoja,
+                imagenes_defecto: imagenesDefecto,
+                redes: redesLimpias,
+              },
+            }
+          : {}),
       })
       .eq("id", restaurante.id);
     setGuardando(false);
@@ -483,7 +507,17 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
                 Los clientes arman su pedido en la carta y te lo envían por WhatsApp con la mesa, el total y sus notas.
               </span>
             </span>
-            <Interruptor activo={pedidos} onChange={setPedidos} etiqueta="Pedidos por WhatsApp" />
+            {conPedidos ? (
+              <Interruptor activo={pedidos} onChange={setPedidos} etiqueta="Pedidos por WhatsApp" />
+            ) : (
+              <Link
+                href="/panel/plan?s=pedidos"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+              >
+                <Icono nombre="candado" className="h-3.5 w-3.5" />
+                Plan {NOMBRE_PLAN[PLAN_PEDIDOS_WHATSAPP]}
+              </Link>
+            )}
           </label>
           {!tieneExtras && <AvisoMigracion />}
           {pedidos && !whatsapp.replace(/\D/g, "") && (

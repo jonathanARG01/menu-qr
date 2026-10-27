@@ -50,6 +50,11 @@ export type Restaurante = {
   ajustes?: Partial<Ajustes>;
   // Puede faltar si aún no se ejecutó la migración 0012.
   ciclo?: "mensual" | "anual";
+  // Prueba de 14 días y plan pago (migración 0016). prueba_fin null: no vence.
+  prueba_inicio?: string | null;
+  prueba_fin?: string | null;
+  plan_inicio?: string | null;
+  pausa_motivo?: "prueba" | "manual" | null;
 };
 
 export type Categoria = {
@@ -61,6 +66,8 @@ export type Categoria = {
   traducciones?: Traducciones;
   // Pantalla a la que van sus comandas (Cocina, Barra…). Requiere la migración 0004.
   estacion?: string;
+  // Categoría de la carta de ejemplo de una cuenta nueva (migración 0016).
+  ejemplo?: boolean;
 };
 
 export type Plato = {
@@ -79,6 +86,8 @@ export type Plato = {
   destacado?: boolean;
   // Agotado hasta esa hora (lo marca la cocina; migración 0009).
   agotado_hasta?: string | null;
+  // Plato de ejemplo de una cuenta nueva (migración 0016): se borra con "Borrar ejemplos".
+  ejemplo?: boolean;
   // Solo en la carta: precio de lista cuando hay una promo vigente, y si está agotado ahora.
   precio_lista?: number;
   agotado?: boolean;

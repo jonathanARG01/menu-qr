@@ -7,7 +7,7 @@ import { Onboarding } from "./Onboarding";
 export const metadata = { title: "Panel · Mesitto" };
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
-  const { user, restaurante, restaurantes, esSuperadmin, rol, secciones } = await obtenerContexto();
+  const { user, restaurante, restaurantes, esSuperadmin, rol, secciones, bloqueadas, admin } = await obtenerContexto();
 
   if (!restaurante) {
     const meta = user.user_metadata as { restaurante_nombre?: string; restaurante_slug?: string; restaurante_pais?: string };
@@ -33,7 +33,12 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         slug: restaurante.slug,
         logo_url: restaurante.logo_url,
         color_primario: restaurante.color_primario,
+        plan: restaurante.plan,
+        prueba_inicio: restaurante.prueba_inicio ?? null,
+        prueba_fin: restaurante.prueba_fin ?? null,
       }}
+      bloqueadas={bloqueadas}
+      admin={admin}
       restaurantes={restaurantes}
       secciones={secciones}
       rol={rol ?? "dueno"}

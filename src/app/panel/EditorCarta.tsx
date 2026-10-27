@@ -77,6 +77,19 @@ export function EditorCarta({ restaurante, estaciones, categoriasIniciales, plat
     else revalidarCarta();
   }
 
+  // Platos de ejemplo de la cuenta nueva: se borran los que no editó (los editados ya son suyos).
+  async function borrarEjemplos() {
+    if (!confirm("¿Borrar los platos de ejemplo? Los que editaste se quedan.")) return;
+    const ok = await guardar(
+      supabase.rpc("borrar_carta_ejemplo", { p_restaurante: restaurante.id }),
+      "Platos de ejemplo borrados",
+    );
+    if (!ok) return;
+    const quedan = platos.filter((p) => !p.ejemplo);
+    setPlatos(quedan);
+    setCategorias((cs) => cs.filter((c) => !c.ejemplo || quedan.some((p) => p.categoria_id === c.id)));
+  }
+
   // ── Categorías ──────────────────────────────
 
   async function agregarCategoria(e: React.FormEvent) {
@@ -197,6 +210,8 @@ export function EditorCarta({ restaurante, estaciones, categoriasIniciales, plat
             </button>
           )}
         </div>
+
+        {platos.some((p) => p.ejemplo) && <AvisoEjemplos onBorrar={borrarEjemplos} />}
 
         {categorias.length > 1 && <ChipsCategorias categorias={categorias} platos={platos} onElegir={irACategoria} />}
 
@@ -730,6 +745,21 @@ function TraducirCategoria({
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function AvisoEjemplos({ onBorrar }: { onBorrar: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+      <Icono nombre="carta" className="h-5 w-5 shrink-0" />
+      <p className="min-w-0 flex-1 basis-56">
+        <strong>Estos platos son de ejemplo</strong>, para que veas cómo luce tu carta. Edítalos con los tuyos o bórralos cuando
+        quieras.
+      </p>
+      <button type="button" onClick={onBorrar} className="boton-secundario py-1.5 text-xs">
+        Borrar ejemplos
+      </button>
     </div>
   );
 }

@@ -8,11 +8,25 @@ import { Icono } from "@/components/Icono";
 import { NOMBRE_ROL, type InfoSeccion, type Rol } from "@/lib/salon";
 import { cerrarSesion } from "./actions";
 import { SelectorRestaurante } from "./SelectorRestaurante";
+import { AvisoPrueba } from "./AvisoPrueba";
+import { NOMBRE_PLAN, planDeSeccion, type Plan } from "@/lib/planes";
 
 type Props = {
-  restaurante: { id: string; nombre: string; slug: string; logo_url: string | null; color_primario: string };
+  restaurante: {
+    id: string;
+    nombre: string;
+    slug: string;
+    logo_url: string | null;
+    color_primario: string;
+    plan: Plan;
+    prueba_inicio: string | null;
+    prueba_fin: string | null;
+  };
   restaurantes: { id: string; nombre: string; rol: string }[];
   secciones: InfoSeccion[];
+  // Secciones que el plan no incluye: van con candado al final de su grupo.
+  bloqueadas: InfoSeccion[];
+  admin: boolean;
   rol: Rol;
   email: string;
   esSuperadmin: boolean;
@@ -84,6 +98,7 @@ export function MarcoPanel(props: Props) {
       <div className="pb-28 lg:pb-10 lg:pl-[16.5rem]">
         <BarraSuperior {...props} botonTema={botonTema} />
         <main className={completo ? "px-3 py-4 sm:px-6 lg:pt-2 lg:pb-6" : `mx-auto ${ancho} px-4 py-5 sm:px-6 lg:pt-2 lg:pb-8`}>
+          {props.admin && ruta !== "/panel/plan" && <AvisoPrueba restaurante={props.restaurante} />}
           {props.children}
         </main>
       </div>
@@ -189,6 +204,8 @@ function MenuLateral({
   restaurante,
   restaurantes,
   secciones,
+  bloqueadas,
+  admin,
   rol,
   email,
   esSuperadmin,
@@ -240,7 +257,8 @@ function MenuLateral({
       <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-3" aria-label="Secciones del panel">
         {grupos.map((grupo) => {
           const items = secciones.filter((s) => s.grupo === grupo);
-          if (items.length === 0) return null;
+          const conCandado = bloqueadas.filter((s) => s.grupo === grupo);
+          if (items.length === 0 && conCandado.length === 0) return null;
           return (
             <div key={grupo}>
               <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400">{grupo}</p>
@@ -274,6 +292,24 @@ function MenuLateral({
                     </li>
                   );
                 })}
+                {conCandado.map((s) => (
+                  <li key={s.id}>
+                    <Link
+                      href={`/panel/plan?s=${s.id}`}
+                      title={`${s.ayuda} · disponible en el plan ${NOMBRE_PLAN[planDeSeccion(s.id)]}`}
+                      className="group flex items-center gap-3 rounded-2xl px-2 py-1.5 text-sm font-medium text-stone-400 transition hover:bg-stone-50 hover:text-stone-600"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-stone-50 text-stone-400">
+                        <Icono nombre={s.id} className="h-[18px] w-[18px]" />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{s.texto}</span>
+                      <span className="mr-1 inline-flex items-center gap-1 rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                        <Icono nombre="candado" className="h-3 w-3" />
+                        {NOMBRE_PLAN[planDeSeccion(s.id)]}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
           );
@@ -287,7 +323,17 @@ function MenuLateral({
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-semibold">{email}</p>
-            <p className="text-[11px] text-suave">{NOMBRE_ROL[rol] ?? rol}</p>
+            <p className="text-[11px] text-suave">
+              {NOMBRE_ROL[rol] ?? rol}
+              {admin && (
+                <>
+                  {" · "}
+                  <Link href="/panel/plan" className="font-semibold text-marca hover:underline">
+                    Plan {NOMBRE_PLAN[restaurante.plan]}
+                  </Link>
+                </>
+              )}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-1.5">

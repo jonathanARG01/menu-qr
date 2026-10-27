@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { TEXTOS, type Idioma } from "@/lib/i18n";
 import { leerAjustes, type Ajustes } from "@/lib/salon";
 import { formatoHora, paisDe } from "@/lib/region";
+import { procesarPruebas } from "@/lib/avisosPrueba";
 
 export const runtime = "nodejs";
 
@@ -106,15 +107,18 @@ export async function POST(request: Request) {
   return NextResponse.json(await recordar(supabase, restaurante));
 }
 
-// Envío diario (Vercel Cron, ver vercel.json): recuerda las reservas del día aunque nadie tenga el panel abierto.
-// Requiere CRON_SECRET y SUPABASE_SERVICE_ROLE_KEY en Vercel.
+// Envío diario (Vercel Cron, ver vercel.json): recuerda las reservas del día aunque nadie tenga el panel abierto, y
+// procesa las pruebas de 14 días (avisos y pausa al vencer, ver lib/avisosPrueba.ts).
+// Requiere CRON_SECRET y SUPABASE_SERVICE_ROLE_KEY en Vercel; los avisos al celular, además, las claves VAPID.
 export async function GET(request: Request) {
   const secreto = process.env.CRON_SECRET;
   if (!secreto || request.headers.get("authorization") !== `Bearer ${secreto}`) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 });
   }
-  if (!PUBLICA || !PRIVADA) return NextResponse.json({ enviados: 0, motivo: "sin claves VAPID" }, { status: 501 });
   const admin = createAdminClient();
   if (!admin) return NextResponse.json({ error: "Falta SUPABASE_SERVICE_ROLE_KEY" }, { status: 501 });
-  return NextResponse.json(await recordar(admin, null, 14));
+  const sitio = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || new URL(request.url).origin;
+  const pruebas = await procesarPruebas(admin, sitio);
+  const reservas = PUBLICA && PRIVADA ? await recordar(admin, null, 14) : { enviados: 0, motivo: "sin claves VAPID" };
+  return NextResponse.json({ reservas, pruebas });
 }
