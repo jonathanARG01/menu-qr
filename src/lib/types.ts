@@ -48,6 +48,8 @@ export type Restaurante = {
   pedidos_whatsapp?: boolean;
   // Puede faltar si aún no se ejecutó la migración 0004.
   ajustes?: Partial<Ajustes>;
+  // Puede faltar si aún no se ejecutó la migración 0012.
+  ciclo?: "mensual" | "anual";
 };
 
 export type Categoria = {
