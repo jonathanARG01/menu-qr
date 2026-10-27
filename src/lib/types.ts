@@ -1,3 +1,5 @@
+import type { Ajustes } from "./salon";
+
 // Textos traducidos por idioma: {"en": {"nombre": "...", "descripcion": "..."}}
 export type Traducciones = Partial<Record<string, Record<string, string | undefined>>>;
 
@@ -22,6 +24,8 @@ export type Restaurante = {
   idiomas?: string[];
   traducciones?: Traducciones;
   pedidos_whatsapp?: boolean;
+  // Puede faltar si aún no se ejecutó la migración 0004.
+  ajustes?: Partial<Ajustes>;
 };
 
 export type Categoria = {
@@ -31,6 +35,8 @@ export type Categoria = {
   orden: number;
   visible: boolean;
   traducciones?: Traducciones;
+  // Pantalla a la que van sus comandas (Cocina, Barra…). Requiere la migración 0004.
+  estacion?: string;
 };
 
 export type Plato = {
@@ -52,6 +58,14 @@ export type Mesa = {
   restaurante_id: string;
   numero: string;
   sucursal_id?: string | null;
+  // Lugar en el plano (migración 0004): casillas de la cuadrícula del piso.
+  piso_id?: string | null;
+  x?: number;
+  y?: number;
+  ancho?: number;
+  alto?: number;
+  forma?: "cuadrada" | "redonda" | "rectangular";
+  capacidad?: number;
 };
 
 export type Sucursal = {

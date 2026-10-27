@@ -1,0 +1,109 @@
+// Íconos de línea del panel (24×24, heredan el color del texto).
+const TRAZOS: Record<string, React.ReactNode> = {
+  salon: (
+    <>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <circle cx="17.5" cy="6.5" r="3.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </>
+  ),
+  cocina: (
+    <>
+      <path d="M6 13.9A4 4 0 0 1 7 6a5 5 0 0 1 10 0 4 4 0 0 1 1 7.9V20H6z" />
+      <path d="M6 17h12" />
+    </>
+  ),
+  carta: (
+    <>
+      <path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+      <path d="M8 8h8M8 12h8M8 16h5" />
+    </>
+  ),
+  marca: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="8.5" cy="10" r="1.2" />
+      <circle cx="12" cy="7.5" r="1.2" />
+      <circle cx="15.5" cy="10" r="1.2" />
+      <path d="M12 21a2.5 2.5 0 0 1 0-5h1.5a2 2 0 0 0 2-2" />
+    </>
+  ),
+  qr: (
+    <>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3" />
+    </>
+  ),
+  estadisticas: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
+  sucursales: (
+    <>
+      <path d="M3 21h18M5 21V8l7-5 7 5v13" />
+      <path d="M9 21v-6h6v6" />
+    </>
+  ),
+  equipo: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.5A6.5 6.5 0 0 1 21.5 20" />
+    </>
+  ),
+  personalizar: (
+    <>
+      <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
+      <circle cx="16" cy="6" r="2" />
+      <circle cx="10" cy="12" r="2" />
+      <circle cx="18" cy="18" r="2" />
+    </>
+  ),
+  menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+  cerrar: <path d="M6 6l12 12M18 6L6 18" />,
+  mas: (
+    <>
+      <circle cx="5" cy="12" r="1.5" />
+      <circle cx="12" cy="12" r="1.5" />
+      <circle cx="19" cy="12" r="1.5" />
+    </>
+  ),
+  externo: <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />,
+  salir: <path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h10" />,
+  personas: (
+    <>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20a7 7 0 0 1 14 0" />
+    </>
+  ),
+  reloj: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
+  campana: <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0" />,
+  pantalla: <path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4" />,
+  lapiz: <path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />,
+  mas_simple: <path d="M12 5v14M5 12h14" />,
+  check: <path d="M5 12.5l4.5 4.5L19 7" />,
+  sonido: <path d="M4 10v4h4l5 4V6L8 10zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" />,
+  silencio: <path d="M4 10v4h4l5 4V6L8 10zM17 10l4 4M21 10l-4 4" />,
+};
+
+export function Icono({ nombre, className = "h-5 w-5" }: { nombre: string; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {TRAZOS[nombre]}
+    </svg>
+  );
+}

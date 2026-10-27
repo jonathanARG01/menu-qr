@@ -6,7 +6,7 @@ import { AuthShell, Aviso } from "@/components/AuthShell";
 import { CamposRestaurante } from "@/components/CamposRestaurante";
 import { crearRestaurante, cerrarSesion } from "./actions";
 
-export function Onboarding({ nombre, slug }: { nombre?: string; slug?: string }) {
+export function Onboarding({ nombre, slug, email }: { nombre?: string; slug?: string; email: string }) {
   const params = useSearchParams();
   const [error, accion, pendiente] = useActionState(crearRestaurante, params.get("error"));
 
@@ -26,6 +26,10 @@ export function Onboarding({ nombre, slug }: { nombre?: string; slug?: string })
           {pendiente ? "Creando…" : "Crear mi carta"}
         </button>
       </form>
+      <p className="mt-5 rounded-xl bg-stone-50 p-3 text-sm text-suave">
+        ¿Trabajas en un restaurante que ya usa el sistema? Pídele al administrador que te sume al equipo con tu correo{" "}
+        <strong className="text-tinta">{email}</strong> y después recarga esta página.
+      </p>
     </AuthShell>
   );
 }

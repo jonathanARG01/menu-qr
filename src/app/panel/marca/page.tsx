@@ -1,9 +1,9 @@
-import { requerirRestaurante } from "@/lib/panel";
+import { requerirSeccion } from "@/lib/panel";
 import type { Categoria, Plato, Seccion } from "@/lib/types";
 import { FormMarca } from "./FormMarca";
 
 export default async function PanelMarca() {
-  const { supabase, restaurante } = await requerirRestaurante();
+  const { supabase, restaurante } = await requerirSeccion("marca");
 
   // La vista previa muestra la carta real del restaurante, tal como la ve el cliente.
   const [{ data: categorias }, { data: platos }] = await Promise.all([

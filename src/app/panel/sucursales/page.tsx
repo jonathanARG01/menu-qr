@@ -1,9 +1,9 @@
-import { requerirRestaurante } from "@/lib/panel";
+import { requerirSeccion } from "@/lib/panel";
 import type { Sucursal } from "@/lib/types";
 import { EditorSucursales } from "./EditorSucursales";
 
 export default async function PanelSucursales() {
-  const { supabase, restaurante } = await requerirRestaurante();
+  const { supabase, restaurante } = await requerirSeccion("sucursales");
   const { data, error } = await supabase
     .from("sucursales")
     .select("*")

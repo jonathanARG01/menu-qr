@@ -1,9 +1,9 @@
-import { requerirRestaurante } from "@/lib/panel";
+import { requerirSeccion } from "@/lib/panel";
 import type { Categoria, Plato } from "@/lib/types";
 import { EditorCarta } from "./EditorCarta";
 
 export default async function PanelCarta() {
-  const { supabase, restaurante } = await requerirRestaurante();
+  const { supabase, restaurante, ajustes } = await requerirSeccion("carta");
 
   const [{ data: categorias }, { data: platos }] = await Promise.all([
     supabase.from("categorias").select("*").eq("restaurante_id", restaurante.id).order("orden").order("created_at"),
@@ -13,6 +13,7 @@ export default async function PanelCarta() {
   return (
     <EditorCarta
       restaurante={restaurante}
+      estaciones={ajustes.modulos.cocina ? ajustes.estaciones : undefined}
       categoriasIniciales={(categorias ?? []) as Categoria[]}
       platosIniciales={(platos ?? []) as Plato[]}
     />

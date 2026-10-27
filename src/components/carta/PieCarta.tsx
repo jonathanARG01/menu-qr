@@ -1,19 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { traducir } from "@/lib/i18n";
 import type { Restaurante } from "@/lib/types";
 import { formatoPrecio } from "@/lib/utils";
 import { useCarta } from "./contexto";
+import { MiMesa } from "./MiMesa";
 
 // Barra inferior de la carta: mesa, sucursal, contacto por WhatsApp y el pedido en curso.
 // Los colores salen de las variables de cada diseño (--pie-bg, --pie-text, --acento, --sobre-acento).
 export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
-  const { pedidos, lineas, mesa, sucursal, t } = useCarta();
+  const { pedidos, pedidosMesa, lineas, mesa, sucursal, t } = useCarta();
   const [abierto, setAbierto] = useState(false);
+  const [mesaAbierta, setMesaAbierta] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
   const whatsapp = sucursal?.whatsapp || restaurante.whatsapp;
   const unidades = lineas.reduce((n, l) => n + l.cantidad, 0);
   const total = lineas.reduce((n, l) => n + l.cantidad * Number(l.plato.precio), 0);
+
+  useEffect(() => {
+    if (!aviso) return;
+    const id = setTimeout(() => setAviso(null), 6000);
+    return () => clearTimeout(id);
+  }, [aviso]);
 
   if (!mesa && !whatsapp && !sucursal && unidades === 0) return null;
 
@@ -23,11 +33,28 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 z-20 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {aviso && (
+          <p
+            role="status"
+            className="mx-auto mb-2 max-w-2xl rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-xl"
+          >
+            {aviso}
+          </p>
+        )}
         <div
           className="mx-auto flex max-w-2xl items-center gap-3 rounded-2xl p-2 pl-4 shadow-xl ring-1 ring-black/10"
           style={{ background: "var(--pie-bg)", color: "var(--pie-text)" }}
         >
           <span className="min-w-0 flex-1 truncate text-sm font-medium">{contexto || restaurante.nombre}</span>
+          {pedidosMesa && (
+            <button
+              type="button"
+              onClick={() => setMesaAbierta(true)}
+              className="rounded-xl px-3 py-2.5 text-sm font-semibold ring-1 ring-current/30"
+            >
+              {t("miMesa")}
+            </button>
+          )}
           {pedidos && unidades > 0 ? (
             <button
               type="button"
@@ -39,7 +66,8 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
               {t("verPedido")} · <span className="tabular-nums">{formatoPrecio(total, restaurante.moneda)}</span>
             </button>
           ) : (
-            whatsapp && (
+            whatsapp &&
+            !pedidosMesa && (
               <a
                 href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(saludo)}`}
                 target="_blank"
@@ -53,13 +81,39 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
           )}
         </div>
       </div>
-      {abierto && <HojaPedido restaurante={restaurante} total={total} onCerrar={() => setAbierto(false)} />}
+      {abierto && <HojaPedido restaurante={restaurante} total={total} onCerrar={() => setAbierto(false)} onEnviado={setAviso} />}
+      {mesaAbierta && <MiMesa restaurante={restaurante} onCerrar={() => setMesaAbierta(false)} onAviso={setAviso} />}
     </>
   );
 }
 
-function HojaPedido({ restaurante, total, onCerrar }: { restaurante: Restaurante; total: number; onCerrar: () => void }) {
-  const { lineas, cambiar, vaciar, mesa, sucursales, sucursal, setSucursal, registrarPedido, idioma, t } = useCarta();
+function HojaPedido({
+  restaurante,
+  total,
+  onCerrar,
+  onEnviado,
+}: {
+  restaurante: Restaurante;
+  total: number;
+  onCerrar: () => void;
+  onEnviado: (aviso: string) => void;
+}) {
+  const {
+    lineas,
+    cambiar,
+    vaciar,
+    mesa,
+    sucursales,
+    sucursal,
+    setSucursal,
+    registrarPedido,
+    idioma,
+    t,
+    pedidosMesa,
+    whatsapp: conWhatsapp,
+  } = useCarta();
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [nombre, setNombre] = useState("");
   const [nota, setNota] = useState("");
   const precio = (valor: number) => formatoPrecio(valor, restaurante.moneda);
@@ -79,6 +133,28 @@ function HojaPedido({ restaurante, total, onCerrar }: { restaurante: Restaurante
   useEffect(() => {
     if (lineas.length === 0) onCerrar();
   }, [lineas.length, onCerrar]);
+
+  // Directo a la cocina: los precios los pone la base de datos desde la carta.
+  async function enviarCocina() {
+    if (!mesa) return;
+    setEnviando(true);
+    setError(null);
+    const { data, error } = await createClient().rpc("pedir_desde_mesa", {
+      p_restaurante: restaurante.id,
+      p_sucursal: sucursal?.id ?? null,
+      p_mesa: mesa,
+      p_items: lineas.map((l) => ({ id: l.plato.id, cantidad: l.cantidad })),
+      p_nombre: nombre.trim() || null,
+      p_nota: nota.trim() || null,
+    });
+    setEnviando(false);
+    if (error) {
+      setError(error.message.includes("Demasiados") ? error.message : t("errorEnvio"));
+      return;
+    }
+    onEnviado((data as { pendiente?: boolean } | null)?.pendiente ? t("pedidoPorConfirmar") : t("pedidoEnviado"));
+    vaciar();
+  }
 
   function enviar() {
     if (!whatsapp || faltaSucursal) return;
@@ -205,18 +281,39 @@ function HojaPedido({ restaurante, total, onCerrar }: { restaurante: Restaurante
             <span className="font-medium">{t("total")}</span>
             <span className="text-xl font-bold tabular-nums">{precio(total)}</span>
           </div>
-          <button
-            type="button"
-            onClick={enviar}
-            disabled={faltaSucursal || !whatsapp}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25d366] px-4 py-3.5 font-semibold text-white disabled:opacity-50"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
-              <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z" />
-            </svg>
-            {t("enviar")}
-          </button>
-          <p className="mt-2 text-center text-xs text-stone-500">{faltaSucursal ? t("elegirSucursal") : t("avisoWhatsapp")}</p>
+          {pedidosMesa && (
+            <>
+              {error && <p className="mb-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+              <button
+                type="button"
+                onClick={enviarCocina}
+                disabled={enviando}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 font-semibold disabled:opacity-50"
+                style={{ background: "var(--acento)", color: "var(--sobre-acento)" }}
+              >
+                {enviando ? t("cargando") : `${t("enviarCocina")} · ${mesa ? `${t("mesa")} ${mesa}` : ""}`}
+              </button>
+            </>
+          )}
+          {conWhatsapp && pedidosMesa && <p className="mt-3 text-center text-xs text-stone-500">{t("oWhatsapp")}</p>}
+          {conWhatsapp && (
+            <>
+              <button
+                type="button"
+                onClick={enviar}
+                disabled={faltaSucursal || !whatsapp}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25d366] px-4 py-3.5 font-semibold text-white disabled:opacity-50"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
+                  <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z" />
+                </svg>
+                {t("enviar")}
+              </button>
+              <p className="mt-2 text-center text-xs text-stone-500">
+                {faltaSucursal ? t("elegirSucursal") : t("avisoWhatsapp")}
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>

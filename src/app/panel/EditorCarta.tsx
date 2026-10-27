@@ -29,13 +29,15 @@ import { IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
 
 type Props = {
   restaurante: Restaurante;
+  // Pantallas de preparación (Cocina, Barra…) si el restaurante usa la pantalla de cocina.
+  estaciones?: string[];
   categoriasIniciales: Categoria[];
   platosIniciales: Plato[];
 };
 
 type ModalEstado = { plato: Plato | null; categoriaId: string } | null;
 
-export function EditorCarta({ restaurante, categoriasIniciales, platosIniciales }: Props) {
+export function EditorCarta({ restaurante, estaciones, categoriasIniciales, platosIniciales }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
   const [categorias, setCategorias] = useState(categoriasIniciales);
@@ -186,6 +188,8 @@ export function EditorCarta({ restaurante, categoriasIniciales, platosIniciales 
                 onRenombrar={(nombre) => actualizarCategoria(cat.id, { nombre })}
                 onTraducir={idiomas.length ? () => setTraduciendo(cat) : undefined}
                 onVisible={(visible) => actualizarCategoria(cat.id, { visible })}
+                estaciones={cat.estacion !== undefined ? estaciones : undefined}
+                onEstacion={(estacion) => actualizarCategoria(cat.id, { estacion })}
                 onBorrar={() => borrarCategoria(cat)}
               >
                 <DndContext
@@ -294,6 +298,8 @@ function BloqueCategoria({
   onRenombrar,
   onTraducir,
   onVisible,
+  estaciones,
+  onEstacion,
   onBorrar,
   children,
 }: {
@@ -304,6 +310,8 @@ function BloqueCategoria({
   onRenombrar: (nombre: string) => void;
   onTraducir?: () => void;
   onVisible: (visible: boolean) => void;
+  estaciones?: string[];
+  onEstacion: (estacion: string) => void;
   onBorrar: () => void;
   children: React.ReactNode;
 }) {
@@ -350,6 +358,19 @@ function BloqueCategoria({
             <span className="ml-2 text-xs font-normal text-suave">{cantidad}</span>
             {!categoria.visible && <span className="ml-2 rounded bg-stone-200 px-1.5 py-0.5 text-xs font-normal">Oculta</span>}
           </button>
+        )}
+        {estaciones && estaciones.length > 1 && !editando && (
+          <select
+            value={categoria.estacion}
+            onChange={(e) => onEstacion(e.target.value)}
+            title="Pantalla donde llegan las comandas de esta categoría"
+            aria-label={`Pantalla de ${categoria.nombre}`}
+            className="max-w-28 rounded-lg border border-borde bg-white px-2 py-1 text-xs text-suave"
+          >
+            {[...new Set([...estaciones, categoria.estacion ?? "Cocina"])].map((e) => (
+              <option key={e}>{e}</option>
+            ))}
+          </select>
         )}
         <Menu
           opciones={[
