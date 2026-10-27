@@ -175,7 +175,29 @@ export const ICONOS: Record<string, string> = {
   recomendado: "⭐",
 };
 
-export const precio = (plato: Plato, restaurante: Restaurante) => formatoPrecio(plato.precio, restaurante.moneda);
+// Precio del plato tal como se muestra en cada diseño: con el precio anterior tachado si hay promo, o "Agotado".
+export const precio = (plato: Plato, restaurante: Restaurante) => <PrecioPlato plato={plato} moneda={restaurante.moneda} />;
+
+function PrecioPlato({ plato, moneda }: { plato: Plato; moneda: string }) {
+  const { t } = useCarta();
+  if (plato.agotado) {
+    return (
+      <span className="whitespace-nowrap">
+        <s className="opacity-50">{formatoPrecio(plato.precio, moneda)}</s>{" "}
+        <span className="rounded bg-current/15 px-1 text-[0.75em] font-semibold uppercase tracking-wide">{t("agotado")}</span>
+      </span>
+    );
+  }
+  if (plato.precio_lista !== undefined) {
+    return (
+      <span className="whitespace-nowrap">
+        <s className="mr-1 text-[0.75em] font-normal opacity-60">{formatoPrecio(plato.precio_lista, moneda)}</s>
+        {formatoPrecio(plato.precio, moneda)}
+      </span>
+    );
+  }
+  return <>{formatoPrecio(plato.precio, moneda)}</>;
+}
 
 export const idSeccion = (id: string) => `c-${id}`;
 

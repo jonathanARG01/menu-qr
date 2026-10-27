@@ -15,7 +15,7 @@ export type EstadoMesa = {
   total?: number;
   listo?: boolean;
   pendiente?: boolean;
-  aviso?: "cuenta" | "mozo" | null;
+  aviso?: "cuenta" | "mozo" | "pago" | null;
 };
 
 export const cajaMesa = (m: Mesa): Caja => ({ x: m.x ?? 0, y: m.y ?? 0, ancho: m.ancho ?? 2, alto: m.alto ?? 2 });
@@ -77,6 +77,7 @@ const ESTILO_ELEMENTO: Record<string, string> = {
 function colorMesa(e?: EstadoMesa) {
   if (!e?.ocupada) return "bg-superficie border-stone-300 text-stone-700";
   if (e.aviso === "cuenta") return "bg-violet-50 border-violet-500 text-violet-900";
+  if (e.aviso === "pago") return "bg-emerald-50 border-emerald-600 text-emerald-900";
   if (e.aviso) return "bg-sky-50 border-sky-500 text-sky-900";
   if (e.listo) return "bg-emerald-50 border-emerald-500 text-emerald-900";
   return "bg-amber-50 border-amber-500 text-amber-900";
@@ -119,6 +120,7 @@ const AMBIENTE: Record<string, React.CSSProperties> = {
 function colorSillas(e?: EstadoMesa) {
   if (!e?.ocupada) return "#56604f";
   if (e.aviso === "cuenta") return "#8b5cf6";
+  if (e.aviso === "pago") return "#059669";
   if (e.aviso) return "#0ea5e9";
   if (e.listo) return "#10b981";
   return "#f59e0b";
@@ -316,6 +318,17 @@ export function Plano({
           onPointerCancel={() => setArrastre(null)}
           onClick={(e) => e.target === e.currentTarget && onSeleccionar(null)}
         >
+          {piso.fondo_url && (
+            // Foto o plano real del local debajo de las mesas.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={piso.fondo_url}
+              alt=""
+              draggable={false}
+              className="pointer-events-none absolute inset-0 h-full w-full rounded-lg object-cover"
+              style={{ opacity: (piso.fondo_opacidad ?? 60) / 100 }}
+            />
+          )}
           {piso.elementos.map((el: Elemento) => {
             const caja = cajaDe("elemento", el.id, el);
             const elegido = seleccion?.tipo === "elemento" && seleccion.id === el.id;
@@ -403,14 +416,16 @@ export function Plano({
                     className={`absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white shadow ${
                       est.aviso === "cuenta"
                         ? "animate-pulse bg-violet-600"
-                        : est.aviso
-                          ? "animate-pulse bg-sky-600"
-                          : est.pendiente
-                            ? "animate-pulse bg-red-600"
-                            : "bg-emerald-600"
+                        : est.aviso === "pago"
+                          ? "bg-emerald-600"
+                          : est.aviso
+                            ? "animate-pulse bg-sky-600"
+                            : est.pendiente
+                              ? "animate-pulse bg-red-600"
+                              : "bg-emerald-600"
                     }`}
                   >
-                    {est.aviso === "cuenta" ? "$" : est.aviso ? "!" : est.pendiente ? "●" : "✓"}
+                    {est.aviso === "cuenta" || est.aviso === "pago" ? "$" : est.aviso ? "!" : est.pendiente ? "●" : "✓"}
                   </span>
                 )}
               </button>

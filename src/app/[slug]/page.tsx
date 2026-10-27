@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function CartaPublica({ params }: Params) {
   const carta = await obtenerCarta((await params).slug);
   if (!carta) notFound();
-  const { restaurante, secciones, sucursales } = carta;
+  const { restaurante, secciones, sucursales, promos } = carta;
 
-  return <Carta restaurante={restaurante} secciones={secciones} sucursales={sucursales} />;
+  return <Carta restaurante={restaurante} secciones={secciones} sucursales={sucursales} promos={promos} />;
 }

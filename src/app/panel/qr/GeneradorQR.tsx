@@ -26,11 +26,13 @@ export function GeneradorQR({
   mesasIniciales,
   sucursales,
   sucursalInicial,
+  reservas = false,
 }: {
   restaurante: Restaurante;
   mesasIniciales: Mesa[];
   sucursales: Sucursal[];
   sucursalInicial?: string;
+  reservas?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
@@ -210,6 +212,40 @@ export function GeneradorQR({
           </p>
         </div>
       </section>
+
+      {reservas && (
+        <section className="grid gap-4 sm:grid-cols-2">
+          {[
+            {
+              ruta: "espera",
+              titulo: "QR de la lista de espera",
+              ayuda: "Para la puerta: el cliente se anota solo y ve en su teléfono cuántos tiene delante.",
+            },
+            {
+              ruta: "reservar",
+              titulo: "QR para reservar",
+              ayuda: "Para Instagram, Google o la vidriera: piden mesa para otro día.",
+            },
+          ].map((q) => {
+            const direccion = `${sitio}/${restaurante.slug}/${q.ruta}${sucursal ? `?s=${sucursal.slug}` : ""}`;
+            return (
+              <div key={q.ruta} className="tarjeta flex flex-col items-center gap-3 p-5 text-center">
+                <TarjetaQR url={direccion} estilo={estilo} />
+                <div>
+                  <h2 className="font-semibold">{q.titulo}</h2>
+                  <p className="text-sm text-suave">{q.ayuda}</p>
+                </div>
+                <p className="break-all rounded-lg bg-stone-50 px-3 py-2 font-mono text-xs text-suave">{direccion}</p>
+                <BotonesDescarga
+                  url={direccion}
+                  estilo={estilo}
+                  archivo={`qr-${restaurante.slug}-${q.ruta}${sucursal ? `-${sucursal.slug}` : ""}`}
+                />
+              </div>
+            );
+          })}
+        </section>
+      )}
 
       <section className="tarjeta space-y-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">

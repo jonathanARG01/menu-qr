@@ -9,6 +9,8 @@ import { avisarComensal } from "@/lib/push";
 import { sonar } from "@/lib/sonidos";
 import { mensajeError } from "@/lib/utils";
 import { minutosDesde, useAhora, useServicio } from "@/lib/useServicio";
+import { anchoGuardado, guardarAncho, horaCorta, imprimirTicket, type AnchoTicket, type LineaTicket } from "@/lib/imprimir";
+import { Agotados, estaAgotado, type PlatoAgotable } from "./Agotados";
 
 type Props = {
   restaurante: Restaurante;
@@ -16,6 +18,8 @@ type Props = {
   pedidosIniciales: Pedido[];
   mesas: Mesa[];
   pisos: Pick<Piso, "id" | "nombre">[];
+  platos: PlatoAgotable[];
+  categorias: { id: string; nombre: string }[];
 };
 
 const SIGUIENTE: Partial<Record<EstadoPedido, { estado: EstadoPedido; texto: string; clase: string }>> = {
@@ -56,7 +60,7 @@ type Arrastre = {
 };
 
 // Pantalla de cocina (o de barra): comandas en tiempo real, del más viejo al más nuevo.
-export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }: Props) {
+export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos, platos, categorias }: Props) {
   const avisar = useToast();
   const { pedidos, supabase, recargar, enVivo } = useServicio(restaurante.id, {
     cuentas: [],
@@ -75,10 +79,19 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
   const [arrastre, setArrastre] = useState<Arrastre | null>(null);
   const recienArrastrado = useRef(false);
   const avisadoSinColumna = useRef(false);
+  const [listaPlatos, setListaPlatos] = useState(platos);
+  const [verAgotados, setVerAgotados] = useState(false);
+  // Impresora de comandas de esta pantalla: imprime sola cada comanda nueva de su estación.
+  const [imprimirAuto, setImprimirAuto] = useState(false);
+  const [ancho, setAncho] = useState<AnchoTicket>("80");
+  const [verImpresora, setVerImpresora] = useState(false);
+  const agotadosAhora = listaPlatos.filter((p) => estaAgotado(p, ahora)).length;
 
   useEffect(() => {
     setEstacion(leer("cocina:estacion") ?? "Todas");
     setSonido(leer("cocina:sonido") !== "no");
+    setImprimirAuto(leer("cocina:imprimir") === "si");
+    setAncho(anchoGuardado());
     try {
       setOrdenLocal(JSON.parse(leer("cocina:orden") ?? "{}"));
     } catch {}
@@ -116,7 +129,33 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
     const llegaron = nuevos.filter((id) => !vistos.current!.has(id));
     nuevos.forEach((id) => vistos.current!.add(id));
     if (llegaron.length && sonido) sonar("cocina");
-  }, [pedidos, sonido]);
+    if (imprimirAuto) {
+      const aImprimir = pedidos.filter((p) => llegaron.includes(p.id) && (estacion === "Todas" || p.estacion === estacion));
+      // Una tras otra, para que el navegador no junte los diálogos.
+      aImprimir.reduce((cola, p) => cola.then(() => imprimirTicket(ticketComanda(p))), Promise.resolve());
+    }
+  }, [pedidos, sonido, imprimirAuto, estacion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function ticketComanda(p: Pedido): LineaTicket[] {
+    const { mesa, piso } = lugar(p);
+    return [
+      { tipo: "titulo", texto: mesa },
+      { tipo: "texto", texto: `${p.estacion} · #${p.numero}${piso ? ` · ${piso}` : ""}`, fuerte: true },
+      {
+        tipo: "texto",
+        texto: `${horaCorta(p.created_at)} · ${p.origen === "cliente" ? "desde el QR" : "mesero"}${p.nombre ? ` · ${p.nombre}` : ""}`,
+        chico: true,
+      },
+      { tipo: "separador" },
+      ...(p.pedido_items ?? []).map((i) => ({
+        tipo: "fila" as const,
+        izq: `${i.cantidad} × ${i.nombre}`,
+        fuerte: true,
+        nota: [i.nota, i.comensal ? `Comensal ${i.comensal}` : ""].filter(Boolean).join(" · ") || undefined,
+      })),
+      ...(p.nota ? [{ tipo: "separador" as const }, { tipo: "texto" as const, texto: `Nota: ${p.nota}`, fuerte: true }] : []),
+    ];
+  }
 
   function lugar(p: Pedido) {
     const mesa = mesas.find(
@@ -289,6 +328,73 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
           </button>
           <button
             type="button"
+            onClick={() => setVerAgotados(true)}
+            className={`rounded-full px-3 py-1 text-sm font-medium ${agotadosAhora ? "bg-red-600 hover:bg-red-700" : "bg-white/10 hover:bg-white/20"}`}
+            title="Marcar platos agotados"
+          >
+            Agotados{agotadosAhora ? ` (${agotadosAhora})` : ""}
+          </button>
+          <span className="relative">
+            <button
+              type="button"
+              onClick={() => setVerImpresora(!verImpresora)}
+              className={`rounded-full p-2 ${imprimirAuto ? "bg-emerald-600 hover:bg-emerald-700" : "bg-white/10 hover:bg-white/20"}`}
+              aria-label="Impresora de comandas"
+              title={imprimirAuto ? "Imprime cada comanda nueva" : "Impresora de comandas"}
+            >
+              <Icono nombre="impresora" className="h-4 w-4" />
+            </button>
+            {verImpresora && (
+              <div className="absolute right-0 top-full z-40 mt-2 w-72 rounded-xl bg-superficie p-4 text-sm text-stone-900 shadow-2xl">
+                <p className="font-semibold">Impresora de comandas</p>
+                <label className="mt-3 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={imprimirAuto}
+                    onChange={(e) => {
+                      setImprimirAuto(e.target.checked);
+                      guardar("cocina:imprimir", e.target.checked ? "si" : "no");
+                    }}
+                  />
+                  Imprimir cada comanda nueva {estacion !== "Todas" ? `de ${estacion}` : ""}
+                </label>
+                <p className="mt-3 text-stone-500">Ancho del papel</p>
+                <div className="mt-1 flex gap-2">
+                  {(["58", "80"] as const).map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => {
+                        setAncho(a);
+                        guardarAncho(a);
+                      }}
+                      className={`flex-1 rounded-lg border px-2 py-1.5 ${ancho === a ? "border-stone-900 bg-stone-900 text-white" : "border-stone-300"}`}
+                    >
+                      {a} mm
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="boton-secundario mt-3 w-full"
+                  onClick={() =>
+                    imprimirTicket([
+                      { tipo: "titulo", texto: "Prueba" },
+                      { tipo: "texto", texto: `${restaurante.nombre} · ${ancho} mm` },
+                      { tipo: "fila", izq: "2 × Hamburguesa", fuerte: true, nota: "sin cebolla" },
+                    ])
+                  }
+                >
+                  Imprimir una prueba
+                </button>
+                <p className="mt-3 text-xs text-stone-500">
+                  Para que imprima sin preguntar, abre Chrome con la opción <code>--kiosk-printing</code> (está en la guía).
+                </p>
+              </div>
+            )}
+          </span>
+          <button
+            type="button"
             onClick={() => (document.fullscreenElement ? document.exitFullscreen() : tablero.current?.requestFullscreen())}
             className="rounded-full bg-white/10 p-2 hover:bg-white/20"
             aria-label="Pantalla completa"
@@ -448,6 +554,16 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
         </aside>
       </div>
 
+      {verAgotados && (
+        <Agotados
+          supabase={supabase}
+          platos={listaPlatos}
+          categorias={categorias}
+          onCambio={(id, hasta) => setListaPlatos((l) => l.map((p) => (p.id === id ? { ...p, agotado_hasta: hasta } : p)))}
+          onCerrar={() => setVerAgotados(false)}
+        />
+      )}
+
       {elegido && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setDetalle(null)}>
           <div
@@ -520,6 +636,9 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos }:
                   </button>
                 </span>
               )}
+              <button type="button" className="boton-secundario" onClick={() => imprimirTicket(ticketComanda(elegido))}>
+                <Icono nombre="impresora" className="h-4 w-4" /> Imprimir
+              </button>
               {elegido.estado !== "nuevo" && elegido.estado !== "pendiente" && (
                 <button
                   type="button"
