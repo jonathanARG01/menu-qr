@@ -1,6 +1,7 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, FotoRedonda, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
+import { Destacados } from "./Destacados";
 import { NavCategorias } from "./NavCategorias";
 import { SelectorIdioma } from "./SelectorIdioma";
 
@@ -72,6 +73,15 @@ export function TemaOriente({ restaurante, secciones, vistaPrevia, pie }: PropsT
 
       <main>
         {secciones.length === 0 && <CartaVacia className="bg-[#f3eedd]" />}
+        <div style={{ background: CREMA }} className="px-5 pt-4">
+          <Destacados
+            restaurante={restaurante}
+            secciones={secciones}
+            className="mx-auto max-w-2xl"
+            claseTitulo="f-playfair text-3xl font-bold uppercase"
+            style={{ "--dest-bg": "#ffffff", "--dest-text": verde } as React.CSSProperties}
+          />
+        </div>
         {secciones.map((seccion, s) => {
           const fondo = fondoDe(s);
           const oscura = fondo !== CREMA;

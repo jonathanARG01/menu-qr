@@ -1,6 +1,8 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, FotoRedonda, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
+import { useCarta } from "./contexto";
+import { Destacados } from "./Destacados";
 import { NavCategorias } from "./NavCategorias";
 import { SelectorIdioma } from "./SelectorIdioma";
 
@@ -21,7 +23,7 @@ function Pincelada({ color, className }: { color: string; className: string }) {
 // Fondo claro de pizzería con pinceladas oliva, título en letra de pincel y pizzas grandes que alternan de lado.
 export function TemaForno({ restaurante, secciones, vistaPrevia, pie }: PropsTema) {
   const rojo = restaurante.color_primario;
-  const primera = secciones[0]?.nombre;
+  const { t } = useCarta();
 
   return (
     <div
@@ -44,29 +46,30 @@ export function TemaForno({ restaurante, secciones, vistaPrevia, pie }: PropsTem
         } as React.CSSProperties
       }
     >
-      <header className="relative px-6 pb-6 pt-8">
+      <header className="relative mx-auto max-w-2xl overflow-hidden px-6 pb-6 pt-8">
         <SelectorIdioma className="absolute right-4 top-4" style={{ background: OLIVA }} />
-        <Pincelada color={OLIVA} className="absolute -right-14 top-[11rem] h-12 w-44 rotate-[-6deg] opacity-90" />
         <div className="flex items-center gap-3">
           {restaurante.logo_url ? (
             <Logo restaurante={restaurante} className="h-14 w-14 rounded-full border border-black/15 object-cover" />
           ) : (
             <span
-              className="flex h-14 w-14 items-center justify-center rounded-full border-2 text-2xl"
+              className="f-playfair flex h-14 w-14 items-center justify-center rounded-full border-2 text-2xl font-bold"
               style={{ borderColor: rojo, color: rojo }}
             >
-              🍕
+              {restaurante.nombre.charAt(0)}
             </span>
           )}
-          <p className="f-playfair text-2xl font-semibold uppercase tracking-[0.2em]">{restaurante.nombre}</p>
+          <p className="f-playfair text-lg font-semibold uppercase tracking-[0.3em]">{t("carta")}</p>
         </div>
-        {primera && (
-          <h1 className="f-kaushan relative mt-4 text-7xl leading-none @md:text-8xl" style={{ color: TINTA }}>
-            {primera}
-          </h1>
-        )}
+        <h1 className="relative mt-5 inline-block pr-6">
+          <Pincelada color={OLIVA} className="absolute -bottom-2 left-6 h-6 w-full opacity-25" />
+          <span className="f-kaushan relative block text-6xl leading-[1.05] @md:text-7xl" style={{ color: TINTA }}>
+            {restaurante.nombre}
+          </span>
+        </h1>
         {restaurante.descripcion && (
-          <p className="mt-3 max-w-[16rem] text-xs font-semibold uppercase tracking-[0.2em] text-black/60">
+          <p className="mt-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-black/60">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: rojo }} />
             {restaurante.descripcion}
           </p>
         )}
@@ -76,17 +79,22 @@ export function TemaForno({ restaurante, secciones, vistaPrevia, pie }: PropsTem
 
       <main className="mx-auto max-w-2xl px-5">
         {secciones.length === 0 && <CartaVacia />}
-        {secciones.map((seccion, s) => {
+        <Destacados
+          restaurante={restaurante}
+          secciones={secciones}
+          className="pt-6"
+          claseTitulo="f-kaushan text-3xl"
+          style={{ "--dest-bg": "#ffffff", "--dest-text": "#1d1d1b" } as React.CSSProperties}
+        />
+        {secciones.map((seccion) => {
           // La sección de extras o agregados se muestra como lista compacta, sin fotos.
           const compacta = seccion.platos.every((p) => !p.descripcion && !p.foto_url);
           return (
             <section key={seccion.id} id={idSeccion(seccion.id)} className="scroll-mt-16 pt-8">
-              {s > 0 && (
-                <h2 className="relative mb-2 inline-block px-3">
-                  <Pincelada color={OLIVA} className="absolute inset-0 h-full w-full" />
-                  <span className="f-kaushan relative text-3xl text-white">{seccion.nombre}</span>
-                </h2>
-              )}
+              <h2 className="relative mb-2 inline-block px-4 py-1">
+                <Pincelada color={OLIVA} className="absolute inset-0 h-full w-full" />
+                <span className="f-kaushan relative text-3xl text-white">{seccion.nombre}</span>
+              </h2>
               {compacta ? (
                 <ul className="mt-2 grid gap-x-6 gap-y-2 rounded-2xl @md:grid-cols-2 bg-white/70 p-4 text-sm">
                   {seccion.platos.map((plato) => (

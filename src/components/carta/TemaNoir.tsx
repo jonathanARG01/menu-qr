@@ -1,6 +1,7 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
+import { Destacados } from "./Destacados";
 import { useCarta } from "./contexto";
 import { NavCategorias } from "./NavCategorias";
 import { SelectorIdioma } from "./SelectorIdioma";
@@ -48,6 +49,13 @@ export function TemaNoir({ restaurante, secciones, vistaPrevia, pie }: PropsTema
 
       <main className="mx-auto max-w-2xl px-5">
         {secciones.length === 0 && <CartaVacia />}
+        <Destacados
+          restaurante={restaurante}
+          secciones={secciones}
+          className="pt-8"
+          claseTitulo="f-playfair text-3xl font-semibold"
+          style={{ "--dest-bg": "#1a1a1c" } as React.CSSProperties}
+        />
         {secciones.map((seccion) => {
           const conFoto = seccion.platos.filter((p) => p.foto_url);
           const sinFoto = seccion.platos.filter((p) => !p.foto_url);

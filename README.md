@@ -23,7 +23,7 @@ Stack: Next.js 15 (App Router) + Supabase (Postgres, Auth, Storage, RLS) + Verce
 ## Puesta en marcha
 
 1. Crea un proyecto en [Supabase](https://supabase.com).
-2. En **SQL Editor**, ejecuta en orden los archivos de `supabase/migrations/` (0001, 0002 y 0003). Opcional: `supabase/seed.sql` crea la carta de ejemplo `/la-esquina` y `supabase/seed_cafe.sql` la cafetería `/aroma-cafe` con 36 bebidas, fotos y traducciones. `supabase/seed_disenos.sql` (después de 0006) crea una carta demo por cada diseño nuevo: `/la-esquina-verde` (Bistró), `/jardin-veggie` (Dorado), `/forno-pizzeria` (Forno), `/warung-oriente` (Oriente) y `/neon-tokio` (Neón).
+2. En **SQL Editor**, ejecuta en orden los archivos de `supabase/migrations/` (0001, 0002 y 0003). Opcional: `supabase/seed.sql` crea la carta de ejemplo `/la-esquina` y `supabase/seed_cafe.sql` la cafetería `/aroma-cafe` con 36 bebidas, fotos y traducciones. `supabase/seed_disenos.sql` (después de 0006) crea una carta demo por cada diseño nuevo: `/la-esquina-verde` (Bistró), `/jardin-veggie` (Dorado), `/forno-pizzeria` (Forno), `/warung-oriente` (Oriente) y `/neon-tokio` (Neón). `supabase/seed_disenos_2.sql` (después de 0007) suma 11 cartas demo más, una por diseño nuevo (Tropical, Natural, Soleado, Gala, Vitrina, Cinta, Trattoria, Kraft, Madera, Cóctel y Revista), y marca algunos platos como destacados.
 3. Para entrar a `/admin`, date permiso de superadmin con tu correo:
    ```sql
    insert into public.superadmins (user_id) select id from auth.users where email = 'tu@correo.com';

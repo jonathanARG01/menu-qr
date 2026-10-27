@@ -1,6 +1,7 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
+import { Destacados } from "./Destacados";
 import { useCarta } from "./contexto";
 import { NavCategorias } from "./NavCategorias";
 import { SelectorIdioma } from "./SelectorIdioma";
@@ -11,7 +12,6 @@ const CREMA = "#f4ecdc";
 // Tarjetas crema y café, letras condensadas y una foto protagonista arriba.
 export function TemaRetro({ restaurante, secciones, vistaPrevia, pie }: PropsTema) {
   const acento = restaurante.color_primario;
-  const portada = secciones.flatMap((s) => s.platos).find((p) => p.foto_url);
   const { idiomas } = useCarta();
 
   return (
@@ -48,19 +48,15 @@ export function TemaRetro({ restaurante, secciones, vistaPrevia, pie }: PropsTem
           {restaurante.nombre}
         </h1>
         {restaurante.descripcion && <p className="mt-2 px-6 text-sm opacity-70">{restaurante.descripcion}</p>}
-        {portada ? (
-          <div className="relative mt-5">
-            <Foto plato={portada} className="aspect-[4/3] w-full object-cover" />
-            <span
-              className="f-oswald absolute bottom-4 left-4 rounded-full px-4 py-1 text-sm font-semibold uppercase tracking-wide"
-              style={{ background: acento, color: textoSobre(acento) }}
-            >
-              {portada.nombre} · {precio(portada, restaurante)}
-            </span>
-          </div>
-        ) : (
-          <div className="h-6" />
-        )}
+        <Destacados
+          restaurante={restaurante}
+          secciones={secciones}
+          className="mt-5 px-4 text-left"
+          claseTitulo="f-oswald text-2xl font-semibold uppercase tracking-wide"
+          claseNombre="f-oswald text-lg font-medium uppercase tracking-wide"
+          style={{ "--dest-bg": "#ffffff", "--dest-text": CAFE } as React.CSSProperties}
+        />
+        <div className="h-6" />
       </header>
 
       {secciones.length > 0 && (

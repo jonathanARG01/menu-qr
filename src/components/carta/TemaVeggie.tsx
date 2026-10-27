@@ -1,6 +1,7 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, FotoRedonda, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
+import { Destacados } from "./Destacados";
 import { NavCategorias } from "./NavCategorias";
 import { SelectorIdioma } from "./SelectorIdioma";
 
@@ -69,6 +70,13 @@ export function TemaVeggie({ restaurante, secciones, vistaPrevia, pie }: PropsTe
 
           <main className="px-5">
             {secciones.length === 0 && <CartaVacia />}
+            <Destacados
+              restaurante={restaurante}
+              secciones={secciones}
+              className="pt-6"
+              claseTitulo="f-vibes text-4xl font-normal"
+              style={{ "--dest-bg": "rgba(0,0,0,0.3)" } as React.CSSProperties}
+            />
             {secciones.map((seccion) => (
               <section key={seccion.id} id={idSeccion(seccion.id)} className="scroll-mt-16 pt-8">
                 <h2 className="mb-4 flex items-center justify-center gap-3" style={{ color: oro }}>

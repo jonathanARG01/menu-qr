@@ -13,6 +13,13 @@
 @import "@fontsource/great-vibes/400.css";
 @import "@fontsource/kaushan-script/400.css";
 @import "@fontsource/righteous/400.css";
+@import "@fontsource/caveat/600.css";
+@import "@fontsource/fredoka/600.css";
+@import "@fontsource/fredoka/700.css";
+@import "@fontsource/cinzel/500.css";
+@import "@fontsource/cinzel/700.css";
+@import "@fontsource/rubik-dirt/400.css";
+@import "@fontsource/allura/400.css";
 
 .f-playfair {
   font-family: "Playfair Display", Georgia, serif;
@@ -41,4 +48,59 @@
 }
 .f-righteous {
   font-family: "Righteous", system-ui, sans-serif;
+}
+.f-caveat {
+  font-family: "Caveat", cursive;
+}
+.f-fredoka {
+  font-family: "Fredoka", system-ui, sans-serif;
+}
+.f-cinzel {
+  font-family: "Cinzel", Georgia, serif;
+}
+.f-dirt {
+  font-family: "Rubik Dirt", "Impact", sans-serif;
+}
+.f-allura {
+  font-family: "Allura", cursive;
+}
+
+/* Diseño Revista: la página nueva entra girando desde el lomo, como al hojear. */
+.hoja-siguiente {
+  transform-origin: left center;
+  animation: hoja-siguiente 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.hoja-anterior {
+  transform-origin: right center;
+  animation: hoja-anterior 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes hoja-siguiente {
+  from {
+    transform: perspective(1800px) rotateY(80deg);
+    box-shadow: -40px 0 60px rgba(0, 0, 0, 0.35);
+    opacity: 0.4;
+  }
+  to {
+    transform: perspective(1800px) rotateY(0);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    opacity: 1;
+  }
+}
+@keyframes hoja-anterior {
+  from {
+    transform: perspective(1800px) rotateY(-80deg);
+    box-shadow: 40px 0 60px rgba(0, 0, 0, 0.35);
+    opacity: 0.4;
+  }
+  to {
+    transform: perspective(1800px) rotateY(0);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hoja-siguiente,
+  .hoja-anterior {
+    animation: none;
+  }
 }

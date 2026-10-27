@@ -1,6 +1,7 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, FotoRedonda, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
+import { Destacados } from "./Destacados";
 import { NavCategorias } from "./NavCategorias";
 import { SelectorIdioma } from "./SelectorIdioma";
 
@@ -61,6 +62,13 @@ export function TemaBistro({ restaurante, secciones, vistaPrevia, pie }: PropsTe
 
       <main className="mx-auto max-w-2xl px-4 pt-4">
         {secciones.length === 0 && <CartaVacia />}
+        <Destacados
+          restaurante={restaurante}
+          secciones={secciones}
+          className="pt-4"
+          claseTitulo="f-marker text-3xl uppercase"
+          style={{ "--dest-bg": "#f6edd6", "--dest-text": "#1d4a2f", "--dest-precio": "#1d4a2f" } as React.CSSProperties}
+        />
         {secciones.map((seccion) => (
           <section key={seccion.id} id={idSeccion(seccion.id)} className="scroll-mt-16 pt-6">
             <h2 className="f-marker mb-2 text-center text-3xl uppercase tracking-wide" style={{ color: acento }}>

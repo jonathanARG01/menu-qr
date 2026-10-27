@@ -1,6 +1,7 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
+import { Destacados } from "./Destacados";
 import { NavCategorias } from "./NavCategorias";
 import { SelectorIdioma } from "./SelectorIdioma";
 
@@ -43,6 +44,13 @@ export function TemaClasico({ restaurante, secciones, vistaPrevia, pie }: PropsT
 
       <main className="mx-auto max-w-2xl px-4">
         {secciones.length === 0 && <CartaVacia />}
+        <Destacados
+          restaurante={restaurante}
+          secciones={secciones}
+          className="pt-6"
+          claseTitulo="font-serif text-2xl font-semibold"
+          style={{ "--dest-bg": "#ffffff", "--dest-text": "#1c1917" } as React.CSSProperties}
+        />
         {secciones.map((seccion) => (
           <section key={seccion.id} id={idSeccion(seccion.id)} className="scroll-mt-16 pt-8">
             <h2 className="mb-3 text-sm font-bold uppercase tracking-widest" style={{ color: primario }}>

@@ -209,6 +209,16 @@ export function EditorCarta({ restaurante, estaciones, categoriasIniciales, plat
                           onDisponible={(disponible) =>
                             actualizarPlato(plato.id, { disponible }, disponible ? "Visible en la carta" : "Marcado como agotado")
                           }
+                          onDestacar={
+                            "destacado" in plato
+                              ? (destacado) =>
+                                  actualizarPlato(
+                                    plato.id,
+                                    { destacado },
+                                    destacado ? "Ahora sale en Destacados" : "Quitado de Destacados",
+                                  )
+                              : undefined
+                          }
                           onEditar={() => setModal({ plato, categoriaId: cat.id })}
                         />
                       ))}
@@ -394,12 +404,15 @@ function FilaPlato({
   moneda,
   onPrecio,
   onDisponible,
+  onDestacar,
   onEditar,
 }: {
   plato: Plato;
   moneda: string;
   onPrecio: (precio: number) => void;
   onDisponible: (v: boolean) => void;
+  // Solo si ya existe la columna (migración 0007).
+  onDestacar?: (v: boolean) => void;
   onEditar: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: plato.id });
@@ -448,6 +461,20 @@ function FilaPlato({
         aria-label={`Precio de ${plato.nombre}`}
         className="w-20 shrink-0 rounded-lg border border-borde px-2 py-1.5 text-right text-sm tabular-nums outline-none focus:border-marca focus:ring-2 focus:ring-marca/20"
       />
+      {onDestacar && (
+        <button
+          type="button"
+          onClick={() => onDestacar(!plato.destacado)}
+          aria-pressed={!!plato.destacado}
+          aria-label={plato.destacado ? `Quitar ${plato.nombre} de Destacados` : `Destacar ${plato.nombre}`}
+          title={plato.destacado ? "Destacado en la carta" : "Destacar en la carta"}
+          className={`shrink-0 rounded-lg px-1.5 py-1 text-xl leading-none transition ${
+            plato.destacado ? "text-amber-500" : "text-stone-300 hover:text-amber-400"
+          }`}
+        >
+          {plato.destacado ? "★" : "☆"}
+        </button>
+      )}
       <Interruptor activo={plato.disponible} onChange={onDisponible} etiqueta={plato.disponible ? "Disponible" : "Agotado"} />
     </li>
   );

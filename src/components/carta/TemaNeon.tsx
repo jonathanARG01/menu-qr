@@ -1,6 +1,7 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, FotoRedonda, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
+import { Destacados } from "./Destacados";
 import { NavCategorias } from "./NavCategorias";
 import { SelectorIdioma } from "./SelectorIdioma";
 
@@ -13,7 +14,6 @@ const brillo = (color: string) => `0 0 4px #fff, 0 0 10px ${color}, 0 0 22px ${c
 export function TemaNeon({ restaurante, secciones, vistaPrevia, pie }: PropsTema) {
   const acento = restaurante.color_primario;
   const colores = [acento, ...OTROS];
-  const portada = secciones.flatMap((s) => s.platos).find((p) => p.foto_url);
 
   return (
     <div
@@ -68,19 +68,19 @@ export function TemaNeon({ restaurante, secciones, vistaPrevia, pie }: PropsTema
             {restaurante.descripcion}
           </p>
         )}
-        {portada && (
-          <FotoRedonda
-            plato={portada}
-            className="mx-auto mt-6 w-40"
-            style={{ boxShadow: brillo(OTROS[0]), border: `3px solid ${OTROS[0]}` }}
-          />
-        )}
       </header>
 
       {secciones.length > 0 && <NavCategorias categorias={secciones} claseChip="f-righteous uppercase tracking-wide" />}
 
       <main className="mx-auto grid max-w-3xl gap-x-6 gap-y-2 px-4 pt-2 @md:grid-cols-2">
         {secciones.length === 0 && <CartaVacia />}
+        <Destacados
+          restaurante={restaurante}
+          secciones={secciones}
+          className="pt-4 @md:col-span-2"
+          claseTitulo="f-righteous text-2xl uppercase"
+          style={{ "--dest-bg": "#15151d" } as React.CSSProperties}
+        />
         {secciones.map((seccion, i) => {
           const color = colores[i % colores.length];
           return (

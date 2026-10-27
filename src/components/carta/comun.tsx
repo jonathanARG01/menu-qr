@@ -11,22 +11,159 @@ export type PropsTema = {
   pie?: React.ReactNode;
 };
 
-export const TEMA_INFO: Record<Tema, { nombre: string; descripcion: string; acento: string; fondo: string }> = {
-  clasico: { nombre: "Clásico", descripcion: "Claro y sencillo, usa tus colores", acento: "#b45309", fondo: "#fffbf5" },
-  noir: { nombre: "Noche", descripcion: "Oscuro y elegante, fotos grandes", acento: "#e8a33d", fondo: "#0f0f10" },
-  esmeralda: { nombre: "Esmeralda", descripcion: "Verde gourmet con detalles dorados", acento: "#d4af6a", fondo: "#0e3b30" },
-  street: { nombre: "Comida rápida", descripcion: "Negro con colores intensos", acento: "#ffc300", fondo: "#121212" },
-  retro: { nombre: "Retro", descripcion: "Crema y café con mostaza", acento: "#f2b134", fondo: "#3a2c25" },
+// Pestañas del selector de diseños en el panel.
+export const GRUPOS_TEMA = [
+  { id: "sencillos", nombre: "Sencillos" },
+  { id: "elegantes", nombre: "Elegantes" },
+  { id: "casuales", nombre: "Casuales" },
+  { id: "bebidas", nombre: "Bares y bebidas" },
+  { id: "premium", nombre: "Premium" },
+] as const;
+
+export type GrupoTema = (typeof GRUPOS_TEMA)[number]["id"];
+
+export const TEMA_INFO: Record<Tema, { nombre: string; descripcion: string; acento: string; fondo: string; grupo: GrupoTema }> = {
+  clasico: {
+    nombre: "Clásico",
+    descripcion: "Claro y sencillo, usa tus colores",
+    acento: "#b45309",
+    fondo: "#fffbf5",
+    grupo: "sencillos",
+  },
+  noir: {
+    nombre: "Noche",
+    descripcion: "Oscuro y elegante, fotos grandes",
+    acento: "#e8a33d",
+    fondo: "#0f0f10",
+    grupo: "elegantes",
+  },
+  esmeralda: {
+    nombre: "Esmeralda",
+    descripcion: "Verde gourmet con detalles dorados",
+    acento: "#d4af6a",
+    fondo: "#0e3b30",
+    grupo: "elegantes",
+  },
+  street: {
+    nombre: "Comida rápida",
+    descripcion: "Negro con colores intensos",
+    acento: "#ffc300",
+    fondo: "#121212",
+    grupo: "casuales",
+  },
+  retro: { nombre: "Retro", descripcion: "Crema y café con mostaza", acento: "#f2b134", fondo: "#3a2c25", grupo: "casuales" },
   bistro: {
     nombre: "Bistró",
     descripcion: "Verde intenso, letras pintadas y platos redondos",
     acento: "#f5c518",
     fondo: "#1d4a2f",
+    grupo: "casuales",
   },
-  veggie: { nombre: "Dorado", descripcion: "Verde oscuro con marco y letras doradas", acento: "#d9b25f", fondo: "#14291b" },
-  forno: { nombre: "Forno", descripcion: "Blanco con pinceladas, ideal para pizzerías", acento: "#c8302b", fondo: "#f3f2ee" },
-  oriente: { nombre: "Oriente", descripcion: "Verde y crema con ondas, cocina asiática", acento: "#2f6b4f", fondo: "#f3eedd" },
-  neon: { nombre: "Neón", descripcion: "Negro con luces de neón y brochazos", acento: "#ff2bd6", fondo: "#07070b" },
+  veggie: {
+    nombre: "Dorado",
+    descripcion: "Verde oscuro con marco y letras doradas",
+    acento: "#d9b25f",
+    fondo: "#14291b",
+    grupo: "elegantes",
+  },
+  forno: {
+    nombre: "Forno",
+    descripcion: "Blanco con pinceladas, ideal para pizzerías",
+    acento: "#c8302b",
+    fondo: "#f3f2ee",
+    grupo: "sencillos",
+  },
+  oriente: {
+    nombre: "Oriente",
+    descripcion: "Verde y crema con ondas, cocina asiática",
+    acento: "#2f6b4f",
+    fondo: "#f3eedd",
+    grupo: "elegantes",
+  },
+  neon: {
+    nombre: "Neón",
+    descripcion: "Negro con luces de neón y brochazos",
+    acento: "#ff2bd6",
+    fondo: "#07070b",
+    grupo: "bebidas",
+  },
+  tropical: {
+    nombre: "Tropical",
+    descripcion: "Negro con hojas y neón, para tragos",
+    acento: "#ff3fa4",
+    fondo: "#0b0d0c",
+    grupo: "bebidas",
+  },
+  jugos: {
+    nombre: "Natural",
+    descripcion: "Selva verde y etiquetas de colores, para jugos",
+    acento: "#8cc63f",
+    fondo: "#0f2a17",
+    grupo: "bebidas",
+  },
+  batidos: {
+    nombre: "Soleado",
+    descripcion: "Amarillo alegre con números, para batidos",
+    acento: "#3b1f0e",
+    fondo: "#ffc62a",
+    grupo: "bebidas",
+  },
+  gala: {
+    nombre: "Gala",
+    descripcion: "Verde profundo y dorado, cada plato como un afiche",
+    acento: "#c9a96a",
+    fondo: "#12302a",
+    grupo: "elegantes",
+  },
+  vitrina: {
+    nombre: "Vitrina",
+    descripcion: "Tarjetas de vidrio sobre verde oscuro",
+    acento: "#8bc34a",
+    fondo: "#1b231d",
+    grupo: "elegantes",
+  },
+  cinta: {
+    nombre: "Cinta",
+    descripcion: "Papel claro con cintas verdes y precios en rojo",
+    acento: "#d62828",
+    fondo: "#efe6d3",
+    grupo: "casuales",
+  },
+  trattoria: {
+    nombre: "Trattoria",
+    descripcion: "Pizarra negra con los colores de Italia",
+    acento: "#d7263d",
+    fondo: "#151515",
+    grupo: "casuales",
+  },
+  kraft: {
+    nombre: "Kraft",
+    descripcion: "Papel crema y etiquetas de cartón",
+    acento: "#c0392b",
+    fondo: "#f4ede1",
+    grupo: "sencillos",
+  },
+  madera: {
+    nombre: "Madera",
+    descripcion: "Mesa de madera y platos en cuadrícula",
+    acento: "#f4a261",
+    fondo: "#6b4423",
+    grupo: "sencillos",
+  },
+  coctel: {
+    nombre: "Cóctel",
+    descripcion: "Pizarra negra, letras gastadas y precios grandes",
+    acento: "#ff5fa2",
+    fondo: "#0d0d0d",
+    grupo: "bebidas",
+  },
+  revista: {
+    nombre: "Revista",
+    descripcion: "Se hojea como una revista, con sonido de página",
+    acento: "#b8452f",
+    fondo: "#f5efe6",
+    grupo: "premium",
+  },
 };
 
 export const ICONOS: Record<string, string> = {
@@ -63,38 +200,66 @@ export function Foto({ plato, className }: { plato: Plato; className: string }) 
 }
 
 // Emoji de reserva para los diseños de platos redondos cuando el plato no tiene foto.
+const TRAGOS: [RegExp, string][] = [
+  [/martini|cosmopolitan/, "🍸"],
+  [/negroni|fernet|whisky|sour/, "🥃"],
+  [/caipi|daiquiri|colada|pitufo|mojito|sunrise|fizz|lagoon|panther|beach|jungle|paraguayo|trago|coctel/, "🍹"],
+];
+
 const EMOJIS: [RegExp, string][] = [
-  [/pizza|margarita|pepperoni|prosciutto|cuatro quesos|carnes|hongos/, "🍕"],
+  [/risotto/, "🍛"],
+  [
+    /pizza|margarit[ah]|pepperoni|prosciutto|cuatro quesos|carnes|hongos|mussarela|muzzarella|calabresa|hawaiana|suprema|marinara|diavola|capricciosa|caprese/,
+    "🍕",
+  ],
+  [/calzone|rollito|lumpia|spring|empanad|gyoza/, "🥟"],
   [/hamburgues|burger/, "🍔"],
+  [/pancho|hot dog|salchicha/, "🌭"],
+  [/quesadilla|taco|burrito|nacho/, "🌮"],
   [/papas/, "🍟"],
-  [/rollito|lumpia|spring|empanad|gyoza/, "🥟"],
-  [/roll|sushi|philadelphia|california|tuna|maki/, "🍣"],
+  [/panqueque|waffle/, "🥞"],
+  ...TRAGOS,
+  [/ roll|sushi|philadelphia|california|tuna|maki/, "🍣"],
   [/fideo|ramen|soba|mie |noodle|pasta/, "🍜"],
-  [/sopa|tom yum|tom yam|miso|caldo/, "🍲"],
-  [/biryani|masala|tikka|curry|arroz/, "🍛"],
+  [/sopa|tom yum|tom yam|miso|caldo|gazpacho/, "🍲"],
+  [/biryani|masala|tikka|curry|arroz|risotto/, "🍛"],
+  [/sorrentino|ravioles|noquis|lasagna|tallarines/, "🍝"],
+  [/provoleta|burrata|queso/, "🧀"],
+  [/malbec|vino|torrontes|espumante|cabernet|champagne/, "🍷"],
   [/kabab|falafel|medall/, "🧆"],
-  [/bruschetta|pan /, "🥖"],
+  [/bruschetta| pan /, "🥖"],
   [/langostin|camar|shrimp/, "🍤"],
   [/pollo|alita|ayam/, "🍗"],
   [/carne|daging|teriyaki|bife/, "🥩"],
   [/edamame|arveja/, "🫛"],
   [/tofu/, "🥢"],
   [/mochi/, "🍡"],
-  [/cheesecake|torta|tarta/, "🍰"],
-  [/helado/, "🍨"],
+  [/cheesecake|torta|tarta|tiramisu|mil hojas/, "🍰"],
+  [/helado|affogato/, "🍨"],
   [/gulab|rasmalai|flan/, "🍮"],
   [/bubble/, "🧋"],
-  [/matcha|té |latte/, "🍵"],
-  [/limonada|jugo/, "🍋"],
+  [/cafe|capuch|cappuccino|espresso|v60/, "☕"],
+  [/matcha| te |latte/, "🍵"],
+  [/batido|shake|licuado|smoothie/, "🥤"],
+  [/ (verde|tropical|conga|purace|rojo|mixto|detox|naranja|zanahoria) |limonada|jugo/, "🧃"],
+  [/gaseosa|cola|lima-limon|soda/, "🥤"],
+  [/cactus/, "🌵"],
+  [/planta|calathea|pothos|monstera|haworthia|dracaena|croton|helecho/, "🪴"],
   [/ensalada|verdura|vegetal/, "🥗"],
 ];
 
-const emojiPlato = (nombre: string) => {
-  const n = ` ${nombre
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")} `;
-  return EMOJIS.find(([re]) => re.test(n))?.[1] ?? "🍽️";
+const normalizar = (texto: string) => ` ${texto.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")} `;
+
+// Busca por el nombre; si no encuentra, por la descripción (así "Banana" con "masa y muzzarella" sale como pizza).
+export const emojiPlato = (nombre: string, descripcion?: string | null) => {
+  const buscar = (texto: string) => EMOJIS.find(([re]) => re.test(normalizar(texto)))?.[1];
+  const desc = normalizar(descripcion ?? "");
+  // Si lleva alcohol es un trago, aunque se llame como una pizza ("Margarita").
+  if (/tequila|vodka| ron[ ,]| gin[ ,]|cachaza|whisky|licor|campari|vermut|fernet/.test(desc)) {
+    return TRAGOS.find(([re]) => re.test(normalizar(nombre)))?.[1] ?? "🍹";
+  }
+  const porDescripcion = /masa|mozzarella|muzzarella|mussarela/.test(desc) ? "🍕" : undefined;
+  return buscar(nombre) ?? porDescripcion ?? (descripcion ? buscar(descripcion) : undefined) ?? "🍽️";
 };
 
 // Foto circular del plato; sin foto, un plato con un emoji para que el diseño no quede vacío.
@@ -114,7 +279,7 @@ export function FotoRedonda({ plato, className, style }: { plato: Plato; classNa
   }
   return (
     <span aria-hidden className={`flex aspect-square items-center justify-center rounded-full ${className}`} style={style}>
-      {emojiPlato(plato.nombre)}
+      {emojiPlato(plato.nombre, plato.descripcion)}
     </span>
   );
 }
@@ -137,3 +302,10 @@ export function CartaVacia({ className = "" }: { className?: string }) {
   const { t } = useCarta();
   return <p className={`py-16 text-center opacity-70 ${className}`}>{t("vacia")}</p>;
 }
+
+// Separa una descripción en ingredientes, para los diseños que los muestran en lista.
+export const ingredientes = (descripcion: string | null) =>
+  (descripcion ?? "")
+    .split(/\s*[,;+·]\s*|\s+y\s+/)
+    .map((p) => p.trim())
+    .filter(Boolean);

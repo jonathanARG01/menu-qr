@@ -40,7 +40,9 @@ export function NavCategorias({
     const contenedor = barra.current;
     const chip = contenedor?.querySelector<HTMLElement>(`[data-id="${activa}"]`);
     if (contenedor && chip) {
-      contenedor.scrollTo({ left: chip.offsetLeft - contenedor.clientWidth / 2 + chip.clientWidth / 2, behavior: "smooth" });
+      // Se mide en pantalla: offsetLeft cuenta desde la barra fija y en pantallas anchas corría la fila de más.
+      const desde = chip.getBoundingClientRect().left - contenedor.getBoundingClientRect().left + contenedor.scrollLeft;
+      contenedor.scrollTo({ left: desde - contenedor.clientWidth / 2 + chip.clientWidth / 2, behavior: "smooth" });
     }
   }, [activa]);
 

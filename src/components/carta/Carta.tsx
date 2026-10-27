@@ -17,6 +17,17 @@ import { TemaOriente } from "./TemaOriente";
 import { TemaRetro } from "./TemaRetro";
 import { TemaStreet } from "./TemaStreet";
 import { TemaVeggie } from "./TemaVeggie";
+import { TemaTropical } from "./TemaTropical";
+import { TemaJugos } from "./TemaJugos";
+import { TemaBatidos } from "./TemaBatidos";
+import { TemaGala } from "./TemaGala";
+import { TemaVitrina } from "./TemaVitrina";
+import { TemaCinta } from "./TemaCinta";
+import { TemaTrattoria } from "./TemaTrattoria";
+import { TemaKraft } from "./TemaKraft";
+import { TemaMadera } from "./TemaMadera";
+import { TemaCoctel } from "./TemaCoctel";
+import { TemaRevista } from "./TemaRevista";
 
 const TEMAS: Record<Tema, (props: PropsTema) => React.ReactNode> = {
   clasico: TemaClasico,
@@ -29,6 +40,17 @@ const TEMAS: Record<Tema, (props: PropsTema) => React.ReactNode> = {
   forno: TemaForno,
   oriente: TemaOriente,
   neon: TemaNeon,
+  tropical: TemaTropical,
+  jugos: TemaJugos,
+  batidos: TemaBatidos,
+  gala: TemaGala,
+  vitrina: TemaVitrina,
+  cinta: TemaCinta,
+  trattoria: TemaTrattoria,
+  kraft: TemaKraft,
+  madera: TemaMadera,
+  coctel: TemaCoctel,
+  revista: TemaRevista,
 };
 
 type Props = {

@@ -1,6 +1,7 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
+import { Destacados } from "./Destacados";
 import { useCarta } from "./contexto";
 import { NavCategorias } from "./NavCategorias";
 import { SelectorIdioma } from "./SelectorIdioma";
@@ -46,6 +47,14 @@ export function TemaEsmeralda({ restaurante, secciones, vistaPrevia, pie }: Prop
 
       <main className="mx-auto max-w-xl px-5">
         {secciones.length === 0 && <CartaVacia />}
+        <Destacados
+          restaurante={restaurante}
+          secciones={secciones}
+          className="pt-8"
+          claseTitulo="f-cormorant text-3xl"
+          claseNombre="f-cormorant text-xl"
+          style={{ "--dest-bg": "rgba(0,0,0,0.25)" } as React.CSSProperties}
+        />
         {secciones.map((seccion) => (
           <section key={seccion.id} id={idSeccion(seccion.id)} className="scroll-mt-16 pt-12">
             <h2 className="f-cormorant mb-8 text-center text-4xl font-semibold" style={{ color: acento }}>

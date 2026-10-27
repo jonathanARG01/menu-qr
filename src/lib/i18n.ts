@@ -101,6 +101,7 @@ const es = {
   avisoEntregadoAyuda: "Tu pedido ya está en la mesa.",
   entendido: "Entendido",
   avisoMas: "avisos más",
+  destacados: "Destacados",
 };
 export type ClaveTexto = keyof typeof es;
 
@@ -184,6 +185,7 @@ export const TEXTOS: Record<Idioma, Record<ClaveTexto, string>> = {
     avisoEntregadoAyuda: "Your order has been served.",
     entendido: "Got it",
     avisoMas: "more updates",
+    destacados: "Featured",
   },
   pt: {
     carta: "Cardápio",
@@ -263,6 +265,7 @@ export const TEXTOS: Record<Idioma, Record<ClaveTexto, string>> = {
     avisoEntregadoAyuda: "Seu pedido já está na mesa.",
     entendido: "Entendi",
     avisoMas: "avisos a mais",
+    destacados: "Destaques",
   },
   fr: {
     carta: "Carte",
@@ -342,6 +345,7 @@ export const TEXTOS: Record<Idioma, Record<ClaveTexto, string>> = {
     avisoEntregadoAyuda: "Votre commande est servie.",
     entendido: "Compris",
     avisoMas: "autres avis",
+    destacados: "À la une",
   },
   it: {
     carta: "Menù",
@@ -421,6 +425,7 @@ export const TEXTOS: Record<Idioma, Record<ClaveTexto, string>> = {
     avisoEntregadoAyuda: "Il tuo ordine è al tavolo.",
     entendido: "Ok",
     avisoMas: "altri avvisi",
+    destacados: "In evidenza",
   },
   de: {
     carta: "Speisekarte",
@@ -500,6 +505,7 @@ export const TEXTOS: Record<Idioma, Record<ClaveTexto, string>> = {
     avisoEntregadoAyuda: "Deine Bestellung wurde serviert.",
     entendido: "Verstanden",
     avisoMas: "weitere Hinweise",
+    destacados: "Empfehlungen",
   },
 };
 

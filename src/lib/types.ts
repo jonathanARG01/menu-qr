@@ -3,7 +3,29 @@ import type { Ajustes } from "./salon";
 // Textos traducidos por idioma: {"en": {"nombre": "...", "descripcion": "..."}}
 export type Traducciones = Partial<Record<string, Record<string, string | undefined>>>;
 
-export const TEMAS = ["clasico", "noir", "esmeralda", "street", "retro", "bistro", "veggie", "forno", "oriente", "neon"] as const;
+export const TEMAS = [
+  "clasico",
+  "noir",
+  "esmeralda",
+  "street",
+  "retro",
+  "bistro",
+  "veggie",
+  "forno",
+  "oriente",
+  "neon",
+  "tropical",
+  "jugos",
+  "batidos",
+  "gala",
+  "vitrina",
+  "cinta",
+  "trattoria",
+  "kraft",
+  "madera",
+  "coctel",
+  "revista",
+] as const;
 export type Tema = (typeof TEMAS)[number];
 
 export type Restaurante = {
@@ -51,6 +73,8 @@ export type Plato = {
   etiquetas: string[];
   orden: number;
   traducciones?: Traducciones;
+  // Se muestra en la sección de destacados de la carta (migración 0007).
+  destacado?: boolean;
 };
 
 export type Mesa = {

@@ -9,7 +9,7 @@ import { MONEDAS, mensajeError, urlCarta } from "@/lib/utils";
 import { useToast } from "@/components/Toast";
 import { useUrlSitio } from "@/lib/useUrlSitio";
 import { Carta } from "@/components/carta/Carta";
-import { TEMA_INFO } from "@/components/carta/comun";
+import { GRUPOS_TEMA, TEMA_INFO, type GrupoTema } from "@/components/carta/comun";
 import { SECCIONES_EJEMPLO } from "@/components/carta/ejemplo";
 import { Interruptor } from "@/components/Interruptor";
 import { IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
@@ -39,10 +39,26 @@ const MUESTRA_FUENTE: Record<Tema, string> = {
   forno: "f-kaushan",
   oriente: "f-playfair uppercase font-bold",
   neon: "f-righteous uppercase [text-shadow:0_0_8px_currentColor]",
+  tropical: "f-allura text-3xl [text-shadow:0_0_8px_currentColor]",
+  jugos: "f-kaushan",
+  batidos: "f-fredoka uppercase font-bold",
+  gala: "f-allura text-3xl",
+  vitrina: "f-playfair",
+  cinta: "font-extrabold italic",
+  trattoria: "f-playfair uppercase font-bold",
+  kraft: "f-caveat text-2xl",
+  madera: "font-semibold",
+  coctel: "f-dirt uppercase",
+  revista: "f-playfair italic font-bold",
 };
 
-// Diseños que necesitan el SQL 0006 para poder guardarse.
-const TEMAS_0006: Tema[] = ["bistro", "veggie", "forno", "oriente", "neon"];
+// SQL que habilita cada diseño, para avisar si falta ejecutarlo.
+const SQL_TEMA = (t: Tema) =>
+  ["clasico", "noir", "esmeralda", "street", "retro"].includes(t)
+    ? "0002_temas.sql"
+    : ["bistro", "veggie", "forno", "oriente", "neon"].includes(t)
+      ? "0006_temas_nuevos.sql"
+      : "0007_destacados_y_temas.sql";
 
 export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante; secciones: Seccion[] }) {
   const supabase = useMemo(() => createClient(), []);
@@ -56,6 +72,7 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
   const [fondo, setFondo] = useState(restaurante.color_fondo);
   const [moneda, setMoneda] = useState(restaurante.moneda);
   const [tema, setTema] = useState<Tema>(restaurante.tema ?? "clasico");
+  const [grupo, setGrupo] = useState<GrupoTema>(TEMA_INFO[restaurante.tema ?? "clasico"]?.grupo ?? "sencillos");
   const [whatsapp, setWhatsapp] = useState(restaurante.whatsapp ?? "");
   const [idiomas, setIdiomas] = useState<string[]>(restaurante.idiomas ?? []);
   const [descTraducida, setDescTraducida] = useState<Record<string, string>>(() =>
@@ -110,7 +127,7 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
     setGuardando(false);
     if (error) {
       const falta = error.message.includes("tema");
-      const sql = TEMAS_0006.includes(tema) ? "0006_temas_nuevos.sql" : "0002_temas.sql";
+      const sql = SQL_TEMA(tema);
       return avisar(falta ? `Falta ejecutar el SQL ${sql} en Supabase para guardar el diseño.` : mensajeError(error), "error");
     }
     if (restaurante.logo_url && restaurante.logo_url !== logo) borrarFoto(supabase, restaurante.logo_url);
@@ -148,8 +165,31 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
             <h2 className="font-semibold">Diseño de la carta</h2>
             <p className="text-sm text-suave">Elige cómo ven tu carta los clientes. Puedes cambiarlo cuando quieras.</p>
           </div>
+          <div role="tablist" aria-label="Tipos de diseño" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+            {GRUPOS_TEMA.map((g) => {
+              const activo = grupo === g.id;
+              const cantidad = TEMAS.filter((t) => TEMA_INFO[t].grupo === g.id).length;
+              const elegido = TEMA_INFO[tema].grupo === g.id;
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activo}
+                  onClick={() => setGrupo(g.id)}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
+                    activo ? "border-marca bg-marca text-white" : "border-borde hover:border-stone-400"
+                  }`}
+                >
+                  {elegido && <span aria-label="incluye el diseño elegido">●</span>}
+                  {g.nombre}
+                  <span className={activo ? "text-white/75" : "text-suave"}>{cantidad}</span>
+                </button>
+              );
+            })}
+          </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {TEMAS.map((t) => {
+            {TEMAS.filter((t) => TEMA_INFO[t].grupo === grupo).map((t) => {
               const info = TEMA_INFO[t];
               const activo = tema === t;
               return (

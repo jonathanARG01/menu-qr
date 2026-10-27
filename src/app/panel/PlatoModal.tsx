@@ -37,6 +37,9 @@ export function PlatoModal({
   const [categoria, setCategoria] = useState(plato?.categoria_id ?? categoriaId);
   const [etiquetas, setEtiquetas] = useState<string[]>(plato?.etiquetas ?? []);
   const [disponible, setDisponible] = useState(plato?.disponible ?? true);
+  const [destacado, setDestacado] = useState(plato?.destacado ?? false);
+  // La casilla de destacado aparece cuando ya existe la columna (migración 0007).
+  const [tieneDestacado] = useState(() => !plato || "destacado" in plato);
   const [fotoUrl, setFotoUrl] = useState<string | null>(plato?.foto_url ?? null);
   const idiomas = IDIOMAS_EXTRA.filter((i) => restaurante.idiomas?.includes(i));
   const [traducciones, setTraducciones] = useState<Record<string, { nombre: string; descripcion: string }>>(() =>
@@ -104,6 +107,7 @@ export function PlatoModal({
       categoria_id: categoria,
       etiquetas,
       disponible,
+      ...(tieneDestacado ? { destacado } : {}),
       foto_url: fotoUrl,
       // Solo si ya existe la columna (migración 0003).
       ...("idiomas" in restaurante
@@ -125,14 +129,21 @@ export function PlatoModal({
       ...(esNuevo || categoria !== plato.categoria_id ? { orden: contarPlatos(categoria) } : {}),
     };
 
-    const consulta = esNuevo
-      ? supabase
-          .from("platos")
-          .insert({ ...datos, restaurante_id: restaurante.id })
-          .select()
-          .single()
-      : supabase.from("platos").update(datos).eq("id", plato.id).select().single();
-    const { data, error } = await consulta;
+    const enviar = (fila: Partial<Plato>) =>
+      esNuevo
+        ? supabase
+            .from("platos")
+            .insert({ ...fila, restaurante_id: restaurante.id })
+            .select()
+            .single()
+        : supabase.from("platos").update(fila).eq("id", plato.id).select().single();
+    let { data, error } = await enviar(datos);
+    // Sin la migración 0007 todavía no existe la columna "destacado": se guarda sin ella.
+    if (error && "destacado" in datos && error.message.includes("destacado")) {
+      const { destacado: _sinColumna, ...resto } = datos;
+      void _sinColumna;
+      ({ data, error } = await enviar(resto));
+    }
 
     if (error) {
       setError(mensajeError(error));
@@ -336,6 +347,16 @@ export function PlatoModal({
             </span>
             <Interruptor activo={disponible} onChange={setDisponible} etiqueta="Disponible" />
           </label>
+
+          {tieneDestacado && (
+            <label className="flex items-center justify-between rounded-xl bg-stone-50 px-4 py-3">
+              <span>
+                <span className="block font-medium">★ Destacado</span>
+                <span className="block text-xs text-suave">Sale arriba de todo en la carta, con foto grande.</span>
+              </span>
+              <Interruptor activo={destacado} onChange={setDestacado} etiqueta="Destacado" />
+            </label>
+          )}
 
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         </div>

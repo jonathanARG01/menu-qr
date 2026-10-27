@@ -1,6 +1,8 @@
 import { textoSobre } from "@/lib/utils";
 import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
+import { Destacados } from "./Destacados";
+import { Carrusel } from "./Carrusel";
 import { NavCategorias } from "./NavCategorias";
 import { SelectorIdioma } from "./SelectorIdioma";
 
@@ -55,6 +57,13 @@ export function TemaStreet({ restaurante, secciones, vistaPrevia, pie }: PropsTe
 
       <main className="mx-auto max-w-2xl space-y-10 px-4 pt-8">
         {secciones.length === 0 && <CartaVacia />}
+        <Destacados
+          restaurante={restaurante}
+          secciones={secciones}
+          className="-mb-2"
+          claseTitulo="f-oswald text-2xl font-semibold uppercase italic"
+          style={{ "--dest-bg": "#1f1f1f" } as React.CSSProperties}
+        />
         {secciones.map((seccion, i) => {
           const color = colores[i % colores.length];
           const fotos = seccion.platos.filter((p) => p.foto_url);
@@ -94,7 +103,7 @@ export function TemaStreet({ restaurante, secciones, vistaPrevia, pie }: PropsTe
                 ))}
               </ul>
               {fotos.length > 0 && (
-                <div className="-mx-4 mt-5 flex gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none]">
+                <Carrusel className="-mx-4 mt-5 gap-4 px-4 py-2 [&>*]:scroll-ml-4">
                   {fotos.map((plato, j) => (
                     <figure key={plato.id} className={`w-40 shrink-0 ${j % 2 ? "rotate-2" : "-rotate-2"}`}>
                       <Foto
@@ -106,7 +115,7 @@ export function TemaStreet({ restaurante, secciones, vistaPrevia, pie }: PropsTe
                       </figcaption>
                     </figure>
                   ))}
-                </div>
+                </Carrusel>
               )}
             </section>
           );
