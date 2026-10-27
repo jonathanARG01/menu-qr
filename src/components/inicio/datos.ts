@@ -54,7 +54,45 @@ export const PERIODOS = [
   { id: "anual", nombre: "Anual", meses: 12, descuento: 0.15 },
 ] as const;
 
-export const ARMADO = { precio: 39990, texto: "Cargamos tu carta, fotos y traducciones, y te entregamos los QR para imprimir." };
+// Armado de la carta: pago único opcional, en tres niveles. Cada nivel incluye lo del anterior.
+export const ARMADOS = [
+  {
+    id: "basico",
+    nombre: "Básico",
+    precio: 19990,
+    para: "Tu carta cargada y los QR listos.",
+    incluye: [
+      "Carga de hasta 40 platos con precios y descripciones",
+      "Elección del diseño de la carta",
+      "QR por mesa en PDF, listos para imprimir",
+    ],
+  },
+  {
+    id: "completo",
+    nombre: "Completo",
+    precio: 29990,
+    destacado: true,
+    para: "La carta con fotos y el equipo listo para usarla.",
+    incluye: [
+      "Todo lo del Básico",
+      "Fotos de los platos editadas",
+      "Traducciones revisadas y platos destacados",
+      "Ajustes del salón y cuentas del equipo",
+      "Capacitación en tu local",
+    ],
+  },
+  {
+    id: "pro",
+    nombre: "Pro",
+    precio: 39990,
+    para: "Todo el local listo, y nosotros cargamos lo nuevo.",
+    incluye: [
+      "Todo lo del Completo",
+      "Plano del salón con todas las mesas y pisos, en 3D",
+      "Los primeros 2 meses, cargamos tus platos nuevos",
+    ],
+  },
+] as const;
 
 export const DIAS_PRUEBA = 14;
 
@@ -135,7 +173,7 @@ export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; punto
 ];
 
 export const SERVICIOS: [string, string][] = [
-  ["Armado de la carta", "Cargamos platos, precios, fotos y traducciones por ti."],
+  ["Armado de la carta", "Cargamos platos, precios, fotos y traducciones por ti, en tres niveles desde $19.990."],
   ["QR impresos", "Te entregamos el PDF con un QR por mesa, listo para la imprenta."],
   ["Capacitación del equipo", "Una sesión para meseros, cocina y caja, en tu local o por videollamada."],
   ["Soporte por WhatsApp", "Hablas con una persona, no con un bot, en horario de atención."],
