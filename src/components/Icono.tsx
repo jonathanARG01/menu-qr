@@ -150,6 +150,38 @@ const TRAZOS: Record<string, React.ReactNode> = {
     </>
   ),
   whatsapp: <path d="M4 20l1.3-4A8 8 0 1 1 8 18.7zM9 9.5c0 3 2.5 5.5 5.5 5.5l1.2-1.4-2-1-.8.8a4 4 0 0 1-2.3-2.3l.8-.8-1-2z" />,
+  llevar: (
+    <>
+      <path d="M5 8h14l-1 12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z" />
+      <path d="M9 10V6a3 3 0 0 1 6 0v4" />
+    </>
+  ),
+  delivery: (
+    <>
+      <circle cx="6" cy="17" r="2.5" />
+      <circle cx="18" cy="17" r="2.5" />
+      <path d="M8.5 17h7M3 13h7l2-5h3l3 6.5M14 8V5h-3" />
+    </>
+  ),
+  clientes: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M18 4.5l.9 1.9 2.1.3-1.5 1.5.4 2.1-1.9-1-1.9 1 .4-2.1L15 6.7l2.1-.3z" />
+    </>
+  ),
+  reportes: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M7 16v-3M12 16V8M17 16v-5" />
+    </>
+  ),
+  regalo: (
+    <>
+      <rect x="3" y="8" width="18" height="5" rx="1" />
+      <path d="M5 13v7h14v-7M12 8v12M12 8c-2-4-6-3-5 0M12 8c2-4 6-3 5 0" />
+    </>
+  ),
 };
 
 export function Icono({ nombre, className = "h-5 w-5" }: { nombre: string; className?: string }) {

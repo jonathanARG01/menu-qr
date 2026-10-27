@@ -30,7 +30,7 @@ const DE_MP = new Set([
 // Barra inferior de la carta: mesa, sucursal, contacto por WhatsApp y el pedido en curso.
 // Los colores salen de las variables de cada diseño (--pie-bg, --pie-text, --acento, --sobre-acento).
 export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
-  const { pedidos, pedidosMesa, lineas, mesa, sucursal, idioma, ajustes, t } = useCarta();
+  const { pedidos, pedidosMesa, pedidosLlevar, lineas, mesa, sucursal, idioma, ajustes, t } = useCarta();
   const [ofrecer, setOfrecer] = useState<null | "pedir" | "iphone">(null);
   const [abierto, setAbierto] = useState(false);
   const [mesaAbierta, setMesaAbierta] = useState(false);
@@ -124,7 +124,7 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
   }
 
   const reservar = !mesa && ajustes.modulos.reservas && ajustes.reservas.online;
-  if (!mesa && !whatsapp && !sucursal && unidades === 0 && !reservar) return null;
+  if (!mesa && !whatsapp && !sucursal && unidades === 0 && !reservar && !pedidosLlevar) return null;
 
   const contexto = [mesa && `${t("mesa")} ${mesa}`, sucursal?.nombre].filter(Boolean).join(" · ");
   const saludo = mesa ? `Hola ${restaurante.nombre}, estoy en la mesa ${mesa}.` : `Hola ${restaurante.nombre}.`;
@@ -179,7 +179,9 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
           className="mx-auto flex max-w-2xl items-center gap-3 rounded-2xl p-2 pl-4 shadow-xl ring-1 ring-black/10"
           style={{ background: "var(--pie-bg)", color: "var(--pie-text)" }}
         >
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">{contexto || restaurante.nombre}</span>
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+            {pedidosLlevar && unidades === 0 ? `🛍️ ${t("pedirLlevar")}` : contexto || restaurante.nombre}
+          </span>
           {reservar && unidades === 0 && (
             <a
               href={`/${restaurante.slug}/reservar${sucursal ? `?s=${encodeURIComponent(sucursal.slug)}` : ""}`}
@@ -285,12 +287,33 @@ function HojaPedido({
     idioma,
     t,
     pedidosMesa,
+    pedidosLlevar,
+    ajustes,
     whatsapp: conWhatsapp,
   } = useCarta();
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nombre, setNombre] = useState("");
   const [nota, setNota] = useState("");
+  // Para llevar: cómo lo quiere, su teléfono y, para delivery, la dirección (se recuerdan en este teléfono).
+  const [tipo, setTipo] = useState<"llevar" | "delivery">("llevar");
+  const [telefono, setTelefono] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [cuando, setCuando] = useState<"ya" | "hora">("ya");
+  const [hora, setHora] = useState("");
+  useEffect(() => {
+    if (!pedidosLlevar) return;
+    try {
+      const g = JSON.parse(localStorage.getItem("carta:cliente") ?? "{}") as Record<string, string>;
+      if (g.nombre) setNombre(g.nombre);
+      if (g.telefono) setTelefono(g.telefono);
+      if (g.direccion) setDireccion(g.direccion);
+    } catch {}
+    const d = new Date(Date.now() + (ajustes.llevar.minutos + 10) * 60000);
+    d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0);
+    setHora(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
+  }, [pedidosLlevar, ajustes.llevar.minutos]);
+  const envio = pedidosLlevar && tipo === "delivery" ? ajustes.llevar.envio : 0;
   const precio = (valor: number) => formatoPrecio(valor, restaurante.moneda);
   const faltaSucursal = sucursales.length > 1 && !sucursal;
   const whatsapp = sucursal?.whatsapp || restaurante.whatsapp || sucursales.find((s) => s.whatsapp)?.whatsapp;
@@ -329,6 +352,46 @@ function HojaPedido({
     }
     onEnviado((data as { pendiente?: boolean } | null)?.pendiente ? t("pedidoPorConfirmar") : t("pedidoEnviado"));
     vaciar();
+  }
+
+  // Para llevar o delivery: el pedido entra al panel y el cliente sigue su estado (y lo paga) en otra página.
+  async function enviarLlevar(e: React.FormEvent) {
+    e.preventDefault();
+    if (faltaSucursal) return;
+    setEnviando(true);
+    setError(null);
+    let paraHora: string | null = null;
+    if (cuando === "hora" && hora) {
+      const [h, m] = hora.split(":").map(Number);
+      const d = new Date();
+      d.setHours(h, m, 0, 0);
+      if (d.getTime() < Date.now() - 30 * 60000) d.setDate(d.getDate() + 1);
+      paraHora = d.toISOString();
+    }
+    const { data, error } = await createClient().rpc("pedir_para_llevar", {
+      p_restaurante: restaurante.id,
+      p_sucursal: sucursal?.id ?? null,
+      p_tipo: tipo,
+      p_items: lineas.map((l) => ({ id: l.plato.id, cantidad: l.cantidad })),
+      p_nombre: nombre.trim(),
+      p_telefono: telefono.trim(),
+      p_direccion: tipo === "delivery" ? direccion.trim() : null,
+      p_hora: paraHora,
+      p_nota: nota.trim() || null,
+    });
+    if (error || !data) {
+      setEnviando(false);
+      setError(/Faltan|Falta|muchos|agotó|hora|disponibles/.test(error?.message ?? "") ? error!.message : t("errorEnvio"));
+      return;
+    }
+    try {
+      localStorage.setItem(
+        "carta:cliente",
+        JSON.stringify({ nombre: nombre.trim(), telefono: telefono.trim(), direccion: direccion.trim() }),
+      );
+    } catch {}
+    vaciar();
+    window.location.href = `/${restaurante.slug}/pedido/${(data as { id: string }).id}`;
   }
 
   function enviar() {
@@ -428,16 +491,96 @@ function HojaPedido({
             </label>
           )}
 
-          <label className="block text-sm font-medium">
-            {t("tuNombre")} <span className="font-normal text-stone-400">({t("opcional")})</span>
-            <input
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              maxLength={40}
-              autoComplete="given-name"
-              className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2.5 text-base"
-            />
-          </label>
+          {pedidosLlevar && (
+            <form id="form-llevar" onSubmit={enviarLlevar} className="space-y-3">
+              <fieldset>
+                <legend className="text-sm font-medium">{t("comoLoQuieres")}</legend>
+                <div className="mt-1 flex gap-2">
+                  {(["llevar", ...(ajustes.llevar.delivery ? ["delivery"] : [])] as ("llevar" | "delivery")[]).map((x) => (
+                    <button
+                      key={x}
+                      type="button"
+                      aria-pressed={tipo === x}
+                      onClick={() => setTipo(x)}
+                      className={`flex-1 rounded-xl border-2 px-3 py-2.5 text-sm font-semibold ${tipo === x ? "border-current" : "border-stone-200 text-stone-500"}`}
+                      style={tipo === x ? { color: "var(--acento)" } : undefined}
+                    >
+                      {x === "llevar" ? t("retiro") : t("delivery")}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+              <label className="block text-sm font-medium">
+                {t("nombreYApellido")}
+                <input
+                  required
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  maxLength={60}
+                  autoComplete="name"
+                  className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2.5 text-base"
+                />
+              </label>
+              <label className="block text-sm font-medium">
+                {t("telefono")}
+                <input
+                  required
+                  type="tel"
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
+                  maxLength={30}
+                  autoComplete="tel"
+                  className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2.5 text-base"
+                />
+              </label>
+              {tipo === "delivery" && (
+                <label className="block text-sm font-medium">
+                  {t("direccion")}
+                  <input
+                    required
+                    value={direccion}
+                    onChange={(e) => setDireccion(e.target.value)}
+                    maxLength={200}
+                    autoComplete="street-address"
+                    className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2.5 text-base"
+                  />
+                </label>
+              )}
+              <fieldset>
+                <legend className="text-sm font-medium">{t("paraCuando")}</legend>
+                <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                  <label className="flex items-center gap-1.5">
+                    <input type="radio" checked={cuando === "ya"} onChange={() => setCuando("ya")} /> {t("loAntesPosible")}
+                  </label>
+                  <label className="flex items-center gap-1.5">
+                    <input type="radio" checked={cuando === "hora"} onChange={() => setCuando("hora")} /> {t("aUnaHora")}
+                    <input
+                      type="time"
+                      step={900}
+                      value={hora}
+                      onChange={(e) => {
+                        setHora(e.target.value);
+                        setCuando("hora");
+                      }}
+                      className="rounded-lg border border-stone-300 px-2 py-1"
+                    />
+                  </label>
+                </div>
+              </fieldset>
+            </form>
+          )}
+          {!pedidosLlevar && (
+            <label className="block text-sm font-medium">
+              {t("tuNombre")} <span className="font-normal text-stone-400">({t("opcional")})</span>
+              <input
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                maxLength={40}
+                autoComplete="given-name"
+                className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2.5 text-base"
+              />
+            </label>
+          )}
           <label className="block text-sm font-medium">
             {t("nota")} <span className="font-normal text-stone-400">({t("opcional")})</span>
             <textarea
@@ -452,10 +595,31 @@ function HojaPedido({
         </div>
 
         <div className="border-t border-stone-100 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
+          {envio > 0 && (
+            <div className="mb-1 flex items-baseline justify-between text-sm text-stone-500">
+              <span>{t("envio")}</span>
+              <span className="tabular-nums">{precio(envio)}</span>
+            </div>
+          )}
           <div className="mb-3 flex items-baseline justify-between">
             <span className="font-medium">{t("total")}</span>
-            <span className="text-xl font-bold tabular-nums">{precio(total)}</span>
+            <span className="text-xl font-bold tabular-nums">{precio(total + envio)}</span>
           </div>
+          {pedidosLlevar && (
+            <>
+              {error && <p className="mb-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+              <button
+                type="submit"
+                form="form-llevar"
+                disabled={enviando || faltaSucursal}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 font-semibold disabled:opacity-50"
+                style={{ background: "var(--acento)", color: "var(--sobre-acento)" }}
+              >
+                {enviando ? t("cargando") : t("hacerPedido")}
+              </button>
+              <p className="mt-2 text-center text-xs text-stone-500">{faltaSucursal ? t("elegirSucursal") : t("llevarAyuda")}</p>
+            </>
+          )}
           {pedidosMesa && (
             <>
               {error && <p className="mb-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
@@ -470,7 +634,9 @@ function HojaPedido({
               </button>
             </>
           )}
-          {conWhatsapp && pedidosMesa && <p className="mt-3 text-center text-xs text-stone-500">{t("oWhatsapp")}</p>}
+          {conWhatsapp && (pedidosMesa || pedidosLlevar) && (
+            <p className="mt-3 text-center text-xs text-stone-500">{t("oWhatsapp")}</p>
+          )}
           {conWhatsapp && (
             <>
               <button

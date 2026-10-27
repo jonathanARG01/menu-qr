@@ -9,6 +9,8 @@ import { formatoFecha, formatoHora, numeroWhatsapp, paisDe, type Region } from "
 import type { Mesa, Restaurante } from "@/lib/types";
 import { mensajeError } from "@/lib/utils";
 import { useAhora } from "@/lib/useServicio";
+import { useRecordatorios } from "@/lib/push";
+import { urlSitio } from "@/lib/utils";
 
 type Estado = "pendiente" | "confirmada" | "avisada" | "sentada" | "cancelada" | "no_vino";
 export type Reserva = {
@@ -25,7 +27,14 @@ export type Reserva = {
   origen: "cliente" | "personal";
   avisada_at: string | null;
   created_at: string;
+  // Migración 0014.
+  cliente_id?: string | null;
+  recordatorio_at?: string | null;
+  recordatorio_medio?: "push" | "whatsapp" | null;
+  asistencia?: "si" | "no" | null;
 };
+
+type Historial = { visitas: number; no_vino: number };
 
 const ESTADO: Record<Estado, { texto: string; color: string }> = {
   pendiente: { texto: "Por confirmar", color: "bg-amber-100 text-amber-900" },
@@ -53,6 +62,8 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
   const [vista, setVista] = useState<"espera" | "hoy" | "proximas">("espera");
   const [nueva, setNueva] = useState<null | "espera" | "reserva">(null);
   const [sentando, setSentando] = useState<Reserva | null>(null);
+  const [historial, setHistorial] = useState<Map<string, Historial>>(new Map());
+  useRecordatorios(restaurante.id, ajustes.reservas.recordatorio);
 
   const cargar = useCallback(async () => {
     const hace12 = new Date(Date.now() - 12 * 3600000).toISOString();
@@ -77,10 +88,17 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
       supabase.from("cuentas").select("mesa_id").eq("restaurante_id", restaurante.id).eq("estado", "abierta"),
     ]);
     if (espera.error) return setFalta(true);
-    setLista([...(espera.data ?? []), ...(reservas.data ?? [])] as Reserva[]);
+    const todas = [...(espera.data ?? []), ...(reservas.data ?? [])] as Reserva[];
+    setLista(todas);
+    // Visitas y "no vino" de cada cliente (migración 0014; sin ella no se muestra nada).
+    const ids = [...new Set(todas.map((r) => r.cliente_id).filter((x): x is string => !!x))];
+    if (ids.length && ajustes.modulos.clientes) {
+      const { data } = await supabase.from("clientes_resumen").select("id, visitas, no_vino").in("id", ids);
+      setHistorial(new Map((data ?? []).map((c) => [c.id as string, c as Historial])));
+    }
     setMesas((m.data ?? []) as Mesa[]);
     setOcupadas(new Set((cuentas.data ?? []).map((c) => c.mesa_id as string)));
-  }, [supabase, restaurante.id]);
+  }, [supabase, restaurante.id, ajustes.modulos.clientes]);
 
   useEffect(() => {
     cargar();
@@ -123,13 +141,27 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
     whatsapp(r, `Hola ${r.nombre}, tu mesa en ${restaurante.nombre} ya está lista. Te esperamos en la entrada.`);
   }
 
+  // Enlace donde el cliente ve su reserva, confirma que va o avisa que no puede (y pide el recordatorio al celular).
+  const enlace = (r: Reserva) => `${urlSitio()}/${restaurante.slug}/reserva/${r.id}`;
+
   function confirmar(r: Reserva) {
     cambiar(r, { estado: "confirmada" }, "Reserva confirmada");
     if (r.fecha)
       whatsapp(
         r,
-        `Hola ${r.nombre}, te confirmamos la reserva en ${restaurante.nombre} para ${r.personas} ${r.personas === 1 ? "persona" : "personas"} el ${dia(r.fecha, region)} a las ${hora(r.fecha, region)}. ¡Te esperamos!`,
+        `Hola ${r.nombre}, te confirmamos la reserva en ${restaurante.nombre} para ${r.personas} ${r.personas === 1 ? "persona" : "personas"} el ${dia(r.fecha, region)} a las ${hora(r.fecha, region)}. ¡Te esperamos! Si no puedes venir, avísanos aquí: ${enlace(r)}`,
       );
+  }
+
+  // Recordatorio por WhatsApp (para quien no activó el aviso al celular): con el enlace para confirmar o cancelar.
+  function recordar(r: Reserva) {
+    if (!r.fecha) return;
+    const cuando = mismoDia(new Date(r.fecha), new Date()) ? "hoy" : `el ${dia(r.fecha, region)}`;
+    cambiar(r, { recordatorio_at: new Date().toISOString(), recordatorio_medio: "whatsapp" }, "Recordatorio enviado");
+    whatsapp(
+      r,
+      `Hola ${r.nombre}, te recordamos tu reserva en ${restaurante.nombre} ${cuando} a las ${hora(r.fecha, region)} para ${r.personas} ${r.personas === 1 ? "persona" : "personas"}. ¿Nos confirmas que vienes? Toca aquí: ${enlace(r)}`,
+    );
   }
 
   async function sentar(r: Reserva, mesa: Mesa) {
@@ -168,6 +200,17 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
   const deHoy = reservas.filter((r) => r.fecha && mismoDia(new Date(r.fecha), hoy));
   const proximas = reservas.filter((r) => r.fecha && !mismoDia(new Date(r.fecha), hoy) && r.estado !== "cancelada");
   const porConfirmar = reservas.filter((r) => r.estado === "pendiente").length;
+  // Reservas de las próximas 36 horas que todavía no recibieron recordatorio (y tienen teléfono).
+  const sinRecordar = reservas.filter(
+    (r) =>
+      r.fecha &&
+      r.telefono &&
+      r.recordatorio_at === null &&
+      r.asistencia == null &&
+      (r.estado === "pendiente" || r.estado === "confirmada") &&
+      Date.parse(r.fecha) > ahora &&
+      Date.parse(r.fecha) < ahora + 36 * 3600000,
+  );
   const atrasada = (r: Reserva) =>
     !!r.fecha &&
     (r.estado === "pendiente" || r.estado === "confirmada") &&
@@ -198,6 +241,26 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
           + Nueva reserva
         </button>
       </div>
+
+      {sinRecordar.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
+          <Icono nombre="campana" className="h-5 w-5 shrink-0" />
+          <p className="min-w-0 flex-1">
+            <strong>
+              {sinRecordar.length} {sinRecordar.length === 1 ? "reserva" : "reservas"}
+            </strong>{" "}
+            de hoy y mañana sin recordatorio. Un WhatsApp con el enlace para confirmar baja los “no vino”.
+          </p>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#25d366] px-3 py-1.5 font-semibold text-white"
+            onClick={() => recordar(sinRecordar[0])}
+          >
+            <Icono nombre="whatsapp" className="h-4 w-4" />
+            Recordar a {sinRecordar[0].nombre}
+          </button>
+        </div>
+      )}
 
       <nav className="flex gap-1 rounded-xl bg-stone-100 p-1 text-sm" aria-label="Vista">
         {pestanas.map((p) => (
@@ -267,6 +330,8 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
           region={region}
           atrasada={atrasada}
           mesas={mesas}
+          historial={historial}
+          onRecordar={recordar}
           onConfirmar={confirmar}
           onSentar={setSentando}
           onCambiar={cambiar}
@@ -330,6 +395,8 @@ function ListaReservas({
   conDia,
   atrasada,
   mesas,
+  historial,
+  onRecordar,
   onConfirmar,
   onSentar,
   onCambiar,
@@ -340,6 +407,8 @@ function ListaReservas({
   conDia: boolean;
   atrasada: (r: Reserva) => boolean;
   mesas: Mesa[];
+  historial: Map<string, Historial>;
+  onRecordar: (r: Reserva) => void;
   onConfirmar: (r: Reserva) => void;
   onSentar: (r: Reserva) => void;
   onCambiar: (r: Reserva, c: Partial<Reserva>, texto?: string) => void;
@@ -353,6 +422,7 @@ function ListaReservas({
       {lista.map((r) => {
         const mesa = mesas.find((m) => m.id === r.mesa_id);
         const tarde = atrasada(r);
+        const h = r.cliente_id ? historial.get(r.cliente_id) : undefined;
         return (
           <li
             key={r.id}
@@ -366,6 +436,16 @@ function ListaReservas({
               <p className="font-semibold">
                 {r.nombre} · {r.personas} {r.personas === 1 ? "persona" : "personas"}
                 {mesa && <span className="font-normal text-suave"> · {nombreMesa(mesa.numero)}</span>}
+                {h && h.visitas > 0 && (
+                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                    ★ {h.visitas} {h.visitas === 1 ? "visita" : "visitas"}
+                  </span>
+                )}
+                {h && h.no_vino > 0 && (
+                  <span className="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">
+                    {h.no_vino} no vino
+                  </span>
+                )}
               </p>
               <p className="text-sm text-suave">
                 {r.telefono ?? "Sin teléfono"}
@@ -373,6 +453,17 @@ function ListaReservas({
                 {r.nota ? ` · “${r.nota}”` : ""}
               </p>
               {tarde && <p className="text-sm font-semibold text-red-700">Todavía no llegaron</p>}
+              {(r.asistencia === "si" || r.recordatorio_at) && abierta(r) && (
+                <p className="text-xs">
+                  {r.asistencia === "si" ? (
+                    <span className="font-semibold text-emerald-700">✓ Confirmó que viene</span>
+                  ) : (
+                    <span className="text-suave">
+                      Recordatorio enviado {r.recordatorio_medio === "push" ? "al celular" : "por WhatsApp"}
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
             <Chip estado={r.estado} />
             {abierta(r) && (
@@ -380,6 +471,17 @@ function ListaReservas({
                 {r.estado === "pendiente" && (
                   <button type="button" className="boton py-1.5 text-sm" onClick={() => onConfirmar(r)}>
                     Confirmar
+                  </button>
+                )}
+                {r.telefono && r.fecha && r.asistencia !== "si" && r.recordatorio_at !== undefined && (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-borde px-2.5 py-1.5 text-sm hover:border-emerald-500"
+                    onClick={() => onRecordar(r)}
+                    title="Mandar un recordatorio por WhatsApp con el enlace para confirmar"
+                  >
+                    <Icono nombre="whatsapp" className="h-4 w-4 text-emerald-600" />
+                    {r.recordatorio_at ? "Recordar de nuevo" : "Recordar"}
                   </button>
                 )}
                 <button type="button" className="boton-secundario py-1.5 text-sm" onClick={() => onSentar(r)}>

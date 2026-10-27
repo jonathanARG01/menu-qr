@@ -18,10 +18,16 @@ const MODULOS: { id: Modulo; titulo: string; ayuda: string }[] = [
   { id: "cobros", titulo: "Cobros", ayuda: "Cuenta dividida, propinas y medios de pago" },
   { id: "pedidos_mesa", titulo: "Pedidos desde la mesa", ayuda: "El cliente pide y pide la cuenta desde el QR" },
   {
+    id: "llevar",
+    titulo: "Para llevar y delivery",
+    ayuda: "Pedidos sin mesa: por teléfono o desde la carta, con hora de retiro",
+  },
+  {
     id: "reservas",
     titulo: "Reservas y lista de espera",
     ayuda: "Reservas del día, lista de espera con QR y aviso por WhatsApp",
   },
+  { id: "clientes", titulo: "Clientes frecuentes", ayuda: "Visitas y gasto de cada cliente, y premios a los que vuelven" },
   { id: "estadisticas", titulo: "Estadísticas", ayuda: "Visitas, horarios y lo más pedido" },
   { id: "sucursales", titulo: "Sucursales", ayuda: "Varios locales con la misma carta" },
   { id: "equipo", titulo: "Equipo", ayuda: "Meseros y cocina con su propio usuario" },
@@ -37,6 +43,8 @@ const PERFILES: { titulo: string; ayuda: string; modulos: Partial<Record<Modulo,
       cocina: false,
       cobros: false,
       pedidos_mesa: false,
+      llevar: false,
+      clientes: false,
       equipo: false,
       sucursales: false,
       estadisticas: true,
@@ -45,12 +53,32 @@ const PERFILES: { titulo: string; ayuda: string; modulos: Partial<Record<Modulo,
   {
     titulo: "Café o local chico",
     ayuda: "Mesas, cocina y cobro, sin complicaciones",
-    modulos: { salon: true, cocina: true, cobros: true, pedidos_mesa: true, equipo: true, sucursales: false, estadisticas: true },
+    modulos: {
+      salon: true,
+      cocina: true,
+      cobros: true,
+      pedidos_mesa: true,
+      llevar: true,
+      clientes: true,
+      equipo: true,
+      sucursales: false,
+      estadisticas: true,
+    },
   },
   {
     titulo: "Restaurante completo",
     ayuda: "Todo encendido",
-    modulos: { salon: true, cocina: true, cobros: true, pedidos_mesa: true, equipo: true, sucursales: true, estadisticas: true },
+    modulos: {
+      salon: true,
+      cocina: true,
+      cobros: true,
+      pedidos_mesa: true,
+      llevar: true,
+      clientes: true,
+      equipo: true,
+      sucursales: true,
+      estadisticas: true,
+    },
   },
 ];
 
@@ -214,6 +242,84 @@ export function Personalizar({
         </section>
       )}
 
+      {a.modulos.llevar && (
+        <section id="llevar" className="tarjeta scroll-mt-24 space-y-4 p-5">
+          <div className="flex items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <h2 className="font-semibold">Pedidos para llevar desde la carta</h2>
+              <p className="text-sm text-suave">
+                Encendido: quien abre la carta sin el QR de una mesa puede pedir para retirar (o delivery), elegir la hora y
+                seguir su pedido en el teléfono. Llegan a la sección Para llevar.
+              </p>
+            </div>
+            <Interruptor
+              activo={a.llevar.online}
+              onChange={(online) => set({ llevar: { ...a.llevar, online } })}
+              etiqueta="Pedidos para llevar desde la carta"
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex items-center gap-3 text-sm">
+              <Interruptor
+                activo={a.llevar.delivery}
+                onChange={(delivery) => set({ llevar: { ...a.llevar, delivery } })}
+                etiqueta="Delivery"
+              />
+              También delivery (con dirección)
+            </div>
+            {a.llevar.delivery && (
+              <label className="flex items-center gap-2 text-sm">
+                Costo de envío
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={a.llevar.envio}
+                  onChange={(e) => set({ llevar: { ...a.llevar, envio: Math.max(0, Number(e.target.value) || 0) } })}
+                  className="w-28 rounded-lg border border-borde px-2 py-1"
+                />
+                <span className="text-suave">{a.llevar.envio > 0 ? formato(a.llevar.envio) : "gratis"}</span>
+              </label>
+            )}
+            <label className="flex items-center gap-2 text-sm">
+              Tiempo de preparación
+              <input
+                type="number"
+                min={5}
+                max={180}
+                value={a.llevar.minutos}
+                onChange={(e) => set({ llevar: { ...a.llevar, minutos: Number(e.target.value) || 30 } })}
+                className="w-16 rounded-lg border border-borde px-2 py-1"
+              />
+              minutos
+            </label>
+            <div className="flex items-center gap-3 text-sm">
+              <Interruptor
+                activo={a.llevar.confirmar}
+                onChange={(confirmar) => set({ llevar: { ...a.llevar, confirmar } })}
+                etiqueta="Aceptar los pedidos"
+              />
+              Aceptar cada pedido antes de que pase a cocina
+            </div>
+            {a.modulos.cobros && a.cobro_online.activo && (
+              <div className="flex items-center gap-3 text-sm sm:col-span-2">
+                <Interruptor
+                  activo={a.llevar.pago_obligatorio}
+                  onChange={(pago_obligatorio) => set({ llevar: { ...a.llevar, pago_obligatorio } })}
+                  etiqueta="Pago por adelantado"
+                />
+                Pedir el pago con Mercado Pago antes de prepararlo (si no, el cliente elige pagar online o al retirar)
+              </div>
+            )}
+          </div>
+          {!a.cobro_online.activo && a.modulos.cobros && (
+            <p className="text-xs text-suave">
+              Con el cobro online de Mercado Pago encendido (más abajo) también pueden pagar por adelantado.
+            </p>
+          )}
+        </section>
+      )}
+
       {a.modulos.cobros && (
         <>
           <section className="tarjeta space-y-4 p-5">
@@ -327,6 +433,60 @@ export function Personalizar({
             />
             minutos
           </label>
+          <div className="flex flex-wrap items-center gap-3 border-t border-borde pt-4 text-sm">
+            <Interruptor
+              activo={a.reservas.recordatorio}
+              onChange={(recordatorio) => set({ reservas: { ...a.reservas, recordatorio } })}
+              etiqueta="Recordatorio de reserva"
+            />
+            Recordar la reserva al celular del cliente
+            <input
+              type="number"
+              min={1}
+              max={48}
+              value={a.reservas.horas_antes}
+              onChange={(e) =>
+                set({ reservas: { ...a.reservas, horas_antes: Math.min(48, Math.max(1, Number(e.target.value) || 3)) } })
+              }
+              className="w-16 rounded-lg border border-borde px-2 py-1"
+              disabled={!a.reservas.recordatorio}
+            />
+            horas antes
+          </div>
+          <p className="text-xs text-suave">
+            Llega a quien tocó “Avisarme” al reservar o en el enlace de su reserva, y se manda solo mientras el panel está abierto
+            (y además cada mañana). A los demás, Reservas te ofrece mandar el recordatorio por WhatsApp con un enlace para
+            confirmar o cancelar.
+          </p>
+        </section>
+      )}
+
+      {a.modulos.clientes && (
+        <section id="clientes" className="tarjeta scroll-mt-24 space-y-3 p-5">
+          <h2 className="font-semibold">Premio a los clientes frecuentes</h2>
+          <p className="text-sm text-suave">
+            Cuando un cliente anotado llega a esa visita, el mesero lo ve en la ficha de la mesa y en Clientes.
+          </p>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            Cada
+            <input
+              type="number"
+              min={0}
+              max={50}
+              value={a.clientes.premio_cada}
+              onChange={(e) => set({ clientes: { ...a.clientes, premio_cada: Math.max(0, Number(e.target.value) || 0) } })}
+              className="w-16 rounded-lg border border-borde px-2 py-1"
+            />
+            visitas, regalar
+            <input
+              value={a.clientes.premio}
+              maxLength={60}
+              onChange={(e) => set({ clientes: { ...a.clientes, premio: e.target.value } })}
+              placeholder="un postre"
+              className="campo w-48 flex-1 py-1.5"
+            />
+          </div>
+          <p className="text-xs text-suave">Con 0 no hay premio. Ejemplo: cada 5 visitas, un postre de la casa.</p>
         </section>
       )}
 

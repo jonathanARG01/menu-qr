@@ -7,6 +7,7 @@ import type { Mesa } from "@/lib/types";
 import { minutosDesde } from "@/lib/useServicio";
 import { ESTILOS_PLANO, Plano, type EstadoMesa, type EstiloPlano } from "./Plano";
 import { formatoHora, type Region } from "@/lib/region";
+import { guardarSeguirAvisos, leerSeguirAvisos, useAvisoNuevo } from "./avisos";
 
 type Aviso = {
   id: string;
@@ -26,7 +27,8 @@ const AVISO: Record<Aviso["tipo"], { texto: string; clase: string; icono: string
 const PRIORIDAD: Aviso["tipo"][] = ["cuenta", "pago", "mozo", "pendiente", "listo"];
 
 // Pantalla del salón: el plano y los avisos en grande, para una tele o tableta fija en el salón (como la de cocina).
-// Mantiene la pantalla encendida y, si hay varios pisos, puede ir pasando de uno a otro sola.
+// Mantiene la pantalla encendida y, si hay varios pisos, puede ir pasando de uno a otro sola. Cuando llega un aviso
+// de una mesa de otro piso, muestra ese piso y marca la mesa.
 export function PantallaSalon({
   nombre,
   pisos,
@@ -63,7 +65,29 @@ export function PantallaSalon({
   const marco = useRef<HTMLDivElement>(null);
   const [pisoId, setPisoId] = useState(pisos[0]?.id ?? null);
   const [rotar, setRotar] = useState(false);
+  const [seguir, setSeguir] = useState(true);
+  const [resaltada, setResaltada] = useState<{ mesa: Mesa; piso: string } | null>(null);
   const piso = pisos.find((p) => p.id === pisoId) ?? pisos[0] ?? null;
+
+  useEffect(() => setSeguir(leerSeguirAvisos()), []);
+  function alternarSeguir() {
+    setSeguir(!seguir);
+    guardarSeguirAvisos(!seguir);
+  }
+
+  // Aviso nuevo en otra mesa: se va a su piso (también si está rotando: se queda ahí la vuelta completa).
+  useAvisoNuevo(cuentas, pedidos, (mesaId) => {
+    const mesa = mesas.find((m) => m.id === mesaId);
+    const suPiso = pisos.find((p) => p.id === mesa?.piso_id);
+    if (!mesa || !suPiso) return;
+    if (seguir && suPiso.id !== piso?.id) setPisoId(suPiso.id);
+    if (seguir || suPiso.id === piso?.id) setResaltada({ mesa, piso: suPiso.nombre });
+  });
+  useEffect(() => {
+    if (!resaltada) return;
+    const id = setTimeout(() => setResaltada(null), 10000);
+    return () => clearTimeout(id);
+  }, [resaltada]);
 
   // Pantalla completa del navegador y pantalla siempre encendida mientras esté abierta.
   useEffect(() => {
@@ -87,13 +111,14 @@ export function PantallaSalon({
     };
   }, [onSalir]);
 
+  // Cada piso se muestra 20 segundos (se vuelve a contar si un aviso lo trajo a la vista).
   useEffect(() => {
     if (!rotar || pisos.length < 2) return;
-    const id = setInterval(() => {
+    const id = setTimeout(() => {
       setPisoId((actual) => pisos[(pisos.findIndex((p) => p.id === actual) + 1) % pisos.length].id);
     }, 20000);
-    return () => clearInterval(id);
-  }, [rotar, pisos]);
+    return () => clearTimeout(id);
+  }, [rotar, pisos, pisoId]);
 
   const mesaDe = (c: { mesa_id?: string | null; cuenta_id?: string | null }) =>
     mesas.find((m) => m.id === (c.mesa_id ?? cuentas.find((x) => x.id === c.cuenta_id)?.mesa_id));
@@ -158,6 +183,17 @@ export function PantallaSalon({
               Rotar pisos
             </button>
           )}
+          {pisos.length > 1 && (
+            <button
+              type="button"
+              onClick={alternarSeguir}
+              aria-pressed={seguir}
+              className={`rounded-full px-3 py-1 text-sm ${seguir ? "bg-marca text-white" : "bg-white/10 hover:bg-white/20"}`}
+              title="Cuando llega un aviso de una mesa de otro piso, mostrar ese piso"
+            >
+              Ir al aviso
+            </button>
+          )}
           <span className="flex rounded-full bg-white/10 p-0.5 text-sm" role="group" aria-label="Estilo del plano">
             {ESTILOS_PLANO.map((e) => (
               <button
@@ -187,14 +223,19 @@ export function PantallaSalon({
       </header>
 
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_320px]">
-        <div className="min-h-0 overflow-auto">
+        <div className="relative min-h-0 overflow-auto">
+          {resaltada && (
+            <p className="tema-fijo absolute left-1/2 top-2 z-10 -translate-x-1/2 animate-pulse rounded-full bg-marca px-4 py-1.5 text-sm font-semibold text-white shadow-lg">
+              {resaltada.piso} · {nombreMesa(resaltada.mesa.numero)}
+            </p>
+          )}
           {piso ? (
             <Plano
               piso={piso}
               mesas={mesas}
               estados={estados}
               editando={false}
-              seleccion={null}
+              seleccion={resaltada ? { tipo: "mesa", id: resaltada.mesa.id } : null}
               onSeleccionar={() => {}}
               onMover={() => {}}
               onAbrirMesa={onAbrirMesa}

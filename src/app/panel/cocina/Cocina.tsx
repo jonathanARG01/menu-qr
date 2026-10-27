@@ -11,6 +11,8 @@ import {
   type Pedido,
   type PedidoItem,
   type Piso,
+  type Cuenta,
+  NOMBRE_TIPO,
   nombreMesa,
 } from "@/lib/salon";
 import type { Mesa, Restaurante } from "@/lib/types";
@@ -25,6 +27,7 @@ type Props = {
   restaurante: Restaurante;
   ajustes: Ajustes;
   pedidosIniciales: Pedido[];
+  cuentasIniciales?: Cuenta[];
   mesas: Mesa[];
   pisos: Pick<Piso, "id" | "nombre">[];
   platos: PlatoAgotable[];
@@ -69,10 +72,19 @@ type Arrastre = {
 };
 
 // Pantalla de cocina (o de barra): comandas en tiempo real, del más viejo al más nuevo.
-export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos, platos, categorias }: Props) {
+export function Cocina({
+  restaurante,
+  ajustes,
+  pedidosIniciales,
+  cuentasIniciales = [],
+  mesas,
+  pisos,
+  platos,
+  categorias,
+}: Props) {
   const avisar = useToast();
-  const { pedidos, supabase, recargar, enVivo } = useServicio(restaurante.id, {
-    cuentas: [],
+  const { pedidos, cuentas, supabase, recargar, enVivo } = useServicio(restaurante.id, {
+    cuentas: cuentasIniciales,
     pedidos: pedidosIniciales,
     pagos: [],
   });
@@ -167,6 +179,12 @@ export function Cocina({ restaurante, ajustes, pedidosIniciales, mesas, pisos, p
   }
 
   function lugar(p: Pedido) {
+    // Para llevar y delivery: en vez de la mesa, el tipo y la hora a la que lo retiran (o "lo antes posible").
+    if (p.tipo && p.tipo !== "mesa") {
+      const cuenta = cuentas.find((c) => c.id === p.cuenta_id);
+      const hora = cuenta?.para_hora ? `para las ${horaCorta(cuenta.para_hora, regionDe(ajustes))}` : "lo antes posible";
+      return { mesa: NOMBRE_TIPO[p.tipo], piso: hora };
+    }
     const mesa = mesas.find(
       (m) => m.numero === p.mesa_numero && (!p.sucursal_id || !m.sucursal_id || m.sucursal_id === p.sucursal_id),
     );
