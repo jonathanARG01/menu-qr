@@ -1,10 +1,14 @@
 @import "tailwindcss";
+@import "@fontsource/outfit/latin-700.css";
 
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", serif;
-  --color-marca: #b45309;
-  --color-marca-oscuro: #92400e;
+  --font-marca: "Outfit", system-ui, sans-serif;
+  --color-marca: #23345c;
+  --color-marca-oscuro: #172033;
+  --color-marca-claro: #f2a33a;
+  --color-marca-tinta: #172033;
   --color-tinta: #1c1917;
   --color-suave: #78716c;
   --color-borde: #e7e5e4;
@@ -30,6 +34,11 @@ body {
   @apply inline-flex items-center justify-center gap-2 rounded-lg bg-marca px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-60;
 }
 
+/* Botón mostaza para fondos azul tinta (portada del sitio de venta) */
+.boton-acento {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-marca-claro px-4 py-2.5 text-sm font-semibold text-marca-tinta transition hover:bg-amber-400;
+}
+
 .boton-secundario {
   @apply inline-flex items-center justify-center gap-2 rounded-lg border border-borde bg-superficie px-4 py-2.5 text-sm font-medium text-tinta transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60;
 }
@@ -45,6 +54,8 @@ body {
    (pantalla de cocina, que ya es oscura, y la vista previa de la carta). */
 .tema-oscuro {
   color-scheme: dark;
+  --color-marca: #5b78c4;
+  --color-marca-oscuro: #4a66ad;
   --color-superficie: #1f1c1a;
   --color-fondo: #141210;
   --color-tinta: #f5f5f4;
