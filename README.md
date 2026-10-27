@@ -11,17 +11,28 @@ Stack: Next.js 15 (App Router) + Supabase (Postgres, Auth, Storage, RLS) + Verce
 - **Marca** `/panel/marca`: logo, colores con vista previa, moneda, WhatsApp.
 - **Códigos QR** `/panel/qr`: QR general (PNG y SVG), QR por mesa (PNG) y hoja PDF A4 con 6 tarjetas para imprimir.
 - **Cuentas**: registro, login, recuperar contraseña. Las fotos se comprimen en el navegador a WebP de 1200 px antes de subirlas.
+- **Diseños de carta**: Clásico, Noche, Esmeralda, Comida rápida y Retro, elegibles en Marca con vista previa.
+- **Idiomas**: la carta se escribe en español y se puede ofrecer en inglés, portugués, francés, italiano y alemán. Se abre sola en el idioma del teléfono y tiene un botón para cambiarlo. Las traducciones de platos y categorías se cargan en el panel.
+- **Pedidos por WhatsApp**: el cliente arma su pedido en la carta y lo envía al WhatsApp del local (o de la sucursal) con mesa, total y notas.
+- **Sucursales** `/panel/sucursales`: misma carta, con dirección, horario, WhatsApp y QR de mesa propios (`/<slug>?s=centro&mesa=4`).
+- **Estadísticas** `/panel/estadisticas`: visitas por día, hora, mesa e idioma, pedidos y lo más pedido.
+- **QR con logo**: logo al centro y color de la marca en PNG, SVG y PDF.
+- **Administración** `/admin`: todos los restaurantes, plan, pausar/reactivar, entrar a editar la carta de un cliente y crear restaurantes para clientes.
 - **Seguridad**: RLS en todas las tablas. Cada dueño solo ve y edita su restaurante; la carta pública solo lee restaurantes activos, categorías visibles y platos disponibles. El dueño no puede cambiar su plan ni su dirección.
 
 ## Puesta en marcha
 
 1. Crea un proyecto en [Supabase](https://supabase.com).
-2. En **SQL Editor**, ejecuta `supabase/migrations/0001_inicial.sql`. Opcional: `supabase/seed.sql` crea la carta de ejemplo `/la-esquina`.
-3. En **Authentication → URL Configuration**:
+2. En **SQL Editor**, ejecuta en orden los archivos de `supabase/migrations/` (0001, 0002 y 0003). Opcional: `supabase/seed.sql` crea la carta de ejemplo `/la-esquina` y `supabase/seed_cafe.sql` la cafetería `/aroma-cafe` con 36 bebidas, fotos y traducciones.
+3. Para entrar a `/admin`, date permiso de superadmin con tu correo:
+   ```sql
+   insert into public.superadmins (user_id) select id from auth.users where email = 'tu@correo.com';
+   ```
+4. En **Authentication → URL Configuration**:
    - *Site URL*: la URL pública de la app (por ejemplo `https://tumenu.com`).
    - *Redirect URLs*: añade `https://tumenu.com/auth/confirm` (y `http://localhost:3000/auth/confirm` para desarrollo).
-4. Copia `.env.example` a `.env.local` y rellena las variables (Supabase → Project Settings → API).
-5. `npm install` y `npm run dev`. Abre http://localhost:3000.
+5. Copia `.env.example` a `.env.local` y rellena las variables (Supabase → Project Settings → API).
+6. `npm install` y `npm run dev`. Abre http://localhost:3000.
 
 ## Publicar en Vercel
 
@@ -32,15 +43,20 @@ Stack: Next.js 15 (App Router) + Supabase (Postgres, Auth, Storage, RLS) + Verce
 ## Dar de alta un restaurante
 
 - **El dueño solo**: entra a `/registro`, pone el nombre del local y su correo.
-- **Tú por él**: créale el usuario en Supabase (Authentication → Add user). Al entrar por primera vez el panel le pide el nombre del restaurante y su dirección.
-- Para que un usuario edite un restaurante existente (por ejemplo la demo), añade una fila en `public.usuarios` con su `user_id` y el `restaurante_id`.
-- Planes y altas/bajas (`plan`, `activo`) se cambian por ahora desde el Table Editor de Supabase. El panel de superadmin queda para una fase siguiente.
+- **Tú por él**: en `/admin` → "Restaurante para un cliente". Quedas como dueño y lo eliges arriba en el panel para armarle la carta.
+- **Editar la carta de un cliente**: en `/admin` → "Editar carta" te suma como staff de ese restaurante.
+- Para darle el restaurante a su dueño, añade una fila en `public.usuarios` con su `user_id`, el `restaurante_id` y `rol = 'dueno'`.
+- Plan y pausa (`plan`, `activo`) se cambian en `/admin`. Pausar un restaurante oculta su carta al momento.
+
+Las fotos de `public/demo/cafe` salen de una infografía de terceros y son solo para la demo: para clientes reales usa fotos propias o libres de derechos.
 
 ## Estructura
 
 ```
 src/app/[slug]/          carta pública
-src/app/panel/           panel del dueño (carta, marca, qr)
+src/app/panel/           panel del dueño (carta, marca, qr, sucursales, estadísticas)
+src/app/admin/           administración del servicio (superadmin)
+src/components/carta/    diseños de la carta, idiomas, pedidos y barra inferior
 src/app/login|registro|recuperar|nueva-clave/
 src/app/auth/confirm/    enlaces de correo (confirmar cuenta, recuperar contraseña)
 src/lib/                 clientes de Supabase, tipos, QR/PDF, fotos
