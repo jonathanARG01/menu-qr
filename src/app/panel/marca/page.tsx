@@ -3,7 +3,7 @@ import type { Categoria, Plato, Seccion } from "@/lib/types";
 import { FormMarca } from "./FormMarca";
 
 export default async function PanelMarca() {
-  const { supabase, restaurante } = await requerirSeccion("marca");
+  const { supabase, restaurante, ajustesGuardados } = await requerirSeccion("marca");
 
   // La vista previa muestra la carta real del restaurante, tal como la ve el cliente.
   const [{ data: categorias }, { data: platos }] = await Promise.all([
@@ -14,5 +14,5 @@ export default async function PanelMarca() {
     .map((c) => ({ ...c, platos: ((platos ?? []) as Plato[]).filter((p) => p.categoria_id === c.id) }))
     .filter((c) => c.platos.length > 0);
 
-  return <FormMarca restaurante={restaurante} secciones={secciones} />;
+  return <FormMarca restaurante={restaurante} secciones={secciones} guardados={ajustesGuardados} />;
 }

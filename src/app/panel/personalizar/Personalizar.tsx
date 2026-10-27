@@ -11,6 +11,8 @@ import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { PAISES, ZONAS, paisDe } from "@/lib/region";
 import { revalidarCarta } from "../actions";
 import { MONEDAS_MP } from "@/lib/mercadopago";
+import Link from "next/link";
+import { NOMBRE_PLAN, conservarBloqueado, moduloIncluido, planDeModulo, type Plan } from "@/lib/planes";
 
 const MODULOS: { id: Modulo; titulo: string; ayuda: string }[] = [
   { id: "salon", titulo: "Salón y mesas", ayuda: "Plano por pisos, abrir mesas y tomar pedidos" },
@@ -92,11 +94,16 @@ const numeros = (texto: string) =>
 export function Personalizar({
   restauranteId,
   moneda,
+  plan,
   iniciales,
+  guardados,
 }: {
   restauranteId: string;
   moneda: string;
+  plan: Plan;
   iniciales: Ajustes;
+  // Lo guardado sin el límite del plan: lo que el plan no incluye se vuelve a guardar igual.
+  guardados: Ajustes;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
@@ -108,13 +115,18 @@ export function Personalizar({
 
   const set = (cambios: Partial<Ajustes>) => setA((x) => ({ ...x, ...cambios }));
   // El atajo que coincide con los módulos encendidos queda marcado.
+  const incluidos = (modulos: Partial<Record<Modulo, boolean>>) =>
+    Object.fromEntries(Object.entries(modulos).filter(([m]) => moduloIncluido(plan, m as Modulo)));
   const coincide = (p: (typeof PERFILES)[number]) =>
-    (Object.keys(p.modulos) as Modulo[]).every((m) => !!a.modulos[m] === p.modulos[m]);
+    (Object.keys(incluidos(p.modulos)) as Modulo[]).every((m) => !!a.modulos[m] === p.modulos[m]);
   const modulo = (id: Modulo, v: boolean) => set({ modulos: { ...a.modulos, [id]: v } });
 
   async function guardar() {
     setGuardando(true);
-    const { error } = await supabase.from("restaurantes").update({ ajustes: a }).eq("id", restauranteId);
+    const { error } = await supabase
+      .from("restaurantes")
+      .update({ ajustes: conservarBloqueado(a, guardados, plan) })
+      .eq("id", restauranteId);
     setGuardando(false);
     if (error) return avisar(mensajeError(error), "error");
     avisar("Guardado");
@@ -149,7 +161,7 @@ export function Personalizar({
                 key={p.titulo}
                 type="button"
                 aria-pressed={elegido}
-                onClick={() => set({ modulos: { ...a.modulos, ...p.modulos } })}
+                onClick={() => set({ modulos: { ...a.modulos, ...incluidos(p.modulos) } })}
                 className={`relative rounded-2xl border-2 p-4 text-left transition ${
                   elegido ? "border-marca bg-marca/10" : "border-borde bg-superficie hover:border-marca/50"
                 }`}
@@ -175,7 +187,18 @@ export function Personalizar({
               <p className="font-medium">{m.titulo}</p>
               <p className="text-sm text-suave">{m.ayuda}</p>
             </div>
-            <Interruptor activo={a.modulos[m.id]} onChange={(v) => modulo(m.id, v)} etiqueta={m.titulo} />
+            {moduloIncluido(plan, m.id) ? (
+              <Interruptor activo={a.modulos[m.id]} onChange={(v) => modulo(m.id, v)} etiqueta={m.titulo} />
+            ) : (
+              <Link
+                href={`/panel/plan?m=${m.id}`}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                title={`Disponible en el plan ${NOMBRE_PLAN[planDeModulo(m.id)]}`}
+              >
+                <Icono nombre="candado" className="h-3.5 w-3.5" />
+                Plan {NOMBRE_PLAN[planDeModulo(m.id)]}
+              </Link>
+            )}
           </div>
         ))}
         <p className="px-5 py-3 text-xs text-suave">

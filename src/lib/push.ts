@@ -126,3 +126,24 @@ export function useRecordatorios(restauranteId: string, activo: boolean) {
     return () => clearInterval(id);
   }, [restauranteId, activo]);
 }
+
+// Avisos de la cuenta (no de un pedido): tú en /admin recibes las pruebas por vencer; el dueño, los días que le quedan.
+export async function suscribirCuenta(): Promise<boolean> {
+  if (!soportaPush()) return false;
+  if (Notification.permission !== "granted" && (await Notification.requestPermission()) !== "granted") return false;
+  try {
+    const registro = await navigator.serviceWorker.register("/sw-carta.js");
+    await navigator.serviceWorker.ready;
+    const suscripcion =
+      (await registro.pushManager.getSubscription()) ??
+      (await registro.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: aBytes(CLAVE_PUBLICA) }));
+    const json = suscripcion.toJSON();
+    const { data, error } = await createClient().rpc("suscribir_cuenta", {
+      p_endpoint: json.endpoint,
+      p_claves: json.keys ?? {},
+    });
+    return !error && data === true;
+  } catch {
+    return false;
+  }
+}

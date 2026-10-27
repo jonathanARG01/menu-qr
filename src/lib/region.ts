@@ -1,5 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 // País del restaurante: de él salen la zona horaria por defecto, el formato de fechas del panel y el código de
 // WhatsApp que se agrega a los teléfonos anotados sin él. La moneda se elige aparte en Marca (se sugiere la del país).
 export type Pais = {
@@ -127,13 +125,4 @@ export function paisPorZona(zona?: string | null) {
   )
     return paisDe("MX");
   return PAISES.find((p) => p.zona === zona) ?? PAIS_BASE;
-}
-
-// Al crear un restaurante: moneda, país y zona horaria del país elegido (se pueden cambiar después).
-export async function aplicarPais(supabase: SupabaseClient, restauranteId: string, codigo: string) {
-  const pais = paisDe(codigo);
-  return supabase
-    .from("restaurantes")
-    .update({ moneda: pais.moneda, ajustes: { pais: pais.codigo, zona_horaria: pais.zona } })
-    .eq("id", restauranteId);
 }

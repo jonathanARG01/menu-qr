@@ -182,6 +182,25 @@ const TRAZOS: Record<string, React.ReactNode> = {
       <path d="M5 13v7h14v-7M12 8v12M12 8c-2-4-6-3-5 0M12 8c2-4 6-3 5 0" />
     </>
   ),
+  candado: (
+    <>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </>
+  ),
+  calendario: (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+    </>
+  ),
+  restaurantes: (
+    <>
+      <path d="M3 21h18M5 21V10l7-6 7 6v11" />
+      <path d="M10 21v-6h4v6" />
+    </>
+  ),
+  rayo: <path d="M13 2 4 14h7l-1 8 9-12h-7z" />,
 };
 
 export function Icono({ nombre, className = "h-5 w-5" }: { nombre: string; className?: string }) {

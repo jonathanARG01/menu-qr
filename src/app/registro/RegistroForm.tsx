@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { mensajeError, urlSitio } from "@/lib/utils";
 import { Aviso } from "@/components/AuthShell";
 import { CamposRestaurante } from "@/components/CamposRestaurante";
-import { aplicarPais } from "@/lib/region";
+import { prepararRestaurante } from "@/lib/planes";
 
 // Con "equipo" es el alta de un mesero o cocinero invitado: no crea restaurante, entra al del administrador que lo invitó.
 // "referido" es la dirección del restaurante que lo invitó: se guarda en la cuenta y la base la anota al crear el restaurante.
@@ -67,7 +67,7 @@ export function RegistroForm({ equipo = false, referido }: { equipo?: boolean; r
       router.replace(`/panel?error=${encodeURIComponent(mensajeError(errorAlta))}`);
       return;
     }
-    await aplicarPais(supabase, (alta as { id: string }).id, pais);
+    await prepararRestaurante(supabase, (alta as { id: string }).id, pais);
     router.replace("/panel");
     router.refresh();
   }

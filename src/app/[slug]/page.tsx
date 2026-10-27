@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Carta } from "@/components/carta/Carta";
-import { obtenerCarta } from "./datos";
+import { obtenerCarta, obtenerPausada } from "./datos";
+import { CartaPausada } from "./CartaPausada";
 
 // La carta se sirve desde caché y se regenera al guardar en el panel (y cada 5 min por si acaso).
 export const revalidate = 300;
@@ -15,7 +16,10 @@ type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const carta = await obtenerCarta((await params).slug);
-  if (!carta) return { title: "Carta no encontrada" };
+  if (!carta) {
+    const pausada = await obtenerPausada((await params).slug);
+    return { title: pausada ? pausada.nombre : "Carta no encontrada" };
+  }
   const { restaurante } = carta;
   return {
     title: `${restaurante.nombre} · Carta`,
@@ -28,8 +32,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function CartaPublica({ params }: Params) {
-  const carta = await obtenerCarta((await params).slug);
-  if (!carta) notFound();
+  const { slug } = await params;
+  const carta = await obtenerCarta(slug);
+  if (!carta) {
+    // Pausada (por ti o porque venció la prueba): un mensaje amable en vez de "no encontramos esta carta".
+    const pausada = await obtenerPausada(slug);
+    if (pausada) return <CartaPausada {...pausada} />;
+    notFound();
+  }
   const { restaurante, secciones, sucursales, promos } = carta;
 
   return <Carta restaurante={restaurante} secciones={secciones} sucursales={sucursales} promos={promos} />;
