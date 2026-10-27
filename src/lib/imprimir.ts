@@ -1,5 +1,7 @@
 "use client";
 
+import { PAIS_BASE, formatoFecha, formatoHora, type Region } from "./region";
+
 // Impresión de tickets (comandas, precuenta y cierre de caja) en impresoras térmicas de 58 u 80 mm,
 // o en cualquier impresora. Se arma una página mínima en un marco oculto y se manda a imprimir.
 // Para que imprima sin preguntar, Chrome se abre con --kiosk-printing (ver la guía).
@@ -84,8 +86,19 @@ export function imprimirTicket(lineas: LineaTicket[], ancho: AnchoTicket = ancho
   });
 }
 
-export const horaCorta = (iso: string | number | Date) =>
-  new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
+// Con la región del local la hora sale en su zona horaria; sin ella, en la del navegador.
+export const horaCorta = (iso: string | number | Date, region?: Region) =>
+  region
+    ? formatoHora(iso, region)
+    : new Date(iso).toLocaleTimeString(PAIS_BASE.locale, { hour: "2-digit", minute: "2-digit", hour12: false });
 
-export const fechaCorta = (iso: string | number | Date) =>
-  new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+export const fechaCorta = (iso: string | number | Date, region?: Region) => {
+  const opciones: Intl.DateTimeFormatOptions = {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  };
+  return region ? formatoFecha(iso, region, opciones) : new Date(iso).toLocaleString(PAIS_BASE.locale, opciones);
+};

@@ -8,7 +8,9 @@ import { Icono } from "@/components/Icono";
 import { Interruptor } from "@/components/Interruptor";
 import { AJUSTES_BASE, PERMITIDAS, SECCIONES, type Ajustes, type Modulo, type Seccion } from "@/lib/salon";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
+import { PAISES, ZONAS, paisDe } from "@/lib/region";
 import { revalidarCarta } from "../actions";
+import { MONEDAS_MP } from "@/lib/mercadopago";
 
 const MODULOS: { id: Modulo; titulo: string; ayuda: string }[] = [
   { id: "salon", titulo: "Salón y mesas", ayuda: "Plano por pisos, abrir mesas y tomar pedidos" },
@@ -50,28 +52,6 @@ const PERFILES: { titulo: string; ayuda: string; modulos: Partial<Record<Modulo,
     ayuda: "Todo encendido",
     modulos: { salon: true, cocina: true, cobros: true, pedidos_mesa: true, equipo: true, sucursales: true, estadisticas: true },
   },
-];
-
-const ZONAS: [string, string][] = [
-  ["America/Argentina/Buenos_Aires", "Argentina"],
-  ["America/Montevideo", "Uruguay"],
-  ["America/Santiago", "Chile"],
-  ["America/Asuncion", "Paraguay"],
-  ["America/La_Paz", "Bolivia"],
-  ["America/Lima", "Perú"],
-  ["America/Bogota", "Colombia"],
-  ["America/Guayaquil", "Ecuador"],
-  ["America/Caracas", "Venezuela"],
-  ["America/Sao_Paulo", "Brasil (São Paulo)"],
-  ["America/Mexico_City", "México (Centro)"],
-  ["America/Cancun", "México (Cancún)"],
-  ["America/Tijuana", "México (Tijuana)"],
-  ["America/Costa_Rica", "Costa Rica"],
-  ["America/Panama", "Panamá"],
-  ["America/Santo_Domingo", "República Dominicana"],
-  ["America/New_York", "Estados Unidos (Este)"],
-  ["America/Los_Angeles", "Estados Unidos (Pacífico)"],
-  ["Europe/Madrid", "España"],
 ];
 
 const numeros = (texto: string) =>
@@ -307,7 +287,7 @@ export function Personalizar({
             ayuda="Los que aceptas. Aparecen al cobrar y al pedir la cuenta."
             items={a.metodos_pago}
             onChange={(metodos_pago) => set({ metodos_pago })}
-            ejemplo="Cuenta DNI"
+            ejemplo="Cuenta RUT"
           />
 
           <CobroOnline
@@ -315,6 +295,7 @@ export function Personalizar({
             activo={a.cobro_online.activo}
             onActivo={(activo) => set({ cobro_online: { ...a.cobro_online, activo } })}
             pedidosMesa={a.modulos.pedidos_mesa}
+            moneda={moneda}
           />
         </>
       )}
@@ -382,16 +363,38 @@ export function Personalizar({
         )}
       </section>
 
-      <section className="tarjeta p-5">
+      <section className="tarjeta grid gap-4 p-5 sm:grid-cols-2">
+        <label className="block text-sm">
+          <span className="font-semibold">País</span>
+          <span className="block text-suave">Formato de fechas y código de país de los teléfonos para WhatsApp.</span>
+          <select
+            value={a.pais}
+            onChange={(e) => set({ pais: e.target.value, zona_horaria: paisDe(e.target.value).zona })}
+            className="campo mt-2"
+          >
+            {PAISES.map((p) => (
+              <option key={p.codigo} value={p.codigo}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+          {paisDe(a.pais).moneda !== moneda && (
+            <span className="mt-1 block text-xs text-amber-800">
+              Tu carta está en {moneda}. Si cobras en {paisDe(a.pais).moneda}, cámbiala en Marca.
+            </span>
+          )}
+        </label>
         <label className="block text-sm">
           <span className="font-semibold">Zona horaria</span>
           <span className="block text-suave">Para las promos por horario, los platos agotados y el cierre de caja.</span>
           <select value={a.zona_horaria} onChange={(e) => set({ zona_horaria: e.target.value })} className="campo mt-2">
-            {ZONAS.map(([valor, texto]) => (
-              <option key={valor} value={valor}>
-                {texto}
-              </option>
-            ))}
+            {(ZONAS.some(([z]) => z === a.zona_horaria) ? ZONAS : [[a.zona_horaria, a.zona_horaria], ...ZONAS]).map(
+              ([valor, texto]) => (
+                <option key={valor} value={valor}>
+                  {texto}
+                </option>
+              ),
+            )}
           </select>
         </label>
       </section>
@@ -458,11 +461,13 @@ function CobroOnline({
   activo,
   onActivo,
   pedidosMesa,
+  moneda,
 }: {
   restauranteId: string;
   activo: boolean;
   onActivo: (v: boolean) => void;
   pedidosMesa: boolean;
+  moneda: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
@@ -509,6 +514,12 @@ function CobroOnline({
         </div>
         <Interruptor activo={activo} onChange={onActivo} etiqueta="Cobro online" />
       </div>
+      {activo && !MONEDAS_MP.includes(moneda) && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Mercado Pago no cobra en {moneda}. Funciona con {MONEDAS_MP.join(", ")}: la moneda tiene que ser la de tu cuenta de
+          Mercado Pago (en Chile, CLP).
+        </p>
+      )}
       {activo && !pedidosMesa && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
           Enciende también “Pedidos desde la mesa”: el botón de pago aparece en “Mi mesa”.
@@ -549,8 +560,8 @@ function CobroOnline({
         </button>
       </form>
       <p className="text-xs text-suave">
-        Dónde está: mercadopago.com.ar/developers → Tus integraciones → crear una aplicación (Checkout Pro) → Credenciales de
-        producción → Access Token. Empieza con APP_USR-.
+        Dónde está: en Mercado Pago Developers de tu país (en Chile, mercadopago.cl/developers) → Tus integraciones → crear una
+        aplicación (Checkout Pro) → Credenciales de producción → Access Token. Empieza con APP_USR-.
       </p>
     </section>
   );

@@ -1,4 +1,5 @@
-import { nombreMesa } from "@/lib/salon";
+import { nombreMesa, regionDe } from "@/lib/salon";
+import { ZONAS, formatoFecha, formatoNumero, type Region } from "@/lib/region";
 import Link from "next/link";
 import { requerirSeccion } from "@/lib/panel";
 import { NOMBRE_IDIOMA, type Idioma } from "@/lib/i18n";
@@ -22,12 +23,13 @@ type Resumen = {
 const RANGOS = [7, 30, 90];
 
 export default async function Estadisticas({ searchParams }: { searchParams: Promise<{ dias?: string }> }) {
-  const { supabase, restaurante } = await requerirSeccion("estadisticas");
+  const { supabase, restaurante, ajustes } = await requerirSeccion("estadisticas");
+  const region = regionDe(ajustes);
   const pedido = Number((await searchParams).dias);
   const dias = RANGOS.includes(pedido) ? pedido : 30;
   const desde = new Date(Date.now() - dias * 86400000).toISOString();
   const [{ data, error }, { data: opiniones }] = await Promise.all([
-    supabase.rpc("estadisticas", { p_restaurante: restaurante.id, p_dias: dias }),
+    supabase.rpc("estadisticas", { p_restaurante: restaurante.id, p_dias: dias, p_zona: region.zona }),
     // Sin la migración 0009 no hay tabla de opiniones: la sección no aparece.
     supabase
       .from("opiniones")
@@ -74,11 +76,11 @@ export default async function Estadisticas({ searchParams }: { searchParams: Pro
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Dato titulo="Visitas a la carta" valor={r.visitas.toLocaleString("es-AR")} />
-        <Dato titulo="Promedio por día" valor={promedio.toLocaleString("es-AR", { maximumFractionDigits: 1 })} />
+        <Dato titulo="Visitas a la carta" valor={formatoNumero(r.visitas, region)} />
+        <Dato titulo="Promedio por día" valor={formatoNumero(promedio, region, { maximumFractionDigits: 1 })} />
         <Dato
           titulo="Pedidos por WhatsApp"
-          valor={r.pedidos.toLocaleString("es-AR")}
+          valor={formatoNumero(r.pedidos, region)}
           nota={r.visitas ? `${conversion.toFixed(1)} % de las visitas` : undefined}
         />
         <Dato titulo="Monto pedido" valor={formatoPrecio(r.monto_pedidos, restaurante.moneda)} />
@@ -93,7 +95,7 @@ export default async function Estadisticas({ searchParams }: { searchParams: Pro
       <div className="grid gap-5 md:grid-cols-2">
         <section className="tarjeta p-5">
           <h2 className="font-semibold">Horarios con más visitas</h2>
-          <p className="mb-4 text-xs text-suave">Hora de Argentina.</p>
+          <p className="mb-4 text-xs text-suave">Hora de {ZONAS.find(([z]) => z === region.zona)?.[1] ?? region.zona}.</p>
           <BarrasPorHora datos={r.por_hora} />
         </section>
         <section className="tarjeta p-5">
@@ -123,7 +125,7 @@ export default async function Estadisticas({ searchParams }: { searchParams: Pro
             vacio="Sin visitas en este período."
           />
         </section>
-        {opiniones && opiniones.length > 0 && <Opiniones lista={opiniones as Opinion[]} />}
+        {opiniones && opiniones.length > 0 && <Opiniones lista={opiniones as Opinion[]} region={region} />}
         {r.por_sucursal.length > 1 && (
           <section className="tarjeta p-5 md:col-span-2">
             <h2 className="mb-4 font-semibold">Por sucursal</h2>
@@ -139,8 +141,8 @@ export default async function Estadisticas({ searchParams }: { searchParams: Pro
                 {r.por_sucursal.map((s) => (
                   <tr key={s.sucursal}>
                     <td className="py-2">{s.sucursal}</td>
-                    <td className="py-2 text-right tabular-nums">{s.visitas.toLocaleString("es-AR")}</td>
-                    <td className="py-2 text-right tabular-nums">{s.pedidos.toLocaleString("es-AR")}</td>
+                    <td className="py-2 text-right tabular-nums">{formatoNumero(s.visitas, region)}</td>
+                    <td className="py-2 text-right tabular-nums">{formatoNumero(s.pedidos, region)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -155,7 +157,7 @@ export default async function Estadisticas({ searchParams }: { searchParams: Pro
 type Opinion = { id: string; estrellas: number; comentario: string | null; mesa: string | null; created_at: string };
 
 // Lo que dejaron los clientes al cerrar la mesa. Los comentarios con pocas estrellas solo los ves tú.
-function Opiniones({ lista }: { lista: Opinion[] }) {
+function Opiniones({ lista, region }: { lista: Opinion[]; region: Region }) {
   const promedio = lista.reduce((s, o) => s + o.estrellas, 0) / lista.length;
   const conteo = [5, 4, 3, 2, 1].map((n) => ({ n, cantidad: lista.filter((o) => o.estrellas === n).length }));
   const comentarios = lista.filter((o) => o.comentario).slice(0, 20);
@@ -164,7 +166,7 @@ function Opiniones({ lista }: { lista: Opinion[] }) {
       <h2 className="font-semibold">Opiniones de los clientes</h2>
       <div className="mt-3 flex flex-wrap items-center gap-6">
         <div>
-          <p className="text-3xl font-bold tabular-nums">{promedio.toLocaleString("es-AR", { maximumFractionDigits: 1 })}</p>
+          <p className="text-3xl font-bold tabular-nums">{formatoNumero(promedio, region, { maximumFractionDigits: 1 })}</p>
           <p className="text-amber-500" aria-label={`${promedio.toFixed(1)} estrellas`}>
             {"★".repeat(Math.round(promedio))}
             <span className="text-stone-300">{"★".repeat(5 - Math.round(promedio))}</span>
@@ -192,7 +194,7 @@ function Opiniones({ lista }: { lista: Opinion[] }) {
             <li key={o.id} className="py-2">
               <span className="text-amber-500">{"★".repeat(o.estrellas)}</span>{" "}
               <span className="text-xs text-suave">
-                {new Date(o.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}
+                {formatoFecha(o.created_at, region, { day: "numeric", month: "short" })}
                 {o.mesa ? ` · ${nombreMesa(o.mesa)}` : ""}
               </span>
               <p>{o.comentario}</p>

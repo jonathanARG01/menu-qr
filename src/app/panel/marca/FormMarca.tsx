@@ -361,7 +361,7 @@ export function FormMarca({ restaurante, secciones }: { restaurante: Restaurante
                 value={whatsapp}
                 onChange={(e) => setWhatsapp(e.target.value)}
                 className="campo"
-                placeholder="5215512345678"
+                placeholder="56912345678"
               />
             </div>
           </div>

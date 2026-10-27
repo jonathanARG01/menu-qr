@@ -1,4 +1,4 @@
--- Carta de demostración "Aroma Café" (cafetería, 36 bebidas con foto y precios en pesos).
+-- Carta de demostración "Aroma Café" (cafetería, 36 bebidas con foto y precios en pesos chilenos).
 -- Las fotos están en public/demo/cafe del propio sitio, así que no hace falta subir nada.
 -- Se puede ejecutar más de una vez: si la carta ya existe, solo actualiza las traducciones.
 -- Las traducciones necesitan la migración 0003; si aún no la ejecutaste, vuelve a correr este archivo después.
@@ -13,7 +13,7 @@ begin
 
   if rid is null then
     insert into public.restaurantes (slug, nombre, descripcion, color_primario, color_fondo, moneda, whatsapp)
-    values ('aroma-cafe', 'Aroma Café', 'Café de especialidad tostado en casa', '#c8894a', '#fffbf5', 'ARS', '5491100000000')
+    values ('aroma-cafe', 'Aroma Café', 'Café de especialidad tostado en casa', '#c8894a', '#fffbf5', 'CLP', '56900000000')
     returning id into rid;
 
     insert into public.categorias (restaurante_id, nombre, orden) values (rid, 'Clásicos', 0) returning id into cid;

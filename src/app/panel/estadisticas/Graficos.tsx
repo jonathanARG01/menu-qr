@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { PAIS_BASE } from "@/lib/region";
 
 // Gráficos de una sola serie en el color de la marca: barras finas, puntas redondeadas y un detalle al pasar el dedo.
 
 const plural = (n: number, palabra: string) => `${n} ${palabra}${n === 1 ? "" : "s"}`;
 
-const fechaCorta = (dia: string) => new Date(`${dia}T12:00:00`).toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+const fechaCorta = (dia: string) =>
+  new Date(`${dia}T12:00:00`).toLocaleDateString(PAIS_BASE.locale, { day: "numeric", month: "short" });
 
 function Columnas({
   datos,
@@ -117,7 +119,7 @@ export function BarrasHorizontales({
         <li key={d.etiqueta} title={`${d.etiqueta}: ${d.valor} ${unidad}`}>
           <div className="mb-1 flex justify-between gap-3 text-sm">
             <span className="truncate">{d.etiqueta}</span>
-            <span className="tabular-nums text-suave">{d.valor.toLocaleString("es-AR")}</span>
+            <span className="tabular-nums text-suave">{d.valor.toLocaleString(PAIS_BASE.locale)}</span>
           </div>
           <div className="h-2 rounded-full bg-stone-100">
             <div className="h-2 rounded-full" style={{ width: `${(d.valor / max) * 100}%`, background: "var(--color-marca)" }} />

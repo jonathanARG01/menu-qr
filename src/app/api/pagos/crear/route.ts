@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { MP_API, UUID } from "@/lib/mercadopago";
+import { MP_API, MONEDAS_MP, UUID } from "@/lib/mercadopago";
+import { decimalesMoneda } from "@/lib/utils";
 
 export const runtime = "nodejs";
 
@@ -48,6 +49,13 @@ export async function POST(request: Request) {
   });
   if (error || !data) return NextResponse.json({ error: error?.message ?? "No se pudo preparar el pago" }, { status: 400 });
   const p = data as Preparado;
+  if (!MONEDAS_MP.includes(p.moneda)) {
+    return NextResponse.json({ error: `Mercado Pago no cobra en ${p.moneda}` }, { status: 400 });
+  }
+  // En pesos chilenos (y otras monedas sin centavos) Mercado Pago solo acepta montos enteros. Se redondea hacia
+  // arriba para que el pago nunca quede por debajo de lo que se debe.
+  const factor = 10 ** decimalesMoneda(p.moneda);
+  const total = Math.ceil((Number(p.monto) + Number(p.propina)) * factor - 1e-6) / factor;
 
   const origen = new URL(request.url).origin;
   // Solo se vuelve a la carta del mismo restaurante.
@@ -64,8 +72,8 @@ export async function POST(request: Request) {
           id: p.id,
           title: `${p.restaurante} · Mesa ${p.mesa}`,
           quantity: 1,
-          unit_price: Number(p.monto) + Number(p.propina),
-          currency_id: p.moneda || "ARS",
+          unit_price: total,
+          currency_id: p.moneda,
         },
       ],
       external_reference: p.id,
