@@ -409,6 +409,31 @@ export function MesaPanel({
                 </p>
               ) : (
                 <ul className="space-y-3">
+                  {pedidos.filter((p) => p.estado === "listo").length > 1 && (
+                    // Varios pedidos listos de la mesa: se llevan juntos y se marcan de una vez.
+                    <li>
+                      <button
+                        type="button"
+                        className="boton w-full bg-emerald-600 py-2.5 hover:bg-emerald-700"
+                        onClick={async () => {
+                          const listos = pedidos.filter((p) => p.estado === "listo");
+                          const hecho = await hacer(
+                            supabase
+                              .from("pedidos")
+                              .update({ estado: "entregado" })
+                              .in(
+                                "id",
+                                listos.map((p) => p.id),
+                              ),
+                            "Pedidos entregados",
+                          );
+                          if (hecho) listos.forEach((p) => avisarComensal(p.id));
+                        }}
+                      >
+                        Marcar entregados los {pedidos.filter((p) => p.estado === "listo").length} pedidos listos
+                      </button>
+                    </li>
+                  )}
                   {pedidos.map((p) => (
                     <li key={p.id} className="rounded-xl border border-borde">
                       <div className="flex flex-wrap items-center gap-2 border-b border-borde bg-stone-50 px-3 py-2 text-sm">

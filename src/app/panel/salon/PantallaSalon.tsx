@@ -7,7 +7,7 @@ import type { Mesa } from "@/lib/types";
 import { minutosDesde } from "@/lib/useServicio";
 import { ESTILOS_PLANO, Plano, type EstadoMesa, type EstiloPlano } from "./Plano";
 import { formatoHora, type Region } from "@/lib/region";
-import { guardarSeguirAvisos, leerSeguirAvisos, useAvisoNuevo } from "./avisos";
+import { guardarAgruparAvisos, guardarSeguirAvisos, leerAgruparAvisos, leerSeguirAvisos, useAvisoNuevo } from "./avisos";
 
 type Aviso = {
   id: string;
@@ -15,6 +15,8 @@ type Aviso = {
   tipo: "cuenta" | "pago" | "mozo" | "pendiente" | "listo";
   desde: string;
   detalle?: string;
+  // Comandas juntas en el mismo aviso (al agrupar por mesa).
+  cuantos?: number;
 };
 
 const AVISO: Record<Aviso["tipo"], { texto: string; clase: string; icono: string }> = {
@@ -69,7 +71,16 @@ export function PantallaSalon({
   const [resaltada, setResaltada] = useState<{ mesa: Mesa; piso: string } | null>(null);
   const piso = pisos.find((p) => p.id === pisoId) ?? pisos[0] ?? null;
 
-  useEffect(() => setSeguir(leerSeguirAvisos()), []);
+  // Avisos de cocina juntos por mesa: "Mesa 14 · 2 pedidos listos" en vez de uno por comanda.
+  const [agrupar, setAgrupar] = useState(false);
+  useEffect(() => {
+    setSeguir(leerSeguirAvisos());
+    setAgrupar(leerAgruparAvisos());
+  }, []);
+  function alternarAgrupar() {
+    setAgrupar(!agrupar);
+    guardarAgruparAvisos(!agrupar);
+  }
   function alternarSeguir() {
     setSeguir(!seguir);
     guardarSeguirAvisos(!seguir);
@@ -131,13 +142,17 @@ export function PantallaSalon({
     if (p.estado !== "pendiente" && p.estado !== "listo") continue;
     const mesa = mesaDe(p);
     if (!mesa) continue;
-    avisos.push({
-      id: p.id,
-      mesa,
-      tipo: p.estado === "listo" ? "listo" : "pendiente",
-      desde: p.estado === "listo" ? p.actualizado_at : p.created_at,
-      detalle: (p.pedido_items ?? []).map((i) => `${i.cantidad} ${i.nombre}`).join(", "),
-    });
+    const tipo = p.estado === "listo" ? "listo" : "pendiente";
+    const desde = p.estado === "listo" ? p.actualizado_at : p.created_at;
+    const detalle = (p.pedido_items ?? []).map((i) => `${i.cantidad} ${i.nombre}`).join(", ");
+    const junto = agrupar ? avisos.find((a) => a.mesa.id === mesa.id && a.tipo === tipo) : undefined;
+    if (junto) {
+      junto.cuantos = (junto.cuantos ?? 1) + 1;
+      junto.detalle = [junto.detalle, detalle].filter(Boolean).join(", ");
+      if (desde < junto.desde) junto.desde = desde;
+      continue;
+    }
+    avisos.push({ id: p.id, mesa, tipo, desde, detalle });
   }
   avisos.sort((a, b) => PRIORIDAD.indexOf(a.tipo) - PRIORIDAD.indexOf(b.tipo) || a.desde.localeCompare(b.desde));
 
@@ -222,8 +237,8 @@ export function PantallaSalon({
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_320px]">
-        <div className="relative min-h-0 overflow-auto">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="relative min-h-0 min-w-0 overflow-auto">
           {resaltada && (
             <p className="tema-fijo absolute left-1/2 top-2 z-10 -translate-x-1/2 animate-pulse rounded-full bg-marca px-4 py-1.5 text-sm font-semibold text-white shadow-lg">
               {resaltada.piso} · {nombreMesa(resaltada.mesa.numero)}
@@ -251,7 +266,16 @@ export function PantallaSalon({
         <aside className="tema-fijo flex text-stone-100 min-h-0 flex-col rounded-2xl bg-white/5 p-3">
           <p className="mb-2 flex items-center gap-2 font-semibold">
             <Icono nombre="campana" className="h-5 w-5" /> Avisos
-            <span className="ml-auto rounded-full bg-white/10 px-2 text-sm tabular-nums">{avisos.length}</span>
+            <button
+              type="button"
+              onClick={alternarAgrupar}
+              aria-pressed={agrupar}
+              className={`ml-auto rounded-full px-2.5 py-0.5 text-xs font-medium ${agrupar ? "bg-marca text-white" : "bg-white/10 hover:bg-white/20"}`}
+              title="Juntar los pedidos de una misma mesa en un solo aviso, para llevarlos todos a la vez"
+            >
+              Por mesa
+            </button>
+            <span className="rounded-full bg-white/10 px-2 text-sm tabular-nums">{avisos.length}</span>
           </p>
           {avisos.length === 0 && (
             <p className="py-10 text-center text-sm text-stone-400">Todo tranquilo. Los avisos de las mesas aparecen aquí.</p>
@@ -272,7 +296,13 @@ export function PantallaSalon({
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-lg font-bold leading-tight">{nombreMesa(a.mesa.numero)}</span>
-                      <span className="block text-sm opacity-90">{s.texto}</span>
+                      <span className="block text-sm opacity-90">
+                        {a.cuantos && a.cuantos > 1
+                          ? a.tipo === "listo"
+                            ? `${a.cuantos} pedidos listos para llevar`
+                            : `${a.cuantos} pedidos por confirmar`
+                          : s.texto}
+                      </span>
                       {a.detalle && <span className="block truncate text-xs opacity-80">{a.detalle}</span>}
                     </span>
                     <span className="text-sm font-semibold tabular-nums" suppressHydrationWarning>
