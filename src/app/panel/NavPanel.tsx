@@ -2,14 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { Marca } from "@/components/Logo";
+import { Avatar } from "@/components/Avatar";
+import { createClient } from "@/lib/supabase/client";
+import { olvidarEquipo } from "@/lib/equipo";
 import { Icono } from "@/components/Icono";
 import { NOMBRE_ROL, type InfoSeccion, type Rol } from "@/lib/salon";
 import { cerrarSesion } from "./actions";
 import { SelectorRestaurante } from "./SelectorRestaurante";
 import { AvisoPrueba } from "./AvisoPrueba";
-import { NOMBRE_PLAN, planDeSeccion, type Plan } from "@/lib/planes";
+import { NOMBRE_PLAN, planDeSeccion, WHATSAPP_VENTAS, type Plan } from "@/lib/planes";
+import { EditorPerfil, type Perfil } from "./equipo/EditorPerfil";
 
 type Props = {
   restaurante: {
@@ -31,6 +37,9 @@ type Props = {
   email: string;
   esSuperadmin: boolean;
   tema: Tema;
+  usuarioId: string;
+  // Nombre, foto o emoji y color de quien entró (migración 0018). Sin la migración o sin fila en el equipo, null.
+  perfil: Perfil | null;
   children: React.ReactNode;
 };
 
@@ -56,6 +65,9 @@ export function MarcoPanel(props: Props) {
 
   useEffect(() => setMenuAbierto(false), [ruta]);
 
+  const enLinea = useEnLinea();
+  const instalar = useInstalar();
+
   // Se guarda en una cookie para que el servidor pinte el tema correcto desde el primer momento.
   function alternarTema() {
     const nuevo = tema === "oscuro" ? "claro" : "oscuro";
@@ -68,7 +80,7 @@ export function MarcoPanel(props: Props) {
     <div className={`panel-ui panel-fondo min-h-screen text-tinta ${tema === "oscuro" ? "tema-oscuro" : ""}`}>
       {/* Computadora: menú lateral flotante, como una tarjeta más */}
       <aside className="fixed inset-y-3 left-3 z-30 hidden w-60 overflow-hidden rounded-3xl border border-borde bg-superficie shadow-[0_20px_50px_-30px_rgb(0_0_0/0.5)] lg:flex">
-        <MenuLateral {...props} ruta={ruta} botonTema={botonTema} />
+        <MenuLateral {...props} ruta={ruta} botonTema={botonTema} instalar={instalar} />
       </aside>
 
       {/* Teléfono y tableta: barra superior */}
@@ -90,13 +102,27 @@ export function MarcoPanel(props: Props) {
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={() => setMenuAbierto(false)} />
           <div className="absolute inset-y-2 left-2 flex w-72 max-w-[85vw] overflow-hidden rounded-3xl border border-borde bg-superficie shadow-2xl">
-            <MenuLateral {...props} ruta={ruta} botonTema={botonTema} onCerrar={() => setMenuAbierto(false)} />
+            <MenuLateral
+              {...props}
+              ruta={ruta}
+              botonTema={botonTema}
+              instalar={instalar}
+              onCerrar={() => setMenuAbierto(false)}
+            />
           </div>
         </div>
       )}
 
       <div className="pb-28 lg:pb-10 lg:pl-[16.5rem]">
         <BarraSuperior {...props} botonTema={botonTema} />
+        {!enLinea && (
+          <p
+            role="status"
+            className="mx-3 mt-3 rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white sm:mx-6 lg:mt-0"
+          >
+            Sin conexión a internet. Lo que anotes queda guardado en este equipo y se envía al volver la conexión.
+          </p>
+        )}
         <main className={completo ? "px-3 py-4 sm:px-6 lg:pt-2 lg:pb-6" : `mx-auto ${ancho} px-4 py-5 sm:px-6 lg:pt-2 lg:pb-8`}>
           {props.admin && ruta !== "/panel/plan" && <AvisoPrueba restaurante={props.restaurante} />}
           {props.children}
@@ -209,11 +235,21 @@ function MenuLateral({
   rol,
   email,
   esSuperadmin,
+  usuarioId,
+  perfil,
   ruta,
   botonTema,
+  instalar,
   onCerrar,
-}: Props & { ruta: string; botonTema: React.ReactNode; onCerrar?: () => void }) {
+}: Props & { ruta: string; botonTema: React.ReactNode; instalar: (() => void) | null; onCerrar?: () => void }) {
   const grupos = ["Servicio", "Carta", "Negocio"] as const;
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const [editando, setEditando] = useState(false);
+  const yo = { nombre: perfil?.nombre || email, avatar: perfil?.avatar, color: perfil?.color };
+  const ayuda = WHATSAPP_VENTAS
+    ? `https://wa.me/${WHATSAPP_VENTAS}?text=${encodeURIComponent(`Hola, soy de ${restaurante.nombre} y necesito ayuda con Mesitto.`)}`
+    : null;
 
   return (
     <div className="flex min-h-0 w-full flex-col">
@@ -316,13 +352,55 @@ function MenuLateral({
         })}
       </nav>
 
-      <div className="m-3 mt-1 space-y-3 rounded-2xl border border-borde bg-stone-50 p-3">
+      <div className="mx-3 flex flex-wrap gap-1.5">
+        {ayuda && (
+          <a
+            href={ayuda}
+            target="_blank"
+            rel="noopener"
+            className="inline-flex items-center gap-1.5 rounded-full border border-borde px-3 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-50 hover:text-tinta"
+          >
+            <Icono nombre="whatsapp" className="h-4 w-4 text-[#25d366]" /> Ayuda
+          </a>
+        )}
+        <Link
+          href="/panel/novedades"
+          className={`inline-flex items-center gap-1.5 rounded-full border border-borde px-3 py-1.5 text-xs font-semibold hover:bg-stone-50 hover:text-tinta ${
+            activa(ruta, "/panel/novedades") ? "bg-stone-100 text-tinta" : "text-stone-600"
+          }`}
+        >
+          <Icono nombre="estrella" className="h-4 w-4 text-marca" /> Novedades
+        </Link>
+        {instalar && (
+          <button
+            type="button"
+            onClick={instalar}
+            className="inline-flex items-center gap-1.5 rounded-full border border-borde px-3 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-50 hover:text-tinta"
+          >
+            <Icono nombre="pantalla" className="h-4 w-4" /> Instalar app
+          </button>
+        )}
+      </div>
+
+      <div className="m-3 mt-2 space-y-3 rounded-2xl border border-borde bg-stone-50 p-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-marca text-sm font-bold text-white">
-            {email.charAt(0).toUpperCase()}
-          </span>
+          {perfil ? (
+            <button
+              type="button"
+              onClick={() => setEditando(true)}
+              className="rounded-full"
+              aria-label="Editar mi perfil"
+              title="Editar mi perfil: nombre, foto o emoji"
+            >
+              <Avatar persona={yo} className="h-9 w-9 text-sm" titulo={false} />
+            </button>
+          ) : (
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-marca text-sm font-bold text-white">
+              {email.charAt(0).toUpperCase()}
+            </span>
+          )}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold">{email}</p>
+            <p className="truncate text-xs font-semibold">{perfil?.nombre || email}</p>
             <p className="text-[11px] text-suave">
               {NOMBRE_ROL[rol] ?? rol}
               {admin && (
@@ -354,8 +432,70 @@ function MenuLateral({
           </form>
         </div>
       </div>
+
+      {/* Fuera del menú: el lateral recorta lo que sobresale. */}
+      {editando &&
+        perfil &&
+        createPortal(
+        <EditorPerfil
+          supabase={supabase}
+          restauranteId={restaurante.id}
+          usuarioId={usuarioId}
+          correo={email}
+          inicial={perfil}
+          onCerrar={() => setEditando(false)}
+          onGuardado={() => {
+            setEditando(false);
+            olvidarEquipo();
+            router.refresh();
+          }}
+        />,
+          document.body,
+        )}
     </div>
   );
+}
+
+// Avisa cuando el equipo se queda sin internet.
+function useEnLinea() {
+  const [enLinea, setEnLinea] = useState(true);
+  useEffect(() => {
+    const actualizar = () => setEnLinea(navigator.onLine);
+    actualizar();
+    window.addEventListener("online", actualizar);
+    window.addEventListener("offline", actualizar);
+    return () => {
+      window.removeEventListener("online", actualizar);
+      window.removeEventListener("offline", actualizar);
+    };
+  }, []);
+  return enLinea;
+}
+
+type EventoInstalar = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+
+// Registra el service worker del panel y, si el navegador lo permite, ofrece instalarlo como app.
+// En iPhone no existe ese aviso: se instala desde Compartir → "Agregar a inicio".
+function useInstalar() {
+  const [evento, setEvento] = useState<EventoInstalar | null>(null);
+  useEffect(() => {
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw-panel.js", { scope: "/panel" }).catch(() => {});
+    const guardar = (e: Event) => {
+      e.preventDefault();
+      setEvento(e as EventoInstalar);
+    };
+    const instalada = () => setEvento(null);
+    window.addEventListener("beforeinstallprompt", guardar);
+    window.addEventListener("appinstalled", instalada);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", guardar);
+      window.removeEventListener("appinstalled", instalada);
+    };
+  }, []);
+  if (!evento) return null;
+  return () => {
+    evento.prompt().finally(() => setEvento(null));
+  };
 }
 
 // Símbolo y nombre de Mesitto; en oscuro, el nombre en blanco.

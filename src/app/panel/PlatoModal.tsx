@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { borrarFoto, subirFoto } from "@/lib/fotos";
-import type { Categoria, Plato, Restaurante } from "@/lib/types";
+import type { Categoria, GrupoOpciones, Plato, Restaurante } from "@/lib/types";
+import { gruposDe } from "@/lib/opciones";
 import { ETIQUETAS, mensajeError } from "@/lib/utils";
 import { Interruptor } from "@/components/Interruptor";
 import { IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
@@ -41,6 +42,9 @@ export function PlatoModal({
   // La casilla de destacado aparece cuando ya existe la columna (migración 0007).
   const [tieneDestacado] = useState(() => !plato || "destacado" in plato);
   const [fotoUrl, setFotoUrl] = useState<string | null>(plato?.foto_url ?? null);
+  // Migración 0018: opciones (tamaño, acompañamiento…) y precio para llevar o delivery.
+  const [grupos, setGrupos] = useState<GrupoOpciones[]>(() => (plato ? gruposDe(plato) : []));
+  const [precioLlevar, setPrecioLlevar] = useState(plato?.precio_llevar != null ? String(plato.precio_llevar) : "");
   const idiomas = IDIOMAS_EXTRA.filter((i) => restaurante.idiomas?.includes(i));
   const [traducciones, setTraducciones] = useState<Record<string, { nombre: string; descripcion: string }>>(() =>
     Object.fromEntries(
@@ -97,6 +101,12 @@ export function PlatoModal({
       setError("Escribe un precio válido.");
       return;
     }
+    const llevar = precioLlevar.trim() ? Number(precioLlevar.replace(",", ".")) : null;
+    if (llevar !== null && (!Number.isFinite(llevar) || llevar < 0)) {
+      setError("Escribe un precio para llevar válido o déjalo vacío.");
+      return;
+    }
+    const opciones = gruposDe({ opciones: grupos });
     setGuardando(true);
     setError(null);
 
@@ -127,6 +137,9 @@ export function PlatoModal({
           }
         : {}),
       ...(esNuevo || categoria !== plato.categoria_id ? { orden: contarPlatos(categoria) } : {}),
+      // Solo si se usan o ya existen las columnas (así sin la migración 0018 se sigue pudiendo guardar).
+      ...(opciones.length || (plato && "opciones" in plato) ? { opciones } : {}),
+      ...(llevar !== null || (plato && "precio_llevar" in plato) ? { precio_llevar: llevar === null ? null : Math.round(llevar * 100) / 100 } : {}),
     };
 
     const enviar = (fila: Partial<Plato>) =>
@@ -290,6 +303,22 @@ export function PlatoModal({
             </div>
           </div>
 
+          <div>
+            <label htmlFor="plato-precio-llevar" className="etiqueta-campo">
+              Precio para llevar o delivery <span className="font-normal text-suave">(opcional)</span>
+            </label>
+            <input
+              id="plato-precio-llevar"
+              inputMode="decimal"
+              value={precioLlevar}
+              onChange={(e) => setPrecioLlevar(e.target.value)}
+              className="campo tabular-nums"
+              placeholder="Igual que en el local"
+            />
+          </div>
+
+          <EditorOpciones grupos={grupos} onChange={setGrupos} moneda={restaurante.moneda} />
+
           <fieldset>
             <legend className="etiqueta-campo">Etiquetas</legend>
             <div className="flex flex-wrap gap-2">
@@ -377,5 +406,114 @@ export function PlatoModal({
         </div>
       </form>
     </div>
+  );
+}
+
+// Grupos de opciones del plato: "Tamaño" (elige 1, obligatorio), "Agregados" (hasta 3, con precio extra)…
+function EditorOpciones({
+  grupos,
+  onChange,
+  moneda,
+}: {
+  grupos: GrupoOpciones[];
+  onChange: (g: GrupoOpciones[]) => void;
+  moneda: string;
+}) {
+  const cambiar = (i: number, cambios: Partial<GrupoOpciones>) =>
+    onChange(grupos.map((g, k) => (k === i ? { ...g, ...cambios } : g)));
+  const cambiarValor = (i: number, j: number, cambios: Partial<{ nombre: string; precio: number }>) =>
+    cambiar(i, { valores: grupos[i].valores.map((v, k) => (k === j ? { ...v, ...cambios } : v)) });
+
+  return (
+    <fieldset className="space-y-3 rounded-xl border border-borde p-3">
+      <legend className="px-1 text-sm font-medium">Opciones para elegir</legend>
+      {grupos.length === 0 && (
+        <p className="text-xs text-suave">
+          Tamaño, acompañamiento, punto de la carne… El cliente y el mesero las eligen al pedir, y cada una puede sumar un
+          precio extra.
+        </p>
+      )}
+      {grupos.map((g, i) => (
+        <div key={i} className="space-y-2 rounded-lg bg-stone-50 p-2.5">
+          <div className="flex gap-2">
+            <input
+              aria-label="Nombre del grupo"
+              value={g.nombre}
+              maxLength={40}
+              onChange={(e) => cambiar(i, { nombre: e.target.value })}
+              placeholder="Ej: Acompañamiento"
+              className="campo py-2"
+            />
+            <button
+              type="button"
+              onClick={() => onChange(grupos.filter((_, k) => k !== i))}
+              className="shrink-0 px-2 text-sm text-suave hover:text-red-600"
+              aria-label="Quitar grupo"
+            >
+              ×
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" checked={g.min > 0} onChange={(e) => cambiar(i, { min: e.target.checked ? 1 : 0 })} />
+              Obligatorio
+            </label>
+            <label className="flex items-center gap-1.5">
+              Se pueden marcar
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={g.max}
+                onChange={(e) => cambiar(i, { max: Math.min(10, Math.max(1, Number(e.target.value) || 1)) })}
+                className="w-14 rounded-lg border border-borde px-2 py-1"
+              />
+            </label>
+          </div>
+          {g.valores.map((v, j) => (
+            <div key={j} className="flex gap-2">
+              <input
+                aria-label="Opción"
+                value={v.nombre}
+                maxLength={40}
+                onChange={(e) => cambiarValor(i, j, { nombre: e.target.value })}
+                placeholder={j === 0 ? "Ej: Papas fritas" : "Otra opción"}
+                className="campo py-1.5"
+              />
+              <input
+                aria-label={`Precio extra (${moneda})`}
+                inputMode="decimal"
+                value={v.precio ? String(v.precio) : ""}
+                onChange={(e) => cambiarValor(i, j, { precio: Math.max(0, Number(e.target.value.replace(",", ".")) || 0) })}
+                placeholder="+0"
+                className="campo w-24 shrink-0 py-1.5 tabular-nums"
+              />
+              <button
+                type="button"
+                onClick={() => cambiar(i, { valores: g.valores.filter((_, k) => k !== j) })}
+                className="shrink-0 px-1 text-suave hover:text-red-600"
+                aria-label="Quitar opción"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => cambiar(i, { valores: [...g.valores, { nombre: "", precio: 0 }] })}
+            className="text-sm font-medium text-marca"
+          >
+            + Opción
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...grupos, { nombre: "", min: 0, max: 1, valores: [{ nombre: "", precio: 0 }] }])}
+        className="text-sm font-medium text-marca"
+      >
+        + Grupo de opciones
+      </button>
+    </fieldset>
   );
 }

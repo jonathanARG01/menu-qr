@@ -68,6 +68,14 @@ export function qrSvg(texto: string, estilo: EstiloQR = ESTILO_BASE) {
   );
 }
 
+// Lo que va en el QR de la mesa: su número, o su id si otra mesa del mismo local tiene el mismo número (en otro piso).
+export function enlaceMesa(mesa: Mesa, todas: Mesa[]): { mesa: string; nombre?: string } {
+  const repetida = todas.some(
+    (m) => m.id !== mesa.id && m.numero === mesa.numero && (m.sucursal_id ?? null) === (mesa.sucursal_id ?? null),
+  );
+  return repetida ? { mesa: mesa.id, nombre: mesa.numero } : { mesa: mesa.numero };
+}
+
 export function ordenarMesas(mesas: Mesa[]) {
   return [...mesas].sort((a, b) => a.numero.localeCompare(b.numero, "es", { numeric: true }));
 }
@@ -208,7 +216,8 @@ export async function generarPdf(
 
     // QR dibujado como vectores: nítido al imprimir y el PDF pesa poco.
     const lado = 52;
-    const m = matriz(urlCarta(restaurante.slug, mesa?.numero, undefined, sucursal?.slug), !!estilo.logo);
+    const enlace = mesa ? enlaceMesa(mesa, mesas.filter((x): x is Mesa => !!x)) : null;
+    const m = matriz(urlCarta(restaurante.slug, enlace?.mesa, undefined, sucursal?.slug, enlace?.nombre), !!estilo.logo);
     const celda = lado / m.total;
     const qx = cx - lado / 2;
     const qy = y + 25;

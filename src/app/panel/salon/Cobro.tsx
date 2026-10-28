@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { SelectorPropina } from "@/components/SelectorPropina";
 import { consumoPorComensal, describirPropina, montoPropina, partesIguales, type LineaCuenta, type Propina } from "@/lib/cuenta";
 import type { Ajustes, Pago, SolicitudCuenta } from "@/lib/salon";
+import { esEfectivo } from "@/lib/caja";
 
 type Modo = "junto" | "iguales" | "consumo" | "libre";
 type Parte = { etiqueta: string; monto: number; metodo?: string };
@@ -287,6 +288,12 @@ function FormPago({
   const [enviando, setEnviando] = useState(false);
   const valor = soloPropina ? 0 : Math.max(0, Number(monto.replace(",", ".")) || 0);
   const montoProp = montoPropina(base ?? valor, propina);
+  // Efectivo: con cuánto paga y cuánto vuelto hay que darle.
+  const [recibido, setRecibido] = useState("");
+  const aCobrar = valor + montoProp;
+  const conCuanto = Number(recibido.replace(",", ".")) || 0;
+  const vuelto = conCuanto - aCobrar;
+  const billetes = sugerenciasEfectivo(aCobrar);
 
   return (
     <div className="space-y-5">
@@ -355,6 +362,44 @@ function FormPago({
         </p>
       </div>
 
+      {esEfectivo(metodo) && aCobrar > 0 && (
+        <div className="space-y-2 rounded-xl border border-borde p-3">
+          <label className="block text-sm font-semibold">
+            Paga con
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              value={recibido}
+              onChange={(e) => setRecibido(e.target.value)}
+              placeholder={String(aCobrar)}
+              className="campo mt-1 tabular-nums"
+            />
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {billetes.map((b) => (
+              <button
+                key={b}
+                type="button"
+                onClick={() => setRecibido(String(b))}
+                className="rounded-lg bg-stone-100 px-2.5 py-1 text-sm tabular-nums hover:bg-stone-200"
+              >
+                {b === aCobrar ? "Justo" : formato(b)}
+              </button>
+            ))}
+          </div>
+          {conCuanto > 0 && (
+            <p
+              className={`flex justify-between text-lg font-bold ${vuelto < 0 ? "text-red-600" : "text-emerald-700"}`}
+              role="status"
+            >
+              <span>{vuelto < 0 ? "Falta" : "Vuelto"}</span>
+              <span className="tabular-nums">{formato(Math.abs(vuelto))}</span>
+            </p>
+          )}
+        </div>
+      )}
+
       <button
         type="button"
         className="boton w-full py-3"
@@ -376,4 +421,12 @@ function FormPago({
       </button>
     </div>
   );
+}
+
+// Billetes con los que suele pagar la gente: el monto justo y los redondeos hacia arriba más cercanos.
+function sugerenciasEfectivo(monto: number) {
+  if (monto <= 0) return [];
+  const pasos = monto >= 1000 ? [1000, 5000, 10000, 20000] : [1, 5, 10, 20, 50, 100];
+  const lista = [monto, ...pasos.map((p) => Math.ceil(monto / p) * p)];
+  return [...new Set(lista)].filter((n) => n >= monto).slice(0, 5);
 }

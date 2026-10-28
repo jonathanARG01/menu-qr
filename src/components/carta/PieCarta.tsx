@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { traducir } from "@/lib/i18n";
 import type { Restaurante } from "@/lib/types";
 import { formatoPrecio } from "@/lib/utils";
+import { textoOpciones } from "@/lib/salon";
+import { EnOtrasMonedas } from "./EnOtrasMonedas";
 import { useCarta } from "./contexto";
 import { AvisoEmergente } from "./AvisoEmergente";
 import { MiMesa } from "./MiMesa";
@@ -30,7 +32,7 @@ const DE_MP = new Set([
 // Barra inferior de la carta: mesa, sucursal, contacto por WhatsApp y el pedido en curso.
 // Los colores salen de las variables de cada diseño (--pie-bg, --pie-text, --acento, --sobre-acento).
 export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
-  const { pedidos, pedidosMesa, pedidosLlevar, lineas, mesa, sucursal, idioma, ajustes, t } = useCarta();
+  const { pedidos, pedidosMesa, pedidosLlevar, lineas, mesa, mesaNombre, sucursal, idioma, ajustes, t } = useCarta();
   const [ofrecer, setOfrecer] = useState<null | "pedir" | "iphone">(null);
   const [abierto, setAbierto] = useState(false);
   const [mesaAbierta, setMesaAbierta] = useState(false);
@@ -39,7 +41,7 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
   const [opinar, setOpinar] = useState(false);
   const whatsapp = sucursal?.whatsapp || restaurante.whatsapp;
   const unidades = lineas.reduce((n, l) => n + l.cantidad, 0);
-  const total = lineas.reduce((n, l) => n + l.cantidad * Number(l.plato.precio), 0);
+  const total = lineas.reduce((n, l) => n + l.cantidad * l.precio, 0);
   const miMesa = useMiMesa({ restauranteId: restaurante.id, sucursalId: sucursal?.id ?? null, mesa, activo: pedidosMesa });
 
   useEffect(() => {
@@ -89,9 +91,9 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
     if (!pedidosMesa || !mesa || document.querySelector("link[rel=manifest]")) return;
     const enlace = document.createElement("link");
     enlace.rel = "manifest";
-    enlace.href = `/${restaurante.slug}/manifest.webmanifest?mesa=${encodeURIComponent(mesa)}${sucursal ? `&s=${encodeURIComponent(sucursal.slug)}` : ""}`;
+    enlace.href = `/${restaurante.slug}/manifest.webmanifest?mesa=${encodeURIComponent(mesa)}${mesaNombre && mesaNombre !== mesa ? `&n=${encodeURIComponent(mesaNombre)}` : ""}${sucursal ? `&s=${encodeURIComponent(sucursal.slug)}` : ""}`;
     document.head.appendChild(enlace);
-  }, [pedidosMesa, mesa, sucursal, restaurante.slug]);
+  }, [pedidosMesa, mesa, mesaNombre, sucursal, restaurante.slug]);
 
   // Después de cada pedido: si ya aceptó los avisos, se renueva solo; si no, se le ofrece una vez.
   async function despuesDePedir() {
@@ -126,8 +128,8 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
   const reservar = !mesa && ajustes.modulos.reservas && ajustes.reservas.online;
   if (!mesa && !whatsapp && !sucursal && unidades === 0 && !reservar && !pedidosLlevar) return null;
 
-  const contexto = [mesa && `${t("mesa")} ${mesa}`, sucursal?.nombre].filter(Boolean).join(" · ");
-  const saludo = mesa ? `Hola ${restaurante.nombre}, estoy en la mesa ${mesa}.` : `Hola ${restaurante.nombre}.`;
+  const contexto = [mesaNombre && `${t("mesa")} ${mesaNombre}`, sucursal?.nombre].filter(Boolean).join(" · ");
+  const saludo = mesaNombre ? `Hola ${restaurante.nombre}, estoy en la mesa ${mesaNombre}.` : `Hola ${restaurante.nombre}.`;
 
   return (
     <>
@@ -251,7 +253,7 @@ export function PieCarta({ restaurante }: { restaurante: Restaurante }) {
         <Opinion
           restauranteId={restaurante.id}
           sucursalId={sucursal?.id ?? null}
-          mesa={mesa}
+          mesa={mesaNombre}
           googleUrl={ajustes.resenas.google_url}
           t={t}
           onCerrar={() => {
@@ -277,9 +279,10 @@ function HojaPedido({
 }) {
   const {
     lineas,
-    cambiar,
+    cambiarLinea,
     vaciar,
     mesa,
+    mesaNombre,
     sucursales,
     sucursal,
     setSucursal,
@@ -341,7 +344,7 @@ function HojaPedido({
       p_restaurante: restaurante.id,
       p_sucursal: sucursal?.id ?? null,
       p_mesa: mesa,
-      p_items: lineas.map((l) => ({ id: l.plato.id, cantidad: l.cantidad })),
+      p_items: lineas.map((l) => ({ id: l.plato.id, cantidad: l.cantidad, opciones: l.opciones })),
       p_nombre: nombre.trim() || null,
       p_nota: nota.trim() || null,
     });
@@ -372,7 +375,7 @@ function HojaPedido({
       p_restaurante: restaurante.id,
       p_sucursal: sucursal?.id ?? null,
       p_tipo: tipo,
-      p_items: lineas.map((l) => ({ id: l.plato.id, cantidad: l.cantidad })),
+      p_items: lineas.map((l) => ({ id: l.plato.id, cantidad: l.cantidad, opciones: l.opciones })),
       p_nombre: nombre.trim(),
       p_telefono: telefono.trim(),
       p_direccion: tipo === "delivery" ? direccion.trim() : null,
@@ -399,10 +402,13 @@ function HojaPedido({
     // El mensaje va siempre en español con los nombres originales: lo lee el personal del local.
     const mensaje = [
       `*Nuevo pedido* · ${restaurante.nombre}`,
-      mesa && `Mesa: ${mesa}`,
+      mesaNombre && `Mesa: ${mesaNombre}`,
       sucursal && `Sucursal: ${sucursal.nombre}`,
       "",
-      ...lineas.map((l) => `${l.cantidad} × ${l.plato.nombre} — ${precio(l.cantidad * Number(l.plato.precio))}`),
+      ...lineas.map(
+        (l) =>
+          `${l.cantidad} × ${l.plato.nombre}${l.opciones.length ? ` (${textoOpciones(l.opciones)})` : ""} — ${precio(l.cantidad * l.precio)}`,
+      ),
       "",
       `*Total: ${precio(total)}*`,
       nombre.trim() && `Nombre: ${nombre.trim()}`,
@@ -440,16 +446,17 @@ function HojaPedido({
 
         <div className="space-y-4 overflow-y-auto px-5 pb-4">
           <ul className="divide-y divide-stone-100">
-            {lineas.map(({ plato, cantidad }) => (
-              <li key={plato.id} className="flex items-center gap-3 py-3">
+            {lineas.map(({ clave, plato, cantidad, opciones, precio: unitario }) => (
+              <li key={clave} className="flex items-center gap-3 py-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{traducir(plato, idioma, ["nombre"]).nombre}</p>
-                  <p className="text-sm tabular-nums text-stone-500">{precio(Number(plato.precio))}</p>
+                  {opciones.length > 0 && <p className="truncate text-xs text-stone-500">{textoOpciones(opciones)}</p>}
+                  <p className="text-sm tabular-nums text-stone-500">{precio(unitario)}</p>
                 </div>
                 <span className="flex items-center rounded-full border border-stone-200">
                   <button
                     type="button"
-                    onClick={() => cambiar(plato.id, -1)}
+                    onClick={() => cambiarLinea(clave, -1)}
                     aria-label={`${t("quitar")}: ${plato.nombre}`}
                     className="h-9 w-9 text-lg"
                   >
@@ -458,14 +465,14 @@ function HojaPedido({
                   <span className="w-6 text-center font-semibold tabular-nums">{cantidad}</span>
                   <button
                     type="button"
-                    onClick={() => cambiar(plato.id, 1)}
+                    onClick={() => cambiarLinea(clave, 1)}
                     aria-label={`${t("agregar")}: ${plato.nombre}`}
                     className="h-9 w-9 text-lg"
                   >
                     +
                   </button>
                 </span>
-                <span className="w-20 text-right font-semibold tabular-nums">{precio(cantidad * Number(plato.precio))}</span>
+                <span className="w-20 text-right font-semibold tabular-nums">{precio(cantidad * unitario)}</span>
               </li>
             ))}
           </ul>
@@ -603,7 +610,10 @@ function HojaPedido({
           )}
           <div className="mb-3 flex items-baseline justify-between">
             <span className="font-medium">{t("total")}</span>
-            <span className="text-xl font-bold tabular-nums">{precio(total + envio)}</span>
+            <span className="text-right">
+              <span className="block text-xl font-bold tabular-nums">{precio(total + envio)}</span>
+              <EnOtrasMonedas total={total + envio} monedas={ajustes.otras_monedas} texto={t("aprox")} />
+            </span>
           </div>
           {pedidosLlevar && (
             <>
@@ -630,7 +640,7 @@ function HojaPedido({
                 className="flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 font-semibold disabled:opacity-50"
                 style={{ background: "var(--acento)", color: "var(--sobre-acento)" }}
               >
-                {enviando ? t("cargando") : `${t("enviarCocina")} · ${mesa ? `${t("mesa")} ${mesa}` : ""}`}
+                {enviando ? t("cargando") : `${t("enviarCocina")} · ${mesaNombre ? `${t("mesa")} ${mesaNombre}` : ""}`}
               </button>
             </>
           )}

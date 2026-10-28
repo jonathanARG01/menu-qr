@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { Icono } from "@/components/Icono";
 import { describirPropina, totalLineas } from "@/lib/cuenta";
@@ -15,11 +15,16 @@ import {
   type SolicitudCuenta,
   nombreMesa,
   regionDe,
+  textoOpciones,
 } from "@/lib/salon";
 import { avisarComensal } from "@/lib/push";
-import { fechaCorta, imprimirTicket } from "@/lib/imprimir";
+import { fechaCorta, horaCorta, imprimirTicket } from "@/lib/imprimir";
+import { conReintentos, esErrorDeRed } from "@/lib/reintentos";
+import { nombrePersona, useEquipo } from "@/lib/equipo";
+import { Avatar } from "@/components/Avatar";
+import { EnOtrasMonedas } from "@/components/carta/EnOtrasMonedas";
 import type { Categoria, Mesa, Plato, Restaurante } from "@/lib/types";
-import { formatoPrecio, mensajeError } from "@/lib/utils";
+import { formatoOtraMoneda, formatoPrecio, mensajeError } from "@/lib/utils";
 import { minutosDesde, tiempo, useAhora, type useServicio } from "@/lib/useServicio";
 import { formatoHora, numeroWhatsapp, paisDe } from "@/lib/region";
 import { ClienteCuenta, Atiende } from "./ClienteCuenta";
@@ -28,6 +33,7 @@ import { TomarPedido, type LineaNueva } from "./TomarPedido";
 
 export const COLOR_ESTADO: Record<EstadoPedido, string> = {
   pendiente: "bg-red-100 text-red-800",
+  retenido: "bg-violet-100 text-violet-800",
   nuevo: "bg-amber-100 text-amber-800",
   preparando: "bg-sky-100 text-sky-800",
   listo: "bg-emerald-100 text-emerald-800",
@@ -46,6 +52,8 @@ type Props = {
   categorias: Categoria[];
   platos: Plato[];
   servicio: ReturnType<typeof useServicio>;
+  // Mesas del local, para mover o juntar la cuenta con otra mesa.
+  mesas?: Mesa[];
   onCerrar: () => void;
   // Pantalla con la que abre (un pedido para llevar recién creado va directo a la carta).
   inicio?: "mesa" | "pedido" | "cobro";
@@ -63,6 +71,7 @@ export function MesaPanel({
   categorias,
   platos,
   servicio,
+  mesas = [],
   onCerrar,
   inicio = "mesa",
 }: Props) {
@@ -86,6 +95,13 @@ export function MesaPanel({
   const propinas = pagos.reduce((t, p) => t + Number(p.propina), 0);
   const [pantalla, setPantalla] = useState<"mesa" | "pedido" | "cobro">(inicio);
   const [comensalesNuevos, setComensalesNuevos] = useState(mesa?.capacidad ?? 2);
+  // Mover la cuenta a otra mesa, juntarla con otra o pasar un plato (el item elegido) a otra mesa.
+  const [moviendo, setMoviendo] = useState<null | "mover" | "juntar" | PedidoItem>(null);
+  const { persona, yo } = useEquipo(supabase, restaurante.id);
+  const atiende = persona(cuenta?.mesero_id);
+  const asignado = persona(mesa?.mesero_id);
+  // La mesa es de otro mesero: se avisa antes de tomarle el pedido.
+  const deOtro = ajustes.modulos.equipo && !!yo && !!cuenta && !llevar && !!atiende && atiende.user_id !== yo;
 
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
@@ -117,49 +133,153 @@ export function MesaPanel({
       `${nombreMesa(mesa.numero)} abierta`,
     );
 
+  // Primero se crean las comandas "en espera" (no se ven en cocina), después sus platos y al final se marchan.
+  // Todo lleva ids generados en el teléfono: si se corta la conexión y se reintenta, nada se duplica ni queda vacío.
   async function enviarPedido(nuevas: LineaNueva[]) {
-    if (!cuenta) return;
+    if (!cuenta) return false;
     const estacionDe = (p: Plato) => categorias.find((c) => c.id === p.categoria_id)?.estacion ?? "Cocina";
     const grupos = new Map<string, LineaNueva[]>();
-    for (const l of nuevas) grupos.set(estacionDe(l.plato), [...(grupos.get(estacionDe(l.plato)) ?? []), l]);
+    for (const l of nuevas) {
+      const clave = `${estacionDe(l.plato)}|${l.despues ? "despues" : "ya"}`;
+      grupos.set(clave, [...(grupos.get(clave) ?? []), l]);
+    }
+    // La comanda toma el id de su primer plato (son tablas distintas): el mismo borrador arma siempre la misma.
+    const comandas = [...grupos].map(([clave, ls]) => ({
+      id: ls[0].id,
+      estacion: clave.split("|")[0],
+      despues: clave.endsWith("|despues"),
+      lineas: ls,
+    }));
 
-    for (const [estacion, ls] of grupos) {
-      const { data, error } = await supabase
-        .from("pedidos")
-        .insert({
+    const fallo = (error: unknown) => {
+      avisar(
+        esErrorDeRed(error)
+          ? "Sin conexión: la comanda quedó guardada en este teléfono y se reintenta sola."
+          : mensajeError(error),
+        "error",
+      );
+      return false;
+    };
+
+    const r1 = await conReintentos(() =>
+      supabase.from("pedidos").upsert(
+        comandas.map((c) => ({
+          id: c.id,
           restaurante_id: restaurante.id,
           cuenta_id: cuenta.id,
           sucursal_id: cuenta.sucursal_id,
           mesa_numero: mesa?.numero ?? null,
-          estacion,
+          estacion: c.estacion,
           origen: "personal",
-          estado: "nuevo",
+          estado: "retenido",
           nombre: llevar ? (cuenta.cliente_nombre?.slice(0, 40) ?? null) : null,
-        })
-        .select("id")
-        .single();
-      if (error) return avisar(mensajeError(error), "error");
-      const { error: e2 } = await supabase.from("pedido_items").insert(
-        ls.map((l) => ({
-          pedido_id: data.id,
-          restaurante_id: restaurante.id,
-          plato_id: l.plato.id,
-          // El precio y el nombre los pone la base de datos desde la carta.
-          nombre: l.plato.nombre,
-          precio: l.plato.precio,
-          cantidad: l.cantidad,
-          nota: l.nota.trim() || null,
-          comensal: l.comensal,
         })),
-      );
-      if (e2) {
-        await supabase.from("pedidos").update({ estado: "cancelado" }).eq("id", data.id);
-        return avisar(mensajeError(e2), "error");
+        { onConflict: "id", ignoreDuplicates: true },
+      ),
+    );
+    if (r1.error) return fallo(r1.error);
+
+    const r2 = await conReintentos(() =>
+      supabase.from("pedido_items").upsert(
+        comandas.flatMap((c) =>
+          c.lineas.map((l) => ({
+            id: l.id,
+            pedido_id: c.id,
+            restaurante_id: restaurante.id,
+            plato_id: l.plato.id,
+            // El precio y el nombre los pone la base de datos desde la carta (con las opciones elegidas).
+            nombre: l.plato.nombre,
+            precio: l.plato.precio,
+            cantidad: l.cantidad,
+            nota: l.nota.trim() || null,
+            comensal: l.comensal,
+            ...(l.opciones.length ? { opciones: l.opciones } : {}),
+          })),
+        ),
+        { onConflict: "id", ignoreDuplicates: true },
+      ),
+    );
+    if (r2.error) {
+      if (!esErrorDeRed(r2.error)) {
+        await supabase
+          .from("pedidos")
+          .update({ estado: "cancelado" })
+          .in(
+            "id",
+            comandas.map((c) => c.id),
+          );
       }
+      return fallo(r2.error);
     }
-    avisar(grupos.size > 1 ? `Pedido enviado a ${[...grupos.keys()].join(" y ")}` : "Pedido enviado");
+
+    const ya = comandas.filter((c) => !c.despues);
+    if (ya.length) {
+      const r3 = await conReintentos(() =>
+        supabase
+          .from("pedidos")
+          .update({ estado: "nuevo" })
+          .in(
+            "id",
+            ya.map((c) => c.id),
+          )
+          .eq("estado", "retenido"),
+      );
+      if (r3.error) return fallo(r3.error);
+    }
+    const estaciones = [...new Set(ya.map((c) => c.estacion))];
+    avisar(
+      ya.length === 0
+        ? "Comanda guardada en espera: márchala cuando toque"
+        : estaciones.length > 1
+          ? `Pedido enviado a ${estaciones.join(" y ")}`
+          : "Pedido enviado",
+    );
     await recargar();
     setPantalla("mesa");
+    return true;
+  }
+
+  // Marchar: la comanda en espera pasa a cocina, con la hora de ahora (así la cocina mide bien su tiempo).
+  const marchar = (lista: Pedido[]) =>
+    hacer(
+      supabase
+        .from("pedidos")
+        .update({ estado: "nuevo", created_at: new Date().toISOString() })
+        .in(
+          "id",
+          lista.map((p) => p.id),
+        ),
+      lista.length > 1 ? "Comandas marchadas a cocina" : "Marchado a cocina",
+    );
+
+  async function moverA(destino: Mesa) {
+    if (!cuenta) return;
+    const ocupada = servicio.cuentas.find((c) => c.mesa_id === destino.id && c.estado === "abierta");
+    if (moviendo === "mover") {
+      if (await hacer(supabase.rpc("mover_cuenta", { p_cuenta: cuenta.id, p_mesa: destino.id }), `Pasó a ${nombreMesa(destino.numero)}`))
+        onCerrar();
+    } else if (moviendo === "juntar" && ocupada) {
+      if (!confirm(`¿Juntar ${titulo} con ${nombreMesa(destino.numero)}? Todo queda en ${nombreMesa(destino.numero)}.`)) return;
+      if (
+        await hacer(
+          supabase.rpc("juntar_cuentas", { p_destino: ocupada.id, p_origen: cuenta.id }),
+          `Mesas juntas en ${nombreMesa(destino.numero)}`,
+        )
+      )
+        onCerrar();
+    } else if (moviendo && typeof moviendo === "object" && ocupada) {
+      let cantidad = moviendo.cantidad;
+      if (cantidad > 1) {
+        const n = Number(prompt(`¿Cuántos de "${moviendo.nombre}" pasan a ${nombreMesa(destino.numero)}?`, String(cantidad)));
+        if (!Number.isFinite(n) || n < 1) return;
+        cantidad = Math.min(n, cantidad);
+      }
+      await hacer(
+        supabase.rpc("mover_item", { p_item: moviendo.id, p_cuenta: ocupada.id, p_cantidad: cantidad }),
+        `${moviendo.nombre} pasó a ${nombreMesa(destino.numero)}`,
+      );
+    }
+    setMoviendo(null);
   }
 
   const estadoPedido = async (p: Pedido, estado: EstadoPedido, ok?: string) => {
@@ -187,8 +307,9 @@ export function MesaPanel({
   function imprimirCuenta() {
     const agrupado = new Map<string, { cantidad: number; importe: number }>();
     for (const i of lineas) {
-      const a = agrupado.get(i.nombre) ?? { cantidad: 0, importe: 0 };
-      agrupado.set(i.nombre, { cantidad: a.cantidad + i.cantidad, importe: a.importe + Number(i.precio) * i.cantidad });
+      const nombre = i.opciones?.length ? `${i.nombre} (${textoOpciones(i.opciones)})` : i.nombre;
+      const a = agrupado.get(nombre) ?? { cantidad: 0, importe: 0 };
+      agrupado.set(nombre, { cantidad: a.cantidad + i.cantidad, importe: a.importe + Number(i.precio) * i.cantidad });
     }
     const sugerida = ajustes.propinas.activas && ajustes.propinas.sugerida ? ajustes.propinas.sugerida : null;
     imprimirTicket([
@@ -208,6 +329,11 @@ export function MesaPanel({
       ...(llevar && cuenta?.direccion ? [{ tipo: "texto" as const, texto: cuenta.direccion, chico: true }] : []),
       { tipo: "separador" },
       { tipo: "fila", izq: "Total", der: formato(total), fuerte: true },
+      ...ajustes.otras_monedas.map((m) => ({
+        tipo: "fila" as const,
+        izq: `Aprox. en ${m.codigo}`,
+        der: formatoOtraMoneda(total / m.tasa, m.codigo),
+      })),
       ...(pagado > 0
         ? [
             { tipo: "fila" as const, izq: "Pagado", der: formato(pagado) },
@@ -278,6 +404,9 @@ export function MesaPanel({
         className={`flex h-full w-full ${ancho} flex-col bg-superficie shadow-2xl`}
       >
         <div className="flex items-center gap-3 border-b border-borde px-5 py-4">
+          {ajustes.avatares && (atiende ?? asignado) && (
+            <Avatar persona={atiende ?? asignado} className="h-10 w-10 text-sm" />
+          )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-xl font-bold">{titulo}</p>
             <p className="text-sm text-suave" suppressHydrationWarning>
@@ -285,6 +414,7 @@ export function MesaPanel({
                 piso,
                 mesa && `${mesa.capacidad ?? 4} lugares`,
                 cuenta && `${llevar ? "pedido" : "abierta"} hace ${tiempo(minutosDesde(cuenta.abierta_at, ahora))}`,
+                atiende ? `atiende ${nombrePersona(atiende)}` : asignado && `a cargo de ${nombrePersona(asignado)}`,
               ]
                 .filter(Boolean)
                 .join(" · ")}
@@ -296,6 +426,21 @@ export function MesaPanel({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4">
+          {deOtro && pantalla !== "cobro" && (
+            <div className="mb-4 flex items-center gap-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+              <Avatar persona={atiende} className="h-8 w-8 text-xs" />
+              <p className="min-w-0 flex-1">
+                Esta mesa la atiende <strong>{nombrePersona(atiende)}</strong>. Avísale antes de tomar el pedido.
+              </p>
+              <button
+                type="button"
+                className="rounded-lg bg-superficie px-2.5 py-1 text-xs font-semibold shadow-sm"
+                onClick={() => hacer(supabase.from("cuentas").update({ mesero_id: yo }).eq("id", cuenta!.id), "Ahora la atiendes tú")}
+              >
+                Pasármela
+              </button>
+            </div>
+          )}
           {cuenta?.aviso && pantalla === "mesa" && (
             <div
               className={`mb-4 flex items-start gap-3 rounded-xl p-3 ${
@@ -360,6 +505,8 @@ export function MesaPanel({
               zona={ajustes.zona_horaria}
               comensales={llevar ? 1 : cuenta.comensales}
               formato={formato}
+              tipo={cuenta.tipo ?? "mesa"}
+              borrador={cuenta.id}
               onEnviar={enviarPedido}
               onCancelar={() => setPantalla("mesa")}
             />
@@ -402,6 +549,25 @@ export function MesaPanel({
               <button type="button" className="boton w-full py-3" onClick={() => setPantalla("pedido")}>
                 <Icono nombre="mas_simple" className="h-4 w-4" /> Tomar pedido
               </button>
+              {!llevar && mesas.length > 1 && (
+                <div className="flex gap-2">
+                  <button type="button" className="boton-secundario flex-1 py-2 text-sm" onClick={() => setMoviendo("mover")}>
+                    Cambiar de mesa
+                  </button>
+                  <button type="button" className="boton-secundario flex-1 py-2 text-sm" onClick={() => setMoviendo("juntar")}>
+                    Juntar con otra
+                  </button>
+                </div>
+              )}
+              {pedidos.filter((p) => p.estado === "retenido").length > 1 && (
+                <button
+                  type="button"
+                  className="boton w-full bg-violet-600 py-2.5 hover:bg-violet-700"
+                  onClick={() => marchar(pedidos.filter((p) => p.estado === "retenido"))}
+                >
+                  Marchar todo lo que está en espera
+                </button>
+              )}
 
               {pedidos.length === 0 ? (
                 <p className="py-6 text-center text-sm text-suave">
@@ -439,6 +605,9 @@ export function MesaPanel({
                       <div className="flex flex-wrap items-center gap-2 border-b border-borde bg-stone-50 px-3 py-2 text-sm">
                         <span className="font-semibold">#{p.numero}</span>
                         <span className="text-suave">{p.estacion}</span>
+                        <span className="text-xs text-suave" suppressHydrationWarning title="Hora del pedido">
+                          {horaCorta(p.created_at, regionDe(ajustes))} · hace {tiempo(minutosDesde(p.created_at, ahora))}
+                        </span>
                         {p.origen === "cliente" && (
                           <span className="rounded bg-violet-100 px-1.5 text-xs text-violet-800">desde el QR</span>
                         )}
@@ -470,8 +639,22 @@ export function MesaPanel({
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm font-medium">{i.nombre}</span>
+                              {i.opciones?.length ? (
+                                <span className="block truncate text-xs text-suave">{textoOpciones(i.opciones)}</span>
+                              ) : null}
                               {i.nota && <span className="block truncate text-xs text-amber-700">{i.nota}</span>}
                             </span>
+                            {!llevar && mesas.length > 1 && (
+                              <button
+                                type="button"
+                                className="rounded-md px-1 text-suave hover:bg-stone-100 hover:text-tinta"
+                                onClick={() => setMoviendo(i)}
+                                aria-label={`Pasar ${i.nombre} a otra mesa`}
+                                title="Pasar a otra mesa"
+                              >
+                                ⇄
+                              </button>
+                            )}
                             <select
                               value={i.comensal ?? ""}
                               onChange={(e) => cambiarItem(i, { comensal: e.target.value ? Number(e.target.value) : null })}
@@ -490,7 +673,7 @@ export function MesaPanel({
                           </li>
                         ))}
                       </ul>
-                      {(p.estado === "pendiente" || p.estado === "listo" || p.nota || p.nombre) && (
+                      {(p.estado === "pendiente" || p.estado === "retenido" || p.estado === "listo" || p.nota || p.nombre) && (
                         <div className="flex flex-wrap items-center gap-2 border-t border-borde px-3 py-2 text-sm">
                           {(p.nombre || p.nota) && (
                             <span className="text-xs text-suave">
@@ -504,6 +687,15 @@ export function MesaPanel({
                               onClick={() => estadoPedido(p, "nuevo", "Enviado a cocina")}
                             >
                               Confirmar y enviar
+                            </button>
+                          )}
+                          {p.estado === "retenido" && (
+                            <button
+                              type="button"
+                              className="boton ml-auto bg-violet-600 px-3 py-1.5 hover:bg-violet-700"
+                              onClick={() => marchar([p])}
+                            >
+                              Marchar
                             </button>
                           )}
                           {p.estado === "listo" && (
@@ -525,6 +717,26 @@ export function MesaPanel({
           )}
         </div>
 
+        {moviendo && cuenta && (
+          <ElegirMesa
+            titulo={
+              moviendo === "mover"
+                ? "¿A qué mesa libre pasa?"
+                : moviendo === "juntar"
+                  ? `¿Con qué mesa se junta ${titulo}?`
+                  : `¿A qué mesa pasa "${moviendo.nombre}"?`
+            }
+            mesas={mesas.filter((m) => {
+              if (m.id === mesa?.id) return false;
+              const ocupada = servicio.cuentas.some((c) => c.mesa_id === m.id && c.estado === "abierta");
+              return moviendo === "mover" ? !ocupada : ocupada;
+            })}
+            vacio={moviendo === "mover" ? "No hay mesas libres." : "No hay otras mesas abiertas."}
+            onElegir={moverA}
+            onCerrar={() => setMoviendo(null)}
+          />
+        )}
+
         {cuenta && pantalla === "mesa" && (
           <div className="space-y-3 border-t border-borde px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
             <div className="flex items-baseline justify-between">
@@ -532,7 +744,10 @@ export function MesaPanel({
                 {pagado > 0 ? `Pagado ${formato(pagado)}` : "Total"}
                 {propinas > 0 ? ` · Propinas ${formato(propinas)}` : ""}
               </span>
-              <span className="text-2xl font-bold tabular-nums">{formato(total)}</span>
+              <span className="text-right">
+                <span className="block text-2xl font-bold tabular-nums">{formato(total)}</span>
+                <EnOtrasMonedas total={total} monedas={ajustes.otras_monedas} texto="Aprox." />
+              </span>
             </div>
             <div className="flex gap-2">
               {admin && pedidos.length === 0 && pagos.length === 0 && (
@@ -664,6 +879,59 @@ function DatosLlevar({ cuenta, ajustes, formato }: { cuenta: Cuenta; ajustes: Aj
           </a>
         </p>
       )}
+    </div>
+  );
+}
+
+// Lista de mesas para mover o juntar (las del mismo piso primero, por número).
+function ElegirMesa({
+  titulo,
+  mesas,
+  vacio,
+  onElegir,
+  onCerrar,
+}: {
+  titulo: string;
+  mesas: Mesa[];
+  vacio: string;
+  onElegir: (m: Mesa) => void;
+  onCerrar: () => void;
+}) {
+  const ordenadas = useMemo(
+    () => [...mesas].sort((a, b) => a.numero.localeCompare(b.numero, "es", { numeric: true })),
+    [mesas],
+  );
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onCerrar}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={titulo}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-t-2xl bg-superficie p-5 shadow-2xl sm:rounded-2xl"
+      >
+        <p className="mb-3 font-semibold">{titulo}</p>
+        {ordenadas.length === 0 ? (
+          <p className="py-4 text-sm text-suave">{vacio}</p>
+        ) : (
+          <ul className="grid max-h-[50vh] grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
+            {ordenadas.map((m) => (
+              <li key={m.id}>
+                <button
+                  type="button"
+                  onClick={() => onElegir(m)}
+                  className="w-full rounded-xl border border-borde px-2 py-3 text-sm font-semibold hover:border-marca hover:bg-marca/5"
+                >
+                  {nombreMesa(m.numero)}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <button type="button" onClick={onCerrar} className="boton-secundario mt-4 w-full">
+          Cancelar
+        </button>
+      </div>
     </div>
   );
 }

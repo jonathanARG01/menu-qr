@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { leerAjustes } from "@/lib/salon";
+import { leerAjustes, textoOpciones, type OpcionElegida } from "@/lib/salon";
 import { formatoHora, numeroWhatsapp, paisDe } from "@/lib/region";
 import { soportaPush, suscribirA } from "@/lib/push";
 import { sonar } from "@/lib/sonidos";
@@ -20,11 +20,18 @@ type Datos = {
   envio: number;
   desde: string;
   despachado_at: string | null;
+  entregado_at?: string | null;
   cerrada_at: string | null;
+  // Eligió pagar al retirar porque falló el pago en línea (migración 0018).
+  paga_al_retirar?: boolean;
   zona: string;
   whatsapp: string | null;
   pagado: number;
-  pedidos: { numero: number; estado: string; items: { nombre: string; precio: number; cantidad: number }[] }[];
+  pedidos: {
+    numero: number;
+    estado: string;
+    items: { nombre: string; precio: number; cantidad: number; opciones?: OpcionElegida[] }[];
+  }[];
 };
 
 // Lo que agrega Mercado Pago a la dirección al volver.
@@ -56,6 +63,8 @@ export function SeguimientoPedido({ restaurante, id }: { restaurante: Restaurant
   const [pagando, setPagando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Mercado Pago no anduvo: se ofrece pagar al retirar (plan B).
+  const [fallo, setFallo] = useState(false);
   const [push, setPush] = useState<"no" | "ofrecer" | "activo">("no");
   const anterior = useRef<string | null>(null);
   const precio = (n: number) => formatoPrecio(n, restaurante.moneda);
@@ -102,7 +111,7 @@ export function SeguimientoPedido({ restaurante, id }: { restaurante: Restaurant
       );
       const { estado } = ((await res?.json().catch(() => null)) ?? {}) as { estado?: string | null };
       if (estado === "aprobado") return (setAviso(t("pagoAprobado")), consultar());
-      if (estado === "rechazado") return setError(t("pagoRechazado"));
+      if (estado === "rechazado") return (setError(t("pagoRechazado")), setFallo(true));
       setAviso(t("pagoPendiente"));
       if (++intentos < 6) setTimeout(revisar, 4000);
     };
@@ -121,7 +130,7 @@ export function SeguimientoPedido({ restaurante, id }: { restaurante: Restaurant
   const enCamino = datos?.tipo === "delivery" && !!datos.despachado_at;
   const entregado = datos?.estado === "cerrada" || (estados.length > 0 && estados.every((e) => e === "entregado"));
   const anulado = datos?.estado === "anulada";
-  const esperandoPago = pendiente && ajustes.llevar.pago_obligatorio && falta > 0;
+  const esperandoPago = pendiente && ajustes.llevar.pago_obligatorio && falta > 0 && !datos?.paga_al_retirar;
 
   const etapa = anulado
     ? "estadoCancelado"
@@ -162,9 +171,21 @@ export function SeguimientoPedido({ restaurante, id }: { restaurante: Restaurant
     if (!r?.url) {
       setPagando(false);
       setError(t("pagoRechazado"));
+      setFallo(true);
       return;
     }
     window.location.href = r.url;
+  }
+
+  async function pagarAlRetirar() {
+    setPagando(true);
+    const { error: e } = await supabase.rpc("pagar_al_retirar", { p_id: id });
+    setPagando(false);
+    if (e) return setError(e.message);
+    setError(null);
+    setFallo(false);
+    setAviso(t("pagasAlRetirar"));
+    consultar();
   }
 
   async function activarAvisos() {
@@ -202,6 +223,8 @@ export function SeguimientoPedido({ restaurante, id }: { restaurante: Restaurant
   ];
   const whatsapp = datos.whatsapp;
   const puedePagar = conectado && ajustes.cobro_online.activo && falta > 0 && !anulado && !entregado;
+  // Plan B: si el pago en línea falla (o no está disponible) y el pedido lo espera, puede pagar al retirar.
+  const planB = !datos.paga_al_retirar && falta > 0 && !anulado && !entregado && (fallo || (esperandoPago && !puedePagar));
 
   return (
     <Marco restaurante={restaurante} titulo={t("tuPedido")}>
@@ -244,6 +267,7 @@ export function SeguimientoPedido({ restaurante, id }: { restaurante: Restaurant
           <li key={k} className="flex justify-between gap-3 py-2">
             <span>
               {i.cantidad} × {i.nombre}
+              {i.opciones?.length ? <span className="block text-xs text-stone-500">{textoOpciones(i.opciones)}</span> : null}
             </span>
             <span className="tabular-nums">{precio(Number(i.precio) * i.cantidad)}</span>
           </li>
@@ -262,6 +286,7 @@ export function SeguimientoPedido({ restaurante, id }: { restaurante: Restaurant
       <p className={`mt-2 text-right text-sm font-semibold ${falta > 0 ? "text-stone-500" : "text-emerald-700"}`}>
         {falta > 0 ? `${t("faltaPagar")}: ${precio(falta)}` : t("pagado")}
       </p>
+      {datos.paga_al_retirar && falta > 0 && <p className="mt-1 text-right text-sm text-stone-500">{t("pagasAlRetirar")}</p>}
       {datos.direccion && <p className="mt-2 text-sm text-stone-500">📍 {datos.direccion}</p>}
 
       <div className="mt-5 space-y-2">
@@ -269,6 +294,19 @@ export function SeguimientoPedido({ restaurante, id }: { restaurante: Restaurant
           <button type="button" onClick={pagar} disabled={pagando} className={BOTON} style={ESTILO_BOTON}>
             {pagando ? t("cargando") : `${t("pagarOnline")} · ${precio(falta)}`}
           </button>
+        )}
+        {planB && (
+          <div className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
+            <p>{t("planB")}</p>
+            <button
+              type="button"
+              onClick={pagarAlRetirar}
+              disabled={pagando}
+              className="mt-2 w-full rounded-xl bg-white px-4 py-2.5 font-semibold ring-1 ring-amber-300"
+            >
+              {t("pagarAlRetirar")}
+            </button>
+          </div>
         )}
         {push === "ofrecer" && !entregado && !anulado && (
           <button

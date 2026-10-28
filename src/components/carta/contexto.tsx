@@ -4,9 +4,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { createClient } from "@/lib/supabase/client";
 import { IDIOMAS_EXTRA, texto, type ClaveTexto, type Idioma } from "@/lib/i18n";
 import type { Plato, Restaurante, Seccion, Sucursal } from "@/lib/types";
-import { leerAjustes, type Ajustes } from "@/lib/salon";
+import { leerAjustes, type Ajustes, type OpcionElegida } from "@/lib/salon";
+import { claveLinea, extraOpciones } from "@/lib/opciones";
 
-type Linea = { plato: Plato; cantidad: number };
+// Una línea del pedido: un plato con sus opciones (el mismo plato con otras opciones va en otra línea).
+export type Linea = { clave: string; plato: Plato; cantidad: number; opciones: OpcionElegida[]; precio: number };
+type Guardada = { platoId: string; cantidad: number; opciones: OpcionElegida[] };
 
 type Valor = {
   idioma: Idioma;
@@ -21,12 +24,17 @@ type Valor = {
   // Sin mesa: el restaurante recibe pedidos para llevar (o delivery) desde la carta.
   pedidosLlevar: boolean;
   ajustes: Ajustes;
+  moneda: string;
   lineas: Linea[];
   cantidad: (platoId: string) => number;
   cambiar: (platoId: string, delta: number) => void;
+  cambiarLinea: (clave: string, delta: number) => void;
+  agregar: (platoId: string, opciones: OpcionElegida[]) => void;
   vaciar: () => void;
-  // Datos que llegan en el enlace del QR (?mesa=4&s=centro)
+  // Datos que llegan en el enlace del QR (?mesa=4&s=centro). Si el número de mesa se repite en otro piso,
+  // el QR trae el id de la mesa (?mesa=<id>&n=4): mesa es lo que se manda a la base y mesaNombre lo que se muestra.
   mesa: string | null;
+  mesaNombre: string | null;
   sucursales: Sucursal[];
   sucursal: Sucursal | null;
   setSucursal: (sucursal: Sucursal | null) => void;
@@ -43,11 +51,15 @@ const Ctx = createContext<Valor>({
   pedidosMesa: false,
   pedidosLlevar: false,
   ajustes: leerAjustes(),
+  moneda: "CLP",
   lineas: [],
   cantidad: () => 0,
   cambiar: () => {},
+  cambiarLinea: () => {},
+  agregar: () => {},
   vaciar: () => {},
   mesa: null,
+  mesaNombre: null,
   sucursales: [],
   sucursal: null,
   setSucursal: () => {},
@@ -88,8 +100,9 @@ export function ProveedorCarta({
   );
   const [idioma, setIdiomaEstado] = useState<Idioma>("es");
   const [mesa, setMesa] = useState<string | null>(null);
+  const [mesaNombre, setMesaNombre] = useState<string | null>(null);
   const [sucursal, setSucursal] = useState<Sucursal | null>(sucursales.length === 1 ? sucursales[0] : null);
-  const [cantidades, setCantidades] = useState<Record<string, number>>({});
+  const [cantidades, setCantidades] = useState<Record<string, Guardada>>({});
 
   // Idioma: el último elegido en este teléfono, si no el del navegador, si no español.
   useEffect(() => {
@@ -113,9 +126,11 @@ export function ProveedorCarta({
   useEffect(() => {
     if (vistaPrevia) return;
     const params = new URLSearchParams(window.location.search);
-    const numeroMesa = params.get("mesa")?.slice(0, 12) || null;
+    const numeroMesa = params.get("mesa")?.slice(0, 36) || null;
+    const nombreMesa = params.get("n")?.slice(0, 12) || (numeroMesa && numeroMesa.length <= 12 ? numeroMesa : null);
     const deEnlace = sucursales.find((s) => s.slug === params.get("s")) ?? null;
     setMesa(numeroMesa);
+    setMesaNombre(nombreMesa);
     if (deEnlace) setSucursal(deEnlace);
 
     const clave = `carta:visita:${restaurante.id}:${numeroMesa ?? ""}:${deEnlace?.id ?? ""}`;
@@ -128,7 +143,7 @@ export function ProveedorCarta({
         p_restaurante: restaurante.id,
         p_tipo: "visita",
         p_sucursal: deEnlace?.id ?? (sucursales.length === 1 ? sucursales[0].id : null),
-        p_mesa: numeroMesa,
+        p_mesa: nombreMesa,
         p_idioma: (leer("carta:idioma") ?? navigator.language).slice(0, 2),
       })
       .then(
@@ -138,17 +153,47 @@ export function ProveedorCarta({
   }, [restaurante.id, sucursales, vistaPrevia]);
 
   const platos = useMemo(() => new Map(secciones.flatMap((s) => s.platos).map((p) => [p.id, p])), [secciones]);
-  const lineas = useMemo(
+  const lineas = useMemo<Linea[]>(
     () =>
       Object.entries(cantidades)
-        .filter(([id, n]) => n > 0 && platos.has(id))
-        .map(([id, n]) => ({ plato: platos.get(id)!, cantidad: n })),
+        .filter(([, g]) => g.cantidad > 0 && platos.has(g.platoId))
+        .map(([clave, g]) => {
+          const plato = platos.get(g.platoId)!;
+          return { clave, plato, cantidad: g.cantidad, opciones: g.opciones, precio: Number(plato.precio) + extraOpciones(g.opciones) };
+        }),
     [cantidades, platos],
   );
 
-  const cambiar = useCallback((platoId: string, delta: number) => {
-    setCantidades((actual) => ({ ...actual, [platoId]: Math.min(99, Math.max(0, (actual[platoId] ?? 0) + delta)) }));
+  const cambiarLinea = useCallback((clave: string, delta: number) => {
+    setCantidades((actual) => {
+      const g = actual[clave];
+      if (!g) return actual;
+      return { ...actual, [clave]: { ...g, cantidad: Math.min(99, Math.max(0, g.cantidad + delta)) } };
+    });
   }, []);
+
+  const agregar = useCallback((platoId: string, opciones: OpcionElegida[]) => {
+    const clave = claveLinea(platoId, opciones);
+    setCantidades((actual) => ({
+      ...actual,
+      [clave]: { platoId, opciones, cantidad: Math.min(99, (actual[clave]?.cantidad ?? 0) + 1) },
+    }));
+  }, []);
+
+  // Sin opciones: suma o resta del plato. Con opciones, restar quita de la última línea de ese plato.
+  const cambiar = useCallback(
+    (platoId: string, delta: number) => {
+      if (delta > 0) return agregar(platoId, []);
+      setCantidades((actual) => {
+        const clave = Object.keys(actual)
+          .filter((c) => actual[c].platoId === platoId && actual[c].cantidad > 0)
+          .pop();
+        if (!clave) return actual;
+        return { ...actual, [clave]: { ...actual[clave], cantidad: Math.max(0, actual[clave].cantidad + delta) } };
+      });
+    },
+    [agregar],
+  );
 
   const numeroWhatsapp = sucursal?.whatsapp || restaurante.whatsapp || sucursales.find((s) => s.whatsapp)?.whatsapp;
   const whatsapp = Boolean(restaurante.pedidos_whatsapp && numeroWhatsapp);
@@ -164,7 +209,7 @@ export function ProveedorCarta({
           p_restaurante: restaurante.id,
           p_tipo: "pedido",
           p_sucursal: sucursal?.id ?? null,
-          p_mesa: mesa,
+          p_mesa: mesaNombre,
           p_idioma: idioma,
           p_total: total,
           p_detalle: lineas.map((l) => ({ id: l.plato.id, nombre: l.plato.nombre, cantidad: l.cantidad })),
@@ -174,7 +219,7 @@ export function ProveedorCarta({
           () => {},
         );
     },
-    [restaurante.id, sucursal, mesa, idioma, lineas],
+    [restaurante.id, sucursal, mesaNombre, idioma, lineas],
   );
 
   const valor: Valor = {
@@ -187,11 +232,15 @@ export function ProveedorCarta({
     pedidosMesa,
     pedidosLlevar,
     ajustes,
+    moneda: restaurante.moneda,
     lineas,
-    cantidad: (id) => cantidades[id] ?? 0,
+    cantidad: (id) => Object.values(cantidades).reduce((n, g) => (g.platoId === id ? n + g.cantidad : n), 0),
     cambiar,
+    cambiarLinea,
+    agregar,
     vaciar: () => setCantidades({}),
     mesa,
+    mesaNombre,
     sucursales,
     sucursal,
     setSucursal,

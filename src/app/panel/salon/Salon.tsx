@@ -5,7 +5,20 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/components/Toast";
 import { Icono } from "@/components/Icono";
-import { ELEMENTOS, nombreMesa, regionDe, type Ajustes, type Elemento, type Piso, type TipoElemento } from "@/lib/salon";
+import {
+  ELEMENTOS,
+  nombreMesa,
+  NOMBRE_ESTADO,
+  regionDe,
+  textoOpciones,
+  type Ajustes,
+  type Elemento,
+  type Piso,
+  type TipoElemento,
+} from "@/lib/salon";
+import { useEquipo } from "@/lib/equipo";
+import { Avatar } from "@/components/Avatar";
+import { mapaFotos } from "@/components/Miniatura";
 import type { Categoria, Mesa, Plato, Restaurante, Sucursal } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { totalLineas } from "@/lib/cuenta";
@@ -95,13 +108,32 @@ export function Salon({
   }, []);
   const [seleccion, setSeleccion] = useState<Seleccion>(null);
   const [mesaAbierta, setMesaAbierta] = useState<string | null>(null);
+  // Buscar un plato desde el plano: qué mesas lo pidieron y en qué va.
+  const [buscarPlato, setBuscarPlato] = useState("");
+  const { equipo } = useEquipo(supabase, restaurante.id);
+  const fotos = useMemo(() => (ajustes.miniaturas ? mapaFotos(platos) : null), [platos, ajustes.miniaturas]);
 
   const mesasLocal = mesas.filter(delLocal);
   const sinUbicar = mesasLocal.filter((m) => !m.piso_id || !pisos.some((p) => p.id === m.piso_id));
 
   // Cómo está cada mesa: libre, ocupada, con pedido listo, con aviso del cliente…
+  const consulta = buscarPlato.trim().toLowerCase();
+  const coincidencias = useMemo(() => {
+    if (!consulta) return [];
+    return pedidos
+      .filter((p) => p.estado !== "cancelado" && p.estado !== "entregado")
+      .flatMap((p) =>
+        (p.pedido_items ?? [])
+          .filter((i) => i.nombre.toLowerCase().includes(consulta))
+          .map((i) => ({ item: i, pedido: p, cuenta: cuentas.find((c) => c.id === p.cuenta_id) })),
+      )
+      .filter((x) => x.cuenta?.mesa_id);
+  }, [consulta, pedidos, cuentas]);
+
   const estados = useMemo(() => {
     const mapa = new Map<string, EstadoMesa>();
+    const conPlato = new Set(coincidencias.map((x) => x.cuenta!.mesa_id!));
+    const avatar = (id?: string | null) => (ajustes.avatares && id ? (equipo.find((p) => p.user_id === id) ?? null) : null);
     for (const c of cuentas) {
       if (!c.mesa_id) continue;
       const suyos = pedidos.filter((p) => p.cuenta_id === c.id && p.estado !== "cancelado");
@@ -113,10 +145,21 @@ export function Salon({
         listo: suyos.some((p) => p.estado === "listo"),
         pendiente: suyos.some((p) => p.estado === "pendiente"),
         aviso: c.aviso?.tipo ?? null,
+        mesero: avatar(c.mesero_id),
       });
     }
+    // Libres con mesero asignado: su foto o iniciales, más tenues.
+    for (const m of mesas) {
+      if (!mapa.has(m.id) && m.mesero_id && avatar(m.mesero_id)) mapa.set(m.id, { ocupada: false, mesero: avatar(m.mesero_id) });
+    }
+    if (consulta) {
+      for (const m of mesas) {
+        const e = mapa.get(m.id) ?? { ocupada: false };
+        mapa.set(m.id, { ...e, destacada: conPlato.has(m.id), apagada: !conPlato.has(m.id) });
+      }
+    }
     return mapa;
-  }, [cuentas, pedidos, ahora]);
+  }, [cuentas, pedidos, ahora, mesas, coincidencias, consulta, ajustes.avatares, equipo]);
 
   // Suena cuando una mesa llama al mesero o pide la cuenta (no al abrir la pantalla). Cada aviso suena distinto.
   useEffect(() => {
@@ -322,6 +365,7 @@ export function Salon({
       categorias={categorias}
       platos={platos}
       servicio={servicioVivo}
+      mesas={mesas.filter(delLocal)}
       onCerrar={() => setMesaAbierta(null)}
     />
   );
@@ -530,6 +574,20 @@ export function Salon({
                 {!editando && ajustes.modulos.reservas && (
                   <ProximasReservas supabase={supabase} restauranteId={restaurante.id} region={regionDe(ajustes)} />
                 )}
+                {!editando && (
+                  <BuscarPlato
+                    valor={buscarPlato}
+                    onChange={setBuscarPlato}
+                    resultados={coincidencias.map((x) => ({
+                      id: x.item.id,
+                      mesaId: x.cuenta!.mesa_id!,
+                      mesa: nombreMesa(x.cuenta!.mesa_numero),
+                      texto: `${x.item.cantidad}× ${x.item.nombre}${x.item.opciones?.length ? ` (${textoOpciones(x.item.opciones)})` : ""}`,
+                      estado: NOMBRE_ESTADO[x.pedido.estado],
+                    }))}
+                    onAbrir={setMesaAbierta}
+                  />
+                )}
                 <Plano
                   piso={piso}
                   mesas={mesas}
@@ -647,6 +705,7 @@ export function Salon({
           ahora={ahora}
           formato={formato}
           region={regionDe(ajustes)}
+          fotos={fotos}
         >
           {fichaMesa}
         </PantallaSalon>
@@ -720,6 +779,11 @@ function BotonMesa({
       </span>
       {(estado?.aviso || estado?.pendiente) && (
         <span className="absolute right-2 top-2 h-2.5 w-2.5 animate-pulse rounded-full bg-red-600" />
+      )}
+      {estado?.mesero && (
+        <span className={`absolute bottom-1.5 right-2 ${estado.ocupada ? "" : "opacity-60"}`}>
+          <Avatar persona={estado.mesero} className="h-5 w-5 text-[8px]" />
+        </span>
       )}
     </button>
   );
@@ -1165,6 +1229,48 @@ function FondoPiso({
         </label>
       )}
       <p className="text-xs text-suave">Una foto desde arriba o el plano del local. Las mesas se acomodan encima.</p>
+    </div>
+  );
+}
+
+// Buscar un plato desde el plano ("¿quién pidió la lasaña?"): marca las mesas y lista en qué va cada uno.
+function BuscarPlato({
+  valor,
+  onChange,
+  resultados,
+  onAbrir,
+}: {
+  valor: string;
+  onChange: (v: string) => void;
+  resultados: { id: string; mesaId: string; mesa: string; texto: string; estado: string }[];
+  onAbrir: (mesaId: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <input
+        type="search"
+        value={valor}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Buscar un plato en las mesas…"
+        className="campo py-2 text-sm"
+        aria-label="Buscar un plato en las mesas"
+      />
+      {valor.trim() && (
+        <ul className="flex flex-wrap gap-1.5 text-xs">
+          {resultados.length === 0 && <li className="text-suave">Ninguna mesa abierta pidió eso.</li>}
+          {resultados.map((r) => (
+            <li key={r.id}>
+              <button
+                type="button"
+                onClick={() => onAbrir(r.mesaId)}
+                className="rounded-full border border-sky-300 bg-sky-50 px-2.5 py-1 text-sky-900 hover:bg-sky-100"
+              >
+                <strong>{r.mesa}</strong> · {r.texto} · {r.estado}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -10,9 +10,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   const { restaurante } = carta;
   const pedido = new URL(request.url).searchParams;
   const consulta = new URLSearchParams();
-  const mesa = pedido.get("mesa")?.slice(0, 12);
+  const mesa = pedido.get("mesa")?.slice(0, 36);
+  const nombre = pedido.get("n")?.slice(0, 12);
   const sucursal = pedido.get("s")?.slice(0, 60);
   if (mesa) consulta.set("mesa", mesa);
+  if (nombre) consulta.set("n", nombre);
   if (sucursal) consulta.set("s", sucursal);
   const inicio = `/${restaurante.slug}${consulta.size ? `?${consulta}` : ""}`;
 

@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { mensajeError } from "@/lib/utils";
+import { borrarRestauranteCompleto, listarFotos } from "@/lib/borrarRestaurante";
 
 // Datos del restaurante y cuentas de su gente, editados desde /admin. Cambiar correos y contraseñas o borrar
 // cuentas necesita la clave de servicio (SUPABASE_SERVICE_ROLE_KEY en Vercel), así que todo pasa por el servidor
@@ -32,8 +33,6 @@ export type DatosRestaurante = {
 
 type Resultado<T = null> = { error: string } | { ok: T };
 
-const BUCKET = "fotos";
-
 async function comoSuperadmin(): Promise<{ error: string } | { db: SupabaseClient; yo: string }> {
   const supabase = await createClient();
   const [{ data: es }, { data: sesion }] = await Promise.all([supabase.rpc("es_superadmin"), supabase.auth.getUser()]);
@@ -46,18 +45,6 @@ async function comoSuperadmin(): Promise<{ error: string } | { db: SupabaseClien
 async function contar(db: SupabaseClient, tabla: string, id: string) {
   const { count } = await db.from(tabla).select("*", { count: "exact", head: true }).eq("restaurante_id", id);
   return count ?? 0;
-}
-
-// Archivos de la carpeta del restaurante en el bucket de fotos (logo, platos, portada).
-async function listarFotos(db: SupabaseClient, id: string) {
-  const rutas: string[] = [];
-  for (let desde = 0; ; desde += 1000) {
-    const { data } = await db.storage.from(BUCKET).list(id, { limit: 1000, offset: desde });
-    if (!data?.length) break;
-    rutas.push(...data.filter((a) => a.id).map((a) => `${id}/${a.name}`));
-    if (data.length < 1000) break;
-  }
-  return rutas;
 }
 
 export async function datosRestaurante(id: string): Promise<Resultado<DatosRestaurante>> {
@@ -195,27 +182,9 @@ export async function eliminarRestaurante(
   if (!r) return { error: "No existe ese restaurante" };
   if (confirmacion.trim().toLowerCase() !== r.slug) return { error: `Escribe ${r.slug} para confirmar.` };
 
-  const { data: filas } = await db.from("usuarios").select("user_id").eq("restaurante_id", id);
-  const usuarios = (filas ?? []).map((u: { user_id: string }) => u.user_id);
-
-  const fotos = await listarFotos(db, id);
-  const { error } = await db.from("restaurantes").delete().eq("id", id);
-  if (error) return { error: mensajeError(error) };
-  // Si las fotos no se pueden borrar no pasa nada: solo quedan archivos huérfanos.
-  for (let i = 0; i < fotos.length; i += 500) await db.storage.from(BUCKET).remove(fotos.slice(i, i + 500));
-
-  let cuentas = 0;
-  if (borrarCuentas && usuarios.length) {
-    const { data: admins } = await db.from("superadmins").select("user_id");
-    const idsAdmin = new Set((admins ?? []).map((a: { user_id: string }) => a.user_id));
-    for (const u of usuarios) {
-      if (idsAdmin.has(u)) continue;
-      const { count } = await db.from("usuarios").select("*", { count: "exact", head: true }).eq("user_id", u);
-      if (count) continue;
-      const { error: e } = await db.auth.admin.deleteUser(u);
-      if (!e) cuentas++;
-    }
-  }
+  const hecho = await borrarRestauranteCompleto(db, id, borrarCuentas);
+  if ("error" in hecho) return { error: mensajeError(hecho.error) };
+  const { cuentas } = hecho;
 
   revalidatePath(`/${r.slug}`);
   revalidatePath("/admin");

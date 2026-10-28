@@ -10,6 +10,7 @@ import { mensajeError, urlCarta } from "@/lib/utils";
 import {
   colorLegibleQR,
   descargar,
+  enlaceMesa,
   ESTILO_BASE,
   generarPdf,
   ordenarMesas,
@@ -27,12 +28,14 @@ export function GeneradorQR({
   sucursales,
   sucursalInicial,
   reservas = false,
+  pisos = [],
 }: {
   restaurante: Restaurante;
   mesasIniciales: Mesa[];
   sucursales: Sucursal[];
   sucursalInicial?: string;
   reservas?: boolean;
+  pisos?: { id: string; nombre: string }[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
@@ -45,6 +48,10 @@ export function GeneradorQR({
   const sucursal = sucursales.find((s) => s.id === sucursalId);
   const mesas = todas.filter((m) => (m.sucursal_id ?? "") === sucursalId);
   const url = (mesa?: string) => urlCarta(restaurante.slug, mesa, sitio, sucursal?.slug);
+  const urlMesa = (mesa: Mesa) => {
+    const e = enlaceMesa(mesa, mesas);
+    return urlCarta(restaurante.slug, e.mesa, sitio, sucursal?.slug, e.nombre);
+  };
   const [desde, setDesde] = useState("1");
   const [hasta, setHasta] = useState("10");
   const [nombreMesa, setNombreMesa] = useState("");
@@ -299,11 +306,14 @@ export function GeneradorQR({
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {mesas.map((mesa) => (
               <li key={mesa.id} className="rounded-xl border border-borde p-3 text-center">
-                <TarjetaQR url={url(mesa.numero)} estilo={estilo} />
+                <TarjetaQR url={urlMesa(mesa)} estilo={estilo} />
                 <p className="mt-2 font-semibold">{rotuloMesa(mesa.numero)}</p>
+                {enlaceMesa(mesa, mesas).nombre && (
+                  <p className="text-xs text-suave">{pisos.find((p) => p.id === mesa.piso_id)?.nombre ?? "Sin piso"}</p>
+                )}
                 <div className="mt-1 flex justify-center gap-3 text-xs">
                   <BotonPng
-                    url={url(mesa.numero)}
+                    url={urlMesa(mesa)}
                     estilo={estilo}
                     archivo={`qr-${restaurante.slug}${sucursal ? `-${sucursal.slug}` : ""}-mesa-${mesa.numero}`}
                   />

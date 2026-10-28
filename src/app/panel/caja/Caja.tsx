@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icono } from "@/components/Icono";
 import { useToast } from "@/components/Toast";
-import { esEfectivo, resumirCaja, type TotalesCaja } from "@/lib/caja";
+import { esEfectivo, resumirCaja, type Gasto, type TotalesCaja } from "@/lib/caja";
 import { fechaCorta, imprimirTicket, type LineaTicket } from "@/lib/imprimir";
 import { leerAjustes, regionDe, type Pago } from "@/lib/salon";
 import { createClient } from "@/lib/supabase/client";
@@ -61,6 +61,8 @@ export function Caja({
   const [guardando, setGuardando] = useState(false);
   const [viendo, setViendo] = useState<Cierre | null>(null);
   const [hasta, setHasta] = useState(() => new Date().toISOString());
+  // Gastos del turno (null: falta la migración 0018).
+  const [gastos, setGastos] = useState<Gasto[] | null>([]);
 
   const ultimo = cierres[0];
   const desde = ultimo?.hasta ?? inicioDeHoy();
@@ -80,7 +82,7 @@ export function Caja({
     }
     const lista = (historial.data ?? []) as Cierre[];
     const inicio = lista[0]?.hasta ?? inicioDeHoy();
-    const [p, c, a] = await Promise.all([
+    const [p, c, a, g] = await Promise.all([
       supabase.from("pagos").select("*").eq("restaurante_id", restaurante.id).gte("created_at", inicio).lte("created_at", ahora),
       supabase
         .from("cuentas")
@@ -90,6 +92,13 @@ export function Caja({
         .gte("cerrada_at", inicio)
         .lte("cerrada_at", ahora),
       supabase.from("cuentas").select("id").eq("restaurante_id", restaurante.id).eq("estado", "abierta"),
+      supabase
+        .from("gastos")
+        .select("*")
+        .eq("restaurante_id", restaurante.id)
+        .gte("created_at", inicio)
+        .lte("created_at", ahora)
+        .order("created_at"),
     ]);
     const idsAbiertas = (a.data ?? []).map((x) => x.id as string);
     let falta = 0;
@@ -108,6 +117,7 @@ export function Caja({
     setPagos((p.data ?? []) as Pago[]);
     setCerradas((c.data ?? []) as { comensales: number }[]);
     setAbiertas({ cantidad: idsAbiertas.length, falta });
+    setGastos(g.error ? null : ((g.data ?? []) as Gasto[]));
     setHasta(ahora);
     setCargando(false);
   }, [supabase, restaurante.id]);
@@ -123,8 +133,8 @@ export function Caja({
   }, [cargar, admin, supabase, restaurante.id]);
 
   const totales = useMemo(
-    () => resumirCaja({ pagos, cuentasCerradas: cerradas, nombres, fondoInicial: numero(fondo) }),
-    [pagos, cerradas, nombres, fondo],
+    () => resumirCaja({ pagos, cuentasCerradas: cerradas, nombres, fondoInicial: numero(fondo), gastos: gastos ?? [] }),
+    [pagos, cerradas, nombres, fondo, gastos],
   );
   const diferencia = contado.trim() ? numero(contado) - totales.efectivo_esperado : null;
 
@@ -192,6 +202,16 @@ export function Caja({
       ...t.personas.map((p) => ({ tipo: "fila" as const, izq: p.nombre, der: formato(p.propinas) })),
       { tipo: "separador" },
       { tipo: "fila", izq: "Fondo inicial", der: formato(Number(c.efectivo_inicial)) },
+      ...(t.gastos
+        ? [
+            {
+              tipo: "fila" as const,
+              izq: "Gastos",
+              der: formato(t.gastos),
+              nota: t.gastos_efectivo ? `${formato(t.gastos_efectivo)} en efectivo (se restan)` : undefined,
+            },
+          ]
+        : []),
       { tipo: "fila", izq: "Efectivo esperado", der: formato(t.efectivo_esperado) },
     ];
     if (c.efectivo_contado !== null) {
@@ -205,6 +225,29 @@ export function Caja({
       lineas.push({ tipo: "texto", texto: `Quedaba sin cobrar en mesas abiertas: ${formato(t.pendiente)}`, chico: true });
     if (c.nota) lineas.push({ tipo: "separador" }, { tipo: "texto", texto: c.nota });
     imprimirTicket(lineas);
+  }
+
+  // Comprobante del gasto para guardar con la boleta o el vale.
+  function imprimirGasto(g: Gasto) {
+    imprimirTicket([
+      { tipo: "titulo", texto: "Comprobante de gasto" },
+      { tipo: "texto", texto: restaurante.nombre, fuerte: true },
+      { tipo: "texto", texto: fechaCorta(g.created_at, region), chico: true },
+      { tipo: "separador" },
+      { tipo: "texto", texto: g.detalle, fuerte: true },
+      { tipo: "fila", izq: `Pagado con ${g.medio.toLowerCase()}`, der: formato(Number(g.monto)), fuerte: true },
+      { tipo: "texto", texto: `Registró: ${(g.registrado_por && nombres.get(g.registrado_por)) || "Equipo"}`, chico: true },
+      { tipo: "separador" },
+      { tipo: "texto", texto: "Firma: ______________________", chico: true },
+    ]);
+  }
+
+  async function borrarGasto(g: Gasto) {
+    if (!confirm(`¿Borrar el gasto "${g.detalle}"?`)) return;
+    const { error } = await supabase.from("gastos").delete().eq("id", g.id);
+    if (error) return avisar(mensajeError(error), "error");
+    avisar("Gasto borrado");
+    await cargar();
   }
 
   if (falta0009) {
@@ -333,6 +376,32 @@ export function Caja({
             </section>
           </div>
 
+          {gastos && (
+            <Gastos
+              gastos={gastos}
+              admin={admin}
+              formato={formato}
+              hora={(iso) => fechaCorta(iso, region)}
+              onNuevo={async (g) => {
+                const { data, error } = await supabase
+                  .from("gastos")
+                  .insert({ restaurante_id: restaurante.id, ...g })
+                  .select("*")
+                  .single();
+                if (error) {
+                  avisar(mensajeError(error), "error");
+                  return false;
+                }
+                avisar("Gasto anotado");
+                await cargar();
+                if (confirm("¿Imprimir el comprobante?")) imprimirGasto(data as Gasto);
+                return true;
+              }}
+              onImprimir={imprimirGasto}
+              onBorrar={borrarGasto}
+            />
+          )}
+
           <section className="tarjeta p-5">
             <h2 className="font-semibold">Arqueo de efectivo</h2>
             <p className="mb-4 text-sm text-suave">
@@ -352,6 +421,9 @@ export function Caja({
               <div className="text-sm">
                 <span className="mb-1 block text-suave">Efectivo esperado</span>
                 <p className="py-2 text-lg font-semibold tabular-nums">{formato(totales.efectivo_esperado)}</p>
+                {!!totales.gastos_efectivo && (
+                  <p className="-mt-1 text-xs text-suave">ya descontados {formato(totales.gastos_efectivo)} de gastos</p>
+                )}
               </div>
               <label className="block text-sm">
                 <span className="mb-1 block text-suave">Efectivo contado</span>
@@ -510,5 +582,110 @@ function Fila({ t, v, fuerte }: { t: string; v: string; fuerte?: boolean }) {
       <dt>{t}</dt>
       <dd>{v}</dd>
     </div>
+  );
+}
+
+// Gastos chicos del turno (hielo, gas, un proveedor): con detalle y comprobante. Los de efectivo salen de la caja.
+function Gastos({
+  gastos,
+  admin,
+  formato,
+  hora,
+  onNuevo,
+  onImprimir,
+  onBorrar,
+}: {
+  gastos: Gasto[];
+  admin: boolean;
+  formato: (n: number) => string;
+  hora: (iso: string) => string;
+  onNuevo: (g: { monto: number; detalle: string; medio: string }) => Promise<boolean>;
+  onImprimir: (g: Gasto) => void;
+  onBorrar: (g: Gasto) => void;
+}) {
+  const [monto, setMonto] = useState("");
+  const [detalle, setDetalle] = useState("");
+  const [medio, setMedio] = useState("Efectivo");
+  const [guardando, setGuardando] = useState(false);
+  const total = gastos.reduce((s, g) => s + Number(g.monto), 0);
+
+  async function anotar(e: React.FormEvent) {
+    e.preventDefault();
+    const valor = numero(monto);
+    if (!valor || !detalle.trim()) return;
+    setGuardando(true);
+    const ok = await onNuevo({ monto: valor, detalle: detalle.trim().slice(0, 120), medio });
+    setGuardando(false);
+    if (ok) {
+      setMonto("");
+      setDetalle("");
+    }
+  }
+
+  return (
+    <section className="tarjeta p-5">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h2 className="font-semibold">Gastos del turno</h2>
+        {total > 0 && <span className="text-sm font-semibold tabular-nums">{formato(total)}</span>}
+      </div>
+      <form onSubmit={anotar} className="grid gap-2 sm:grid-cols-[1fr_140px_150px_auto]">
+        <input
+          value={detalle}
+          onChange={(e) => setDetalle(e.target.value)}
+          maxLength={120}
+          placeholder="¿En qué? Ej.: hielo, gas, propina al repartidor"
+          className="campo"
+          aria-label="Detalle del gasto"
+          required
+        />
+        <input
+          inputMode="decimal"
+          value={monto}
+          onChange={(e) => setMonto(e.target.value)}
+          placeholder="Monto"
+          className="campo tabular-nums"
+          aria-label="Monto"
+          required
+        />
+        <select value={medio} onChange={(e) => setMedio(e.target.value)} className="campo" aria-label="Pagado con">
+          {["Efectivo", "Transferencia", "Tarjeta"].map((m) => (
+            <option key={m}>{m}</option>
+          ))}
+        </select>
+        <button type="submit" className="boton" disabled={guardando}>
+          {guardando ? "Guardando…" : "Anotar"}
+        </button>
+      </form>
+      {gastos.length > 0 && (
+        <ul className="mt-3 divide-y divide-borde text-sm">
+          {gastos.map((g) => (
+            <li key={g.id} className="flex items-center gap-3 py-2">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium">{g.detalle}</span>
+                <span className="block text-xs text-suave" suppressHydrationWarning>
+                  {hora(g.created_at)} · {g.medio}
+                </span>
+              </span>
+              <span className="font-semibold tabular-nums">{formato(Number(g.monto))}</span>
+              <button
+                type="button"
+                onClick={() => onImprimir(g)}
+                className="rounded-lg p-1.5 text-suave hover:bg-stone-100 hover:text-tinta"
+                aria-label="Imprimir comprobante"
+                title="Imprimir comprobante"
+              >
+                <Icono nombre="impresora" className="h-4 w-4" />
+              </button>
+              {admin && (
+                <button type="button" onClick={() => onBorrar(g)} className="text-xs text-red-600 hover:underline">
+                  Borrar
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-2 text-xs text-suave">Los gastos pagados en efectivo se restan del efectivo esperado del arqueo.</p>
+    </section>
   );
 }

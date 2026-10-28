@@ -38,6 +38,7 @@ const COLUMNAS: { id: Etapa; texto: string; ayuda: string }[] = [
 function etapaDe(cuenta: Cuenta, pedidos: Pedido[]): Etapa {
   if (pedidos.some((p) => p.estado === "pendiente")) return "aceptar";
   if (pedidos.length === 0 || pedidos.some((p) => p.estado === "nuevo" || p.estado === "preparando")) return "cocina";
+  if (cuenta.entregado_at) return "entregado";
   if (cuenta.tipo === "delivery" && cuenta.despachado_at) return "camino";
   if (pedidos.every((p) => p.estado === "entregado")) return "entregado";
   return "listo";
@@ -54,6 +55,7 @@ export function Llevar({ restaurante, admin, ajustes, categorias, platos, sucurs
   const [abierta, setAbierta] = useState<{ id: string; inicio?: "mesa" | "pedido" | "cobro" } | null>(null);
   const [nuevo, setNuevo] = useState(false);
   const vistos = useRef<Set<string> | null>(null);
+  const planB = useRef<Set<string> | null>(null);
 
   const lista = useMemo(() => {
     return vivo.cuentas
@@ -82,6 +84,32 @@ export function Llevar({ restaurante, admin, ajustes, categorias, platos, sucurs
       avisar(llegaron.length === 1 ? "Llegó un pedido para llevar" : `Llegaron ${llegaron.length} pedidos para llevar`);
     }
   }, [lista, avisar]);
+
+  // Falló Mercado Pago y el cliente eligió pagar al retirar: se avisa con sonido (no al abrir la pantalla).
+  useEffect(() => {
+    const ahoraB = lista.filter((x) => x.cuenta.paga_al_retirar).map((x) => x.cuenta.id);
+    if (planB.current === null) {
+      planB.current = new Set(ahoraB);
+      return;
+    }
+    const nuevos = lista.filter((x) => x.cuenta.paga_al_retirar && !planB.current!.has(x.cuenta.id));
+    nuevos.forEach((x) => planB.current!.add(x.cuenta.id));
+    if (nuevos.length) {
+      sonar("cuenta");
+      avisar(
+        `${nuevos[0].cuenta.cliente_nombre ?? "Un cliente"} no pudo pagar online: paga al ${nuevos[0].cuenta.tipo === "delivery" ? "recibir" : "retirar"}`,
+      );
+    }
+  }, [lista, avisar]);
+
+  // Enlace para el repartidor: dirección, qué lleva, cuánto cobrar y "Entregado". Se manda por WhatsApp o se copia.
+  function enviarRepartidor(c: Cuenta) {
+    if (!c.reparto_token) return avisar("Para el enlace del repartidor falta ejecutar el SQL 0018 en Supabase.", "error");
+    const enlace = `${window.location.origin}/${restaurante.slug}/reparto/${c.reparto_token}`;
+    const texto = `Delivery de ${restaurante.nombre} para ${c.cliente_nombre ?? "el cliente"}: ${enlace}`;
+    if (navigator.share) navigator.share({ text: texto }).catch(() => {});
+    else window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
+  }
 
   async function hacer(promesa: PromiseLike<{ error: unknown }>, ok?: string) {
     const { error } = await promesa;
@@ -252,6 +280,7 @@ export function Llevar({ restaurante, admin, ajustes, categorias, platos, sucurs
                     onRechazar={() => rechazar(x)}
                     onDespachar={() => despachar(x)}
                     onEntregar={() => entregar(x)}
+                    onRepartidor={() => enviarRepartidor(x.cuenta)}
                   />
                 ))}
               </section>
@@ -305,6 +334,7 @@ function Tarjeta({
   onRechazar,
   onDespachar,
   onEntregar,
+  onRepartidor,
 }: {
   dato: { cuenta: Cuenta; pedidos: Pedido[]; total: number; pagado: number; etapa: Etapa };
   ahora: number;
@@ -316,6 +346,7 @@ function Tarjeta({
   onRechazar: () => void;
   onDespachar: () => void;
   onEntregar: () => void;
+  onRepartidor: () => void;
 }) {
   const c = x.cuenta;
   const pagado = x.total > 0 && x.pagado >= x.total - 0.009;
@@ -323,7 +354,7 @@ function Tarjeta({
   const minutos = minutosDesde(c.abierta_at, ahora);
   // Atrasado: ya pasó la hora pedida y todavía no se entregó.
   const tarde = !!c.para_hora && Date.parse(c.para_hora) < ahora && x.etapa !== "camino" && x.etapa !== "entregado";
-  const esperandoPago = x.etapa === "aceptar" && pagoObligatorio && c.origen === "cliente" && !pagado;
+  const esperandoPago = x.etapa === "aceptar" && pagoObligatorio && c.origen === "cliente" && !pagado && !c.paga_al_retirar;
   return (
     <article className={`tarjeta space-y-2 p-3 ${tarde ? "ring-2 ring-red-400" : ""}`}>
       <button type="button" onClick={onAbrir} className="block w-full text-left">
@@ -346,7 +377,15 @@ function Tarjeta({
             <span
               className={`block text-xs font-semibold ${pagado ? "text-emerald-700" : esperandoPago ? "text-red-600" : "text-suave"}`}
             >
-              {pagado ? (c.aviso?.tipo === "pago" ? "Pagó online" : "Pagado") : esperandoPago ? "Esperando pago" : "Por cobrar"}
+              {pagado
+                ? c.aviso?.tipo === "pago"
+                  ? "Pagó online"
+                  : "Pagado"
+                : esperandoPago
+                  ? "Esperando pago"
+                  : c.paga_al_retirar
+                    ? `Paga al ${c.tipo === "delivery" ? "recibir" : "retirar"}`
+                    : "Por cobrar"}
             </span>
           </span>
         </div>
@@ -372,6 +411,16 @@ function Tarjeta({
         {x.etapa === "listo" && c.tipo === "delivery" && (
           <button type="button" className="boton flex-1 bg-sky-600 py-1.5 text-sm hover:bg-sky-700" onClick={onDespachar}>
             <Icono nombre="delivery" className="h-4 w-4" /> Despachar
+          </button>
+        )}
+        {c.tipo === "delivery" && (x.etapa === "listo" || x.etapa === "camino" || x.etapa === "cocina") && (
+          <button
+            type="button"
+            className="boton-secundario py-1.5 text-sm"
+            onClick={onRepartidor}
+            title="Mándale al repartidor el enlace con la dirección, lo que lleva y cuánto cobrar"
+          >
+            Repartidor
           </button>
         )}
         {((x.etapa === "listo" && c.tipo === "llevar") || x.etapa === "camino" || x.etapa === "entregado") && (
