@@ -14,6 +14,7 @@ import {
   type Cuenta,
   NOMBRE_TIPO,
   nombreMesa,
+  nombreVisible,
 } from "@/lib/salon";
 import type { Mesa, Restaurante } from "@/lib/types";
 import { avisarComensal } from "@/lib/push";
@@ -32,6 +33,7 @@ type Props = {
   pisos: Pick<Piso, "id" | "nombre">[];
   platos: PlatoAgotable[];
   categorias: { id: string; nombre: string }[];
+  equipo?: { user_id: string; nombre: string }[];
 };
 
 const SIGUIENTE: Partial<Record<EstadoPedido, { estado: EstadoPedido; texto: string; clase: string }>> = {
@@ -81,6 +83,7 @@ export function Cocina({
   pisos,
   platos,
   categorias,
+  equipo = [],
 }: Props) {
   const avisar = useToast();
   const { pedidos, cuentas, supabase, recargar, enVivo } = useServicio(restaurante.id, {
@@ -164,9 +167,10 @@ export function Cocina({
       { tipo: "texto", texto: `${p.estacion} · #${p.numero}${piso ? ` · ${piso}` : ""}`, fuerte: true },
       {
         tipo: "texto",
-        texto: `${horaCorta(p.created_at, regionDe(ajustes))} · ${p.origen === "cliente" ? "desde el QR" : "mesero"}${p.nombre ? ` · ${p.nombre}` : ""}`,
+        texto: `${horaCorta(p.created_at, regionDe(ajustes))}${p.nombre ? ` · ${p.nombre}` : ""}`,
         chico: true,
       },
+      { tipo: "texto", texto: quienPidio(p), fuerte: true },
       { tipo: "separador" },
       ...(p.pedido_items ?? []).map((i) => ({
         tipo: "fila" as const,
@@ -176,6 +180,18 @@ export function Cocina({
       })),
       ...(p.nota ? [{ tipo: "separador" as const }, { tipo: "texto" as const, texto: `Nota: ${p.nota}`, fuerte: true }] : []),
     ];
+  }
+
+  // Quién tomó la comanda: el mesero que la cargó, o si la pidió el cliente desde el QR, quién atiende esa mesa.
+  function quienPidio(p: Pedido) {
+    const nombre = (id?: string | null) => {
+      const usuario = id ? equipo.find((e) => e.user_id === id)?.nombre : undefined;
+      return usuario ? nombreVisible(usuario) : undefined;
+    };
+    const atiende = nombre(cuentas.find((c) => c.id === p.cuenta_id)?.mesero_id);
+    if (p.origen === "cliente") return `Pedido por QR${atiende ? ` · Atiende: ${atiende}` : ""}`;
+    const mesero = nombre(p.creado_por) ?? atiende;
+    return mesero ? `Mesero: ${mesero}` : "Mesero";
   }
 
   function lugar(p: Pedido) {
@@ -606,7 +622,7 @@ export function Cocina({
                 </p>
                 <p className="text-sm text-stone-500" suppressHydrationWarning>
                   Pedido a las {horaCorta(elegido.created_at, regionDe(ajustes))} ({minutosDesde(elegido.created_at, ahora)} min)
-                  · {elegido.origen === "cliente" ? "desde el QR" : "por el mesero"}
+                  · {quienPidio(elegido)}
                   {elegido.nombre ? ` · ${elegido.nombre}` : ""}
                 </p>
               </div>
