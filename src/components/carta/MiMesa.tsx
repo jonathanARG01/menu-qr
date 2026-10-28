@@ -14,6 +14,7 @@ import type { DatosMesa } from "./useMiMesa";
 
 const COLOR: Record<string, string> = {
   pendiente: "bg-stone-100 text-stone-600",
+  retenido: "bg-violet-100 text-violet-800",
   nuevo: "bg-amber-100 text-amber-800",
   preparando: "bg-sky-100 text-sky-800",
   listo: "bg-emerald-100 text-emerald-800",
@@ -45,6 +46,18 @@ export function MiMesa({
   const [metodo, setMetodo] = useState<string | undefined>(undefined);
   const [metodos, setMetodos] = useState<string[]>([]);
   const [enviando, setEnviando] = useState(false);
+
+  // Lo que dejaron "para después" pasa a cocina.
+  async function pedirAhora(id: string) {
+    const { data } = await createClient().rpc("pedir_ahora", {
+      p_restaurante: restaurante.id,
+      p_sucursal: sucursal?.id ?? null,
+      p_mesa: mesa,
+      p_pedido: id,
+    });
+    if (data) onAviso(t("pedidoAhora"));
+    recargar();
+  }
   const precio = (n: number) => formatoPrecio(n, restaurante.moneda);
   const cobros = ajustes.modulos.cobros;
 
@@ -177,11 +190,23 @@ export function MiMesa({
                       >
                         {t(`estado_${p.estado}` as ClaveTexto)}
                       </span>
+                      {p.estado === "retenido" && p.origen === "cliente" && p.id && (
+                        <button
+                          type="button"
+                          onClick={() => pedirAhora(p.id!)}
+                          className="float-right rounded-full px-3 py-1 text-xs font-semibold"
+                          style={{ background: "var(--acento)", color: "var(--sobre-acento)" }}
+                        >
+                          {t("pedirAhora")}
+                        </button>
+                      )}
                       {p.items.map((i, k) => (
                         <p key={k} className="flex justify-between gap-3 text-sm">
                           <span>
                             {i.cantidad} × {i.nombre}
-                            {i.opciones?.length ? <span className="block text-xs text-stone-500">{textoOpciones(i.opciones)}</span> : null}
+                            {i.opciones?.length ? (
+                              <span className="block text-xs text-stone-500">{textoOpciones(i.opciones)}</span>
+                            ) : null}
                           </span>
                           <span className="tabular-nums text-stone-500">{precio(Number(i.precio) * i.cantidad)}</span>
                         </p>

@@ -205,6 +205,10 @@ const es = {
   pagarAlRetirar: "Pagar al retirar o al recibir",
   planB: "¿No funcionó el pago en línea? Puedes pagar al retirar o al recibir tu pedido.",
   pagasAlRetirar: "Listo: pagas al retirar o al recibir.",
+  paraDespues: "Para después",
+  paraDespuesAyuda: "Se pide cuando ustedes quieran, desde Mi mesa.",
+  pedirAhora: "Pedir ahora",
+  pedidoAhora: "Listo, ya va a la cocina.",
 };
 export type ClaveTexto = keyof typeof es;
 
@@ -381,6 +385,10 @@ export const TEXTOS: Record<Idioma, Record<ClaveTexto, string>> = {
     pagarAlRetirar: "Pay on pickup or delivery",
     planB: "Online payment not working? You can pay when you pick up or receive your order.",
     pagasAlRetirar: "Done: you'll pay on pickup or delivery.",
+    paraDespues: "For later",
+    paraDespuesAyuda: "Order it whenever you want from My table.",
+    pedirAhora: "Order now",
+    pedidoAhora: "Done, it's on its way to the kitchen.",
   },
   pt: {
     carta: "Cardápio",
@@ -554,6 +562,10 @@ export const TEXTOS: Record<Idioma, Record<ClaveTexto, string>> = {
     pagarAlRetirar: "Pagar na retirada ou na entrega",
     planB: "O pagamento online não funcionou? Você pode pagar na retirada ou na entrega.",
     pagasAlRetirar: "Pronto: você paga na retirada ou na entrega.",
+    paraDespues: "Para depois",
+    paraDespuesAyuda: "Peça quando quiser em Minha mesa.",
+    pedirAhora: "Pedir agora",
+    pedidoAhora: "Pronto, já vai para a cozinha.",
   },
   fr: {
     carta: "Carte",
@@ -727,6 +739,10 @@ export const TEXTOS: Record<Idioma, Record<ClaveTexto, string>> = {
     pagarAlRetirar: "Payer au retrait ou à la livraison",
     planB: "Le paiement en ligne ne fonctionne pas ? Vous pouvez payer au retrait ou à la livraison.",
     pagasAlRetirar: "C'est noté : vous payez au retrait ou à la livraison.",
+    paraDespues: "Pour plus tard",
+    paraDespuesAyuda: "Commandez-le quand vous voulez depuis Ma table.",
+    pedirAhora: "Commander maintenant",
+    pedidoAhora: "C'est parti pour la cuisine.",
   },
   it: {
     carta: "Menù",
@@ -899,6 +915,10 @@ export const TEXTOS: Record<Idioma, Record<ClaveTexto, string>> = {
     pagarAlRetirar: "Paga al ritiro o alla consegna",
     planB: "Il pagamento online non funziona? Puoi pagare al ritiro o alla consegna.",
     pagasAlRetirar: "Fatto: paghi al ritiro o alla consegna.",
+    paraDespues: "Per dopo",
+    paraDespuesAyuda: "Ordinalo quando vuoi da Il mio tavolo.",
+    pedirAhora: "Ordina ora",
+    pedidoAhora: "Fatto, va in cucina.",
   },
   de: {
     carta: "Speisekarte",
@@ -1072,6 +1092,10 @@ export const TEXTOS: Record<Idioma, Record<ClaveTexto, string>> = {
     pagarAlRetirar: "Bei Abholung oder Lieferung zahlen",
     planB: "Online-Zahlung klappt nicht? Du kannst bei Abholung oder Lieferung zahlen.",
     pagasAlRetirar: "Erledigt: Du zahlst bei Abholung oder Lieferung.",
+    paraDespues: "Für später",
+    paraDespuesAyuda: "Bestell es, wann du willst, unter Mein Tisch.",
+    pedirAhora: "Jetzt bestellen",
+    pedidoAhora: "Erledigt, geht in die Küche.",
   },
   zh: {
     carta: "菜单",
@@ -1244,6 +1268,10 @@ export const TEXTOS: Record<Idioma, Record<ClaveTexto, string>> = {
     pagarAlRetirar: "取餐或送达时付款",
     planB: "在线支付不成功？您可以在取餐或送达时付款。",
     pagasAlRetirar: "好的：取餐或送达时付款。",
+    paraDespues: "稍后上",
+    paraDespuesAyuda: "想要时在“我的餐桌”里下单。",
+    pedirAhora: "现在下单",
+    pedidoAhora: "好的，已送往厨房。",
   },
 };
 

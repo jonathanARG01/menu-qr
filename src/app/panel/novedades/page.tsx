@@ -13,17 +13,19 @@ const NOVEDADES: { fecha: string; titulo: string; items: Novedad[] }[] = [
       {
         titulo: "Cambiar de mesa, juntar mesas y pasar platos",
         texto:
-          "Desde la mesa: “Cambiar de mesa”, “Juntar con otra” (unir mesas pegadas con una sola cuenta, o que unos se pasen a la mesa de los otros) y ⇄ en cada plato para moverlo a otra cuenta. La mesa unida se pone al lado en el plano y se puede arrastrar; al cobrar vuelve a su lugar.",
+          "Desde la mesa: “Cambiar de mesa”, “Juntar con otra” (unir mesas pegadas con una sola cuenta, o que unos se pasen a la mesa de los otros) y ⇄ en cada plato para moverlo a otra cuenta. La mesa unida se pone al lado en el plano y se puede arrastrar (si no cabe, una cuerda verde las une); al cobrar vuelve a su lugar.",
         donde: { href: "/panel/salon", texto: "Salón" },
       },
       {
         titulo: "Opciones por plato",
-        texto: "Punto de la carne, acompañamiento, tamaño o extras, con precio adicional. El cliente y el mesero las eligen al pedir.",
+        texto:
+          "Punto de la carne, acompañamiento, tamaño o extras, con precio adicional. El cliente y el mesero las eligen al pedir.",
         donde: { href: "/panel", texto: "Carta" },
       },
       {
         titulo: "Tiempos: dejar para después y marchar",
-        texto: "Al tomar la comanda marca “Después” en los fondos; quedan en espera hasta que tocas “Marchar”.",
+        texto:
+          "Al tomar la comanda marca “Después” en los fondos; quedan en espera hasta que tocas “Marchar”. El cliente también puede dejar platos “Para después” desde su celular y pedirlos cuando quiera desde Mi mesa.",
       },
       {
         titulo: "La comanda no se pierde",
