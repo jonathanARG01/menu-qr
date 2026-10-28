@@ -12,7 +12,8 @@ const NOVEDADES: { fecha: string; titulo: string; items: Novedad[] }[] = [
     items: [
       {
         titulo: "Cambiar de mesa, juntar mesas y pasar platos",
-        texto: "Desde la mesa: “Cambiar de mesa”, “Juntar con otra” y ⇄ en cada plato para moverlo a otra cuenta.",
+        texto:
+          "Desde la mesa: “Cambiar de mesa”, “Juntar con otra” (unir mesas pegadas con una sola cuenta, o que unos se pasen a la mesa de los otros) y ⇄ en cada plato para moverlo a otra cuenta. La mesa unida se pone al lado en el plano y se puede arrastrar; al cobrar vuelve a su lugar.",
         donde: { href: "/panel/salon", texto: "Salón" },
       },
       {

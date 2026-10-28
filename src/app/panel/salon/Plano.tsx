@@ -22,6 +22,9 @@ export type EstadoMesa = {
   // Búsqueda de un plato desde el plano: las mesas que lo pidieron se marcan y las demás se apagan.
   destacada?: boolean;
   apagada?: boolean;
+  // Mesas pegadas con una sola cuenta: "1+2" en todas; unida = no es la principal.
+  grupo?: string;
+  unida?: boolean;
 };
 
 export const cajaMesa = (m: Mesa): Caja => ({ x: m.x ?? 0, y: m.y ?? 0, ancho: m.ancho ?? 2, alto: m.alto ?? 2 });
@@ -200,6 +203,7 @@ export function Plano({
   onSeleccionar,
   onMover,
   onAbrirMesa,
+  movibles,
   formato,
   estilo = "simple",
   alto,
@@ -212,6 +216,8 @@ export function Plano({
   onSeleccionar: (s: Seleccion) => void;
   onMover: (tipo: "mesa" | "elemento", id: string, caja: Caja) => void;
   onAbrirMesa: (id: string) => void;
+  // Fuera de la edición, mesas que igual se pueden arrastrar (las unidas a otra, mientras dura la cuenta).
+  movibles?: { has: (id: string) => boolean };
   formato: (n: number) => string;
   estilo?: EstiloPlano;
   // Alto disponible para el plano (por defecto, la pantalla menos la barra y los botones).
@@ -223,6 +229,9 @@ export function Plano({
   const tres = modo === "3d";
   const lienzo = useRef<HTMLDivElement>(null);
   const [arrastre, setArrastre] = useState<Arrastre | null>(null);
+  // Tras arrastrar una mesa unida, el clic que sigue no abre la ficha.
+  const recienMovida = useRef(false);
+  const sePuedeMover = (tipo: "mesa" | "elemento", id: string) => editando || (tipo === "mesa" && !!movibles?.has(id));
   const enPiso = mesas.filter((m) => m.piso_id === piso.id);
   const [arriba, derecha, abajo, izquierda] = PUNTOS[piso.norte] ?? PUNTOS.arriba;
 
@@ -239,11 +248,11 @@ export function Plano({
   }
 
   function empezar(e: React.PointerEvent, tipo: "mesa" | "elemento", id: string, caja: Caja) {
-    if (!editando) return;
+    if (!sePuedeMover(tipo, id)) return;
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const { cx, cy } = celda(e);
-    onSeleccionar({ tipo, id });
+    if (editando) onSeleccionar({ tipo, id });
     setArrastre({ tipo, id, dx: cx - caja.x, dy: cy - caja.y, caja, movio: false, valido: true });
   }
 
@@ -269,6 +278,7 @@ export function Plano({
   function soltar() {
     if (!arrastre) return;
     if (arrastre.movio && arrastre.valido) onMover(arrastre.tipo, arrastre.id, arrastre.caja);
+    recienMovida.current = arrastre.movio;
     setArrastre(null);
   }
 
@@ -376,11 +386,14 @@ export function Plano({
                 key={m.id}
                 type="button"
                 onPointerDown={(e) => empezar(e, "mesa", m.id, cajaMesa(m))}
-                onClick={() => !editando && onAbrirMesa(m.id)}
+                onClick={() => {
+                  if (recienMovida.current) recienMovida.current = false;
+                  else if (!editando) onAbrirMesa(m.id);
+                }}
                 className={`absolute flex flex-col items-center justify-center p-0.5 leading-tight transition-[box-shadow] ${
                   ambientado ? "text-[#fff7ed]" : `border-2 shadow-sm ${colorMesa(editando ? undefined : est)}`
                 } ${m.forma === "redonda" ? "rounded-full" : ambientado ? "rounded-md" : "rounded-xl"} ${
-                  editando ? "cursor-grab active:cursor-grabbing" : "hover:shadow-md"
+                  editando || movibles?.has(m.id) ? "cursor-grab touch-none active:cursor-grabbing" : "hover:shadow-md"
                 } ${elegido ? (editando ? "ring-2 ring-marca ring-offset-2" : "animate-pulse ring-4 ring-marca ring-offset-2") : ""} ${invalido ? "!border-red-500 !bg-red-50 opacity-80" : ""} ${
                   !editando && est?.destacada ? "ring-4 ring-sky-400 ring-offset-2" : ""
                 } ${!editando && est?.apagada ? "opacity-35" : ""}`}
@@ -412,7 +425,9 @@ export function Plano({
                 >
                   {m.numero}
                 </span>
-                {!editando && est?.ocupada ? (
+                {!editando && est?.unida ? (
+                  <span className="text-[10px] font-semibold opacity-80">unida</span>
+                ) : !editando && est?.ocupada ? (
                   <span className="text-[10px] tabular-nums opacity-80" suppressHydrationWarning>
                     {est.comensales}/{m.capacidad ?? 4} · {est.minutos}′
                   </span>
@@ -437,6 +452,14 @@ export function Plano({
                     }`}
                   >
                     {est.aviso === "cuenta" || est.aviso === "pago" ? "$" : est.aviso ? "!" : est.pendiente ? "●" : "✓"}
+                  </span>
+                )}
+                {!editando && est?.grupo && (
+                  <span
+                    className="absolute -left-1.5 -top-1.5 rounded-full bg-marca px-1.5 py-0.5 text-[9px] font-bold leading-none text-white shadow"
+                    title="Mesas unidas"
+                  >
+                    {est.grupo}
                   </span>
                 )}
                 {!editando && est?.mesero && (

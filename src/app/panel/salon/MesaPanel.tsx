@@ -13,6 +13,7 @@ import {
   type Pedido,
   type PedidoItem,
   type SolicitudCuenta,
+  cuentaDeMesa,
   nombreMesa,
   regionDe,
   textoOpciones,
@@ -54,6 +55,8 @@ type Props = {
   servicio: ReturnType<typeof useServicio>;
   // Mesas del local, para mover o juntar la cuenta con otra mesa.
   mesas?: Mesa[];
+  // Después de unir otra mesa a esta cuenta: el salón la pega al lado en el plano.
+  onUnida?: (cuentaId: string, mesaId: string) => void;
   onCerrar: () => void;
   // Pantalla con la que abre (un pedido para llevar recién creado va directo a la carta).
   inicio?: "mesa" | "pedido" | "cobro";
@@ -72,6 +75,7 @@ export function MesaPanel({
   platos,
   servicio,
   mesas = [],
+  onUnida,
   onCerrar,
   inicio = "mesa",
 }: Props) {
@@ -83,8 +87,10 @@ export function MesaPanel({
     ? servicio.cuentas.find((c) => c.id === cuentaId)
     : servicio.cuentas.find((c) => !!mesa && c.mesa_id === mesa.id);
   const llevar = !mesa;
+  // Mesas pegadas a esta que comparten la cuenta.
+  const unidas = (cuenta?.mesas_unidas ?? []).flatMap((id) => mesas.filter((m) => m.id === id));
   const titulo = mesa
-    ? nombreMesa(mesa.numero)
+    ? `${nombreMesa(mesa.numero)}${unidas.map((m) => ` + ${m.numero}`).join("")}`
     : `${NOMBRE_TIPO[cuenta?.tipo ?? "llevar"]}${cuenta?.cliente_nombre ? ` · ${cuenta.cliente_nombre}` : ""}`;
   const pedidos = cuenta ? servicio.pedidos.filter((p) => p.cuenta_id === cuenta.id && p.estado !== "cancelado") : [];
   const pagos = cuenta ? servicio.pagos.filter((p) => p.cuenta_id === cuenta.id) : [];
@@ -97,6 +103,11 @@ export function MesaPanel({
   const [comensalesNuevos, setComensalesNuevos] = useState(mesa?.capacidad ?? 2);
   // Mover la cuenta a otra mesa, juntarla con otra o pasar un plato (el item elegido) a otra mesa.
   const [moviendo, setMoviendo] = useState<null | "mover" | "juntar" | PedidoItem>(null);
+  // Mesa elegida para juntar: falta decidir si se unen o si unos se pasan a la otra.
+  const [uniendo, setUniendo] = useState<Mesa | null>(null);
+  // Mesa libre: unirla a otra que ya está abierta (sin abrirla antes).
+  const [pegando, setPegando] = useState(false);
+  const abiertas = mesas.filter((m) => m.id !== mesa?.id && cuentaDeMesa(servicio.cuentas, m.id)?.mesa_id === m.id);
   const { persona, yo } = useEquipo(supabase, restaurante.id);
   const atiende = persona(cuenta?.mesero_id);
   const asignado = persona(mesa?.mesero_id);
@@ -254,19 +265,17 @@ export function MesaPanel({
 
   async function moverA(destino: Mesa) {
     if (!cuenta) return;
-    const ocupada = servicio.cuentas.find((c) => c.mesa_id === destino.id && c.estado === "abierta");
+    const ocupada = cuentaDeMesa(servicio.cuentas, destino.id);
     if (moviendo === "mover") {
-      if (await hacer(supabase.rpc("mover_cuenta", { p_cuenta: cuenta.id, p_mesa: destino.id }), `Pasó a ${nombreMesa(destino.numero)}`))
-        onCerrar();
-    } else if (moviendo === "juntar" && ocupada) {
-      if (!confirm(`¿Juntar ${titulo} con ${nombreMesa(destino.numero)}? Todo queda en ${nombreMesa(destino.numero)}.`)) return;
       if (
         await hacer(
-          supabase.rpc("juntar_cuentas", { p_destino: ocupada.id, p_origen: cuenta.id }),
-          `Mesas juntas en ${nombreMesa(destino.numero)}`,
+          supabase.rpc("mover_cuenta", { p_cuenta: cuenta.id, p_mesa: destino.id }),
+          `Pasó a ${nombreMesa(destino.numero)}`,
         )
       )
         onCerrar();
+    } else if (moviendo === "juntar") {
+      setUniendo(destino);
     } else if (moviendo && typeof moviendo === "object" && ocupada) {
       let cantidad = moviendo.cantidad;
       if (cantidad > 1) {
@@ -280,6 +289,36 @@ export function MesaPanel({
       );
     }
     setMoviendo(null);
+  }
+
+  // Juntar con otra mesa: unirlas (las dos quedan ocupadas con una cuenta) o que unos se pasen a la mesa de los otros.
+  async function juntar(modo: "unir" | "vienen" | "van") {
+    const destino = uniendo;
+    setUniendo(null);
+    if (!cuenta || !mesa || !destino) return;
+    const otra = cuentaDeMesa(servicio.cuentas, destino.id);
+    if (modo === "unir") {
+      if (
+        await hacer(
+          supabase.rpc("unir_mesa", { p_cuenta: cuenta.id, p_mesa: destino.id }),
+          `${titulo} + ${destino.numero} unidas`,
+        )
+      )
+        onUnida?.(cuenta.id, destino.id);
+    } else if (otra && modo === "vienen") {
+      await hacer(
+        supabase.rpc("juntar_cuentas", { p_destino: cuenta.id, p_origen: otra.id }),
+        `Los de ${nombreMesa(destino.numero)} pasaron a ${nombreMesa(mesa.numero)}`,
+      );
+    } else if (otra && modo === "van") {
+      if (
+        await hacer(
+          supabase.rpc("juntar_cuentas", { p_destino: otra.id, p_origen: cuenta.id }),
+          `Pasaron a ${nombreMesa(destino.numero)}`,
+        )
+      )
+        onCerrar();
+    }
   }
 
   const estadoPedido = async (p: Pedido, estado: EstadoPedido, ok?: string) => {
@@ -404,9 +443,7 @@ export function MesaPanel({
         className={`flex h-full w-full ${ancho} flex-col bg-superficie shadow-2xl`}
       >
         <div className="flex items-center gap-3 border-b border-borde px-5 py-4">
-          {ajustes.avatares && (atiende ?? asignado) && (
-            <Avatar persona={atiende ?? asignado} className="h-10 w-10 text-sm" />
-          )}
+          {ajustes.avatares && (atiende ?? asignado) && <Avatar persona={atiende ?? asignado} className="h-10 w-10 text-sm" />}
           <div className="min-w-0 flex-1">
             <p className="truncate text-xl font-bold">{titulo}</p>
             <p className="text-sm text-suave" suppressHydrationWarning>
@@ -435,7 +472,9 @@ export function MesaPanel({
               <button
                 type="button"
                 className="rounded-lg bg-superficie px-2.5 py-1 text-xs font-semibold shadow-sm"
-                onClick={() => hacer(supabase.from("cuentas").update({ mesero_id: yo }).eq("id", cuenta!.id), "Ahora la atiendes tú")}
+                onClick={() =>
+                  hacer(supabase.from("cuentas").update({ mesero_id: yo }).eq("id", cuenta!.id), "Ahora la atiendes tú")
+                }
               >
                 Pasármela
               </button>
@@ -497,6 +536,11 @@ export function MesaPanel({
               <button type="button" className="boton w-full py-3" onClick={abrir}>
                 Abrir mesa
               </button>
+              {abiertas.length > 0 && (
+                <button type="button" className="boton-secundario w-full py-2.5 text-sm" onClick={() => setPegando(true)}>
+                  Unir a una mesa abierta
+                </button>
+              )}
             </div>
           ) : pantalla === "pedido" ? (
             <TomarPedido
@@ -546,6 +590,31 @@ export function MesaPanel({
               )}
               {ajustes.modulos.equipo && <Atiende supabase={supabase} cuenta={cuenta} onCambio={recargar} />}
 
+              {unidas.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-suave">Unida con</span>
+                  {unidas.map((m) => (
+                    <span
+                      key={m.id}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 py-1 pl-3 pr-1 font-semibold"
+                    >
+                      {nombreMesa(m.numero)}
+                      <button
+                        type="button"
+                        className="rounded-full px-2 py-0.5 text-xs font-medium text-suave hover:bg-superficie hover:text-tinta"
+                        onClick={() =>
+                          hacer(
+                            supabase.rpc("separar_mesa", { p_cuenta: cuenta.id, p_mesa: m.id }),
+                            `${nombreMesa(m.numero)} quedó libre`,
+                          )
+                        }
+                      >
+                        Separar
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
               <button type="button" className="boton w-full py-3" onClick={() => setPantalla("pedido")}>
                 <Icono nombre="mas_simple" className="h-4 w-4" /> Tomar pedido
               </button>
@@ -717,6 +786,29 @@ export function MesaPanel({
           )}
         </div>
 
+        {pegando && mesa && (
+          <ElegirMesa
+            titulo={`¿A qué mesa se une ${nombreMesa(mesa.numero)}?`}
+            mesas={abiertas}
+            vacio="No hay mesas abiertas."
+            onElegir={async (m) => {
+              setPegando(false);
+              const otra = cuentaDeMesa(servicio.cuentas, m.id);
+              if (!otra) return;
+              if (
+                await hacer(
+                  supabase.rpc("unir_mesa", { p_cuenta: otra.id, p_mesa: mesa.id }),
+                  `${nombreMesa(m.numero)} + ${mesa.numero} unidas`,
+                )
+              ) {
+                onUnida?.(otra.id, mesa.id);
+                onCerrar();
+              }
+            }}
+            onCerrar={() => setPegando(false)}
+          />
+        )}
+
         {moviendo && cuenta && (
           <ElegirMesa
             titulo={
@@ -727,13 +819,32 @@ export function MesaPanel({
                   : `¿A qué mesa pasa "${moviendo.nombre}"?`
             }
             mesas={mesas.filter((m) => {
-              if (m.id === mesa?.id) return false;
-              const ocupada = servicio.cuentas.some((c) => c.mesa_id === m.id && c.estado === "abierta");
-              return moviendo === "mover" ? !ocupada : ocupada;
+              const ocupa = cuentaDeMesa(servicio.cuentas, m.id);
+              if (m.id === mesa?.id || ocupa?.id === cuenta.id) return false;
+              // Juntar: libres u ocupadas (no las que ya están unidas a otra mesa).
+              if (moviendo === "juntar") return !ocupa || ocupa.mesa_id === m.id;
+              return moviendo === "mover" ? !ocupa : !!ocupa;
             })}
-            vacio={moviendo === "mover" ? "No hay mesas libres." : "No hay otras mesas abiertas."}
+            ocupadas={new Set(mesas.filter((m) => cuentaDeMesa(servicio.cuentas, m.id)).map((m) => m.id))}
+            vacio={
+              moviendo === "mover"
+                ? "No hay mesas libres."
+                : moviendo === "juntar"
+                  ? "No hay otras mesas."
+                  : "No hay otras mesas abiertas."
+            }
             onElegir={moverA}
             onCerrar={() => setMoviendo(null)}
+          />
+        )}
+
+        {uniendo && mesa && (
+          <ElegirUnion
+            aqui={nombreMesa(mesa.numero)}
+            otra={nombreMesa(uniendo.numero)}
+            otraOcupada={!!cuentaDeMesa(servicio.cuentas, uniendo.id)}
+            onElegir={juntar}
+            onCerrar={() => setUniendo(null)}
           />
         )}
 
@@ -887,20 +998,19 @@ function DatosLlevar({ cuenta, ajustes, formato }: { cuenta: Cuenta; ajustes: Aj
 function ElegirMesa({
   titulo,
   mesas,
+  ocupadas,
   vacio,
   onElegir,
   onCerrar,
 }: {
   titulo: string;
   mesas: Mesa[];
+  ocupadas?: Set<string>;
   vacio: string;
   onElegir: (m: Mesa) => void;
   onCerrar: () => void;
 }) {
-  const ordenadas = useMemo(
-    () => [...mesas].sort((a, b) => a.numero.localeCompare(b.numero, "es", { numeric: true })),
-    [mesas],
-  );
+  const ordenadas = useMemo(() => [...mesas].sort((a, b) => a.numero.localeCompare(b.numero, "es", { numeric: true })), [mesas]);
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onCerrar}>
       <div
@@ -923,11 +1033,83 @@ function ElegirMesa({
                   className="w-full rounded-xl border border-borde px-2 py-3 text-sm font-semibold hover:border-marca hover:bg-marca/5"
                 >
                   {nombreMesa(m.numero)}
+                  {ocupadas && (
+                    <span className="block text-[11px] font-normal text-suave">{ocupadas.has(m.id) ? "Ocupada" : "Libre"}</span>
+                  )}
                 </button>
               </li>
             ))}
           </ul>
         )}
+        <button type="button" onClick={onCerrar} className="boton-secundario mt-4 w-full">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Juntar dos mesas: ¿se pegan las mesas o los comensales se cambian a la otra?
+function ElegirUnion({
+  aqui,
+  otra,
+  otraOcupada,
+  onElegir,
+  onCerrar,
+}: {
+  aqui: string;
+  otra: string;
+  otraOcupada: boolean;
+  onElegir: (modo: "unir" | "vienen" | "van") => void;
+  onCerrar: () => void;
+}) {
+  const opciones: { modo: "unir" | "vienen" | "van"; titulo: string; texto: string }[] = [
+    {
+      modo: "unir",
+      titulo: "Unir las mesas",
+      texto: `Se pegan: ${otra} queda ocupada junto a ${aqui}, con una sola cuenta. En el plano se pone al lado y la puedes arrastrar; al cobrar vuelve a su lugar.`,
+    },
+    ...(otraOcupada
+      ? [
+          {
+            modo: "vienen" as const,
+            titulo: `Los de ${otra} se pasan aquí`,
+            texto: `Lo pedido en ${otra} se suma a ${aqui} y ${otra} queda libre.`,
+          },
+          {
+            modo: "van" as const,
+            titulo: `Los de ${aqui} se pasan a ${otra}`,
+            texto: `Lo pedido aquí se suma a ${otra} y ${aqui} queda libre.`,
+          },
+        ]
+      : []),
+  ];
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onCerrar}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Juntar ${aqui} con ${otra}`}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-t-2xl bg-superficie p-5 shadow-2xl sm:rounded-2xl"
+      >
+        <p className="mb-3 font-semibold">
+          ¿Cómo se juntan {aqui} y {otra}?
+        </p>
+        <ul className="space-y-2">
+          {opciones.map((o) => (
+            <li key={o.modo}>
+              <button
+                type="button"
+                onClick={() => onElegir(o.modo)}
+                className="w-full rounded-xl border border-borde px-4 py-3 text-left hover:border-marca hover:bg-marca/5"
+              >
+                <span className="block font-semibold">{o.titulo}</span>
+                <span className="block text-sm text-suave">{o.texto}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
         <button type="button" onClick={onCerrar} className="boton-secundario mt-4 w-full">
           Cancelar
         </button>

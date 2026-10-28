@@ -215,7 +215,12 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
     avatares: g.avatares !== false,
     otras_monedas: Array.isArray(g.otras_monedas)
       ? g.otras_monedas
-          .map((m) => ({ codigo: String(m?.codigo ?? "").toUpperCase().slice(0, 3), tasa: Number(m?.tasa) }))
+          .map((m) => ({
+            codigo: String(m?.codigo ?? "")
+              .toUpperCase()
+              .slice(0, 3),
+            tasa: Number(m?.tasa),
+          }))
           .filter((m) => /^[A-Z]{3}$/.test(m.codigo) && Number.isFinite(m.tasa) && m.tasa > 0)
           .slice(0, 3)
       : [],
@@ -339,7 +344,16 @@ export type Cuenta = {
   reparto_token?: string;
   entregado_at?: string | null;
   paga_al_retirar?: boolean;
+  // Migración 0019: otras mesas pegadas a esta que comparten la cuenta, y dónde quedaron en el plano mientras tanto.
+  mesas_unidas?: string[];
+  posiciones?: Record<string, { x: number; y: number }>;
 };
+
+// La cuenta abierta que ocupa una mesa: la suya o aquella a la que está unida.
+export function cuentaDeMesa<C extends Pick<Cuenta, "estado" | "mesa_id" | "mesas_unidas">>(cuentas: C[], mesaId: string) {
+  const abiertas = cuentas.filter((c) => c.estado === "abierta");
+  return abiertas.find((c) => c.mesa_id === mesaId) ?? abiertas.find((c) => c.mesas_unidas?.includes(mesaId));
+}
 
 export type TipoCuenta = "mesa" | "llevar" | "delivery";
 export const NOMBRE_TIPO: Record<TipoCuenta, string> = { mesa: "Mesa", llevar: "Para llevar", delivery: "Delivery" };
