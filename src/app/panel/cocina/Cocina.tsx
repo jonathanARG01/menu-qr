@@ -58,6 +58,14 @@ const guardar = (clave: string, valor: string) => {
 // Posición de una comanda en el tablero: su orden manual (si la movieron) o la hora de llegada.
 const posicion = (p: Pedido, local: Record<string, number>) => local[p.id] ?? p.orden ?? Date.parse(p.created_at);
 
+// Comandas de una misma mesa (la misma cuenta abierta): para juntarlas y que salgan todas a la vez.
+const claveMesa = (p: Pedido) => p.cuenta_id ?? `mesa:${p.mesa_numero}`;
+function porMesa(lista: Pedido[]) {
+  const grupos = new Map<string, Pedido[]>();
+  for (const p of lista) grupos.set(claveMesa(p), [...(grupos.get(claveMesa(p)) ?? []), p]);
+  return [...grupos.entries()].map(([clave, pedidos]) => ({ clave, pedidos }));
+}
+
 const sinClave = (o: Record<string, number>, id: string) => Object.fromEntries(Object.entries(o).filter(([x]) => x !== id));
 
 type Arrastre = {
@@ -96,6 +104,8 @@ export function Cocina({
   const [estacion, setEstacion] = useState<string>("Todas");
   const [sonido, setSonido] = useState(true);
   const [verEntregados, setVerEntregados] = useState(false);
+  // Ver cada comanda por separado o juntas por mesa (se recuerda en cada pantalla).
+  const [agrupar, setAgrupar] = useState(false);
   const [detalle, setDetalle] = useState<string | null>(null);
   const vistos = useRef<Set<string> | null>(null);
   // Orden movido en esta pantalla que todavía no volvió de la base (o que no se puede guardar sin la migración 0005).
@@ -114,6 +124,7 @@ export function Cocina({
   useEffect(() => {
     setEstacion(leer("cocina:estacion") ?? "Todas");
     setSonido(leer("cocina:sonido") !== "no");
+    setAgrupar(leer("cocina:agrupar") === "si");
     setImprimirAuto(leer("cocina:imprimir") === "si");
     setAncho(anchoGuardado());
     try {
@@ -214,6 +225,25 @@ export function Cocina({
     avisarComensal(p.id);
     recargar();
   }
+
+  // Cambia varias comandas a la vez (las de una mesa agrupada).
+  async function cambiarVarias(lista: Pedido[], estado: EstadoPedido) {
+    if (!lista.length) return;
+    const { error } = await supabase
+      .from("pedidos")
+      .update({ estado })
+      .in(
+        "id",
+        lista.map((p) => p.id),
+      );
+    if (error) return avisar(mensajeError(error), "error");
+    lista.forEach((p) => avisarComensal(p.id));
+    recargar();
+  }
+
+  // Cuántas comandas de esa mesa siguen en cocina (de cualquier estación): para no llevar la mitad.
+  const faltanDe = (clave: string) =>
+    pedidos.filter((p) => claveMesa(p) === clave && (p.estado === "nuevo" || p.estado === "preparando")).length;
 
   async function alternarItem(i: PedidoItem) {
     const { error } = await supabase.from("pedido_items").update({ listo: !i.listo }).eq("id", i.id);
@@ -328,6 +358,24 @@ export function Cocina({
 
   const elegido = pedidos.find((p) => p.id === detalle);
 
+  // Platos de una comanda: tocar uno lo tacha (ya está).
+  const lineas = (p: Pedido) =>
+    (p.pedido_items ?? []).map((i) => (
+      <li key={i.id}>
+        <button
+          type="button"
+          onClick={() => alternarItem(i)}
+          className={`flex w-full gap-2 py-1.5 text-left ${i.listo ? "text-stone-400 line-through" : ""}`}
+        >
+          <span className="w-6 shrink-0 text-right font-bold tabular-nums">{i.cantidad}×</span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold leading-tight">{i.nombre}</span>
+            {i.nota && <span className="block rounded bg-amber-100 px-1 text-xs font-medium text-amber-900">{i.nota}</span>}
+          </span>
+        </button>
+      </li>
+    ));
+
   return (
     <div
       ref={tablero}
@@ -343,6 +391,26 @@ export function Cocina({
         </span>
         <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs">{activos.length} en curso</span>
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <span className="flex rounded-full bg-white/10 p-0.5 text-sm" role="group" aria-label="Cómo ver las comandas">
+            {[
+              { valor: false, texto: "Separadas", titulo: "Cada comanda en su tarjeta" },
+              { valor: true, texto: "Por mesa", titulo: "Juntar las comandas de una misma mesa para que salgan a la vez" },
+            ].map((o) => (
+              <button
+                key={o.texto}
+                type="button"
+                aria-pressed={agrupar === o.valor}
+                title={o.titulo}
+                onClick={() => {
+                  setAgrupar(o.valor);
+                  guardar("cocina:agrupar", o.valor ? "si" : "no");
+                }}
+                className={`rounded-full px-3 py-0.5 font-medium ${agrupar === o.valor ? "bg-superficie text-stone-900" : "hover:bg-white/10"}`}
+              >
+                {o.texto}
+              </button>
+            ))}
+          </span>
           {["Todas", ...estaciones].map((e) => (
             <button
               key={e}
@@ -462,76 +530,117 @@ export function Cocina({
               No hay comandas pendientes. Las nuevas aparecen solas aquí.
             </p>
           )}
-          {tarjetas.map((p) => {
-            const min = minutosDesde(p.created_at, ahora);
-            const { mesa, piso } = lugar(p);
-            const sig = SIGUIENTE[p.estado]!;
-            const moviendo = arrastre?.activo && arrastre.id === p.id;
-            return (
-              <article
-                key={p.id}
-                data-comanda={p.id}
-                className={`flex flex-col overflow-hidden rounded-xl bg-superficie text-stone-900 shadow-lg ${moviendo ? "opacity-30 outline-2 outline-dashed outline-white/70" : ""}`}
-              >
-                <button
-                  type="button"
-                  onClick={() => !recienArrastrado.current && setDetalle(p.id)}
-                  onPointerDown={(e) => empezarArrastre(e, p)}
-                  onPointerMove={moverArrastre}
-                  onPointerUp={soltar}
-                  onPointerCancel={() => setArrastre(null)}
-                  title="Toca para ver el detalle · arrastra para cambiar el orden"
-                  className={`cursor-grab touch-none select-none px-3 py-2 text-left text-white active:cursor-grabbing ${color(min)}`}
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="text-lg font-bold">{mesa}</span>
-                    <span className="flex items-center gap-1 text-sm font-semibold tabular-nums" suppressHydrationWarning>
-                      <Icono nombre="reloj" className="h-4 w-4" />
-                      {min}′
+          {agrupar &&
+            porMesa(activos).map(({ clave, pedidos: grupo }) => {
+              const primero = grupo.reduce((a, b) => (a.created_at < b.created_at ? a : b));
+              const min = minutosDesde(primero.created_at, ahora);
+              const { mesa, piso } = lugar(primero);
+              const nuevas = grupo.filter((p) => p.estado === "nuevo");
+              const sig = nuevas.length ? SIGUIENTE.nuevo! : SIGUIENTE.preparando!;
+              return (
+                <article key={clave} className="flex flex-col overflow-hidden rounded-xl bg-superficie text-stone-900 shadow-lg">
+                  <div className={`px-3 py-2 text-white ${color(min)}`}>
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-lg font-bold">{mesa}</span>
+                      <span className="flex items-center gap-1 text-sm font-semibold tabular-nums" suppressHydrationWarning>
+                        <Icono nombre="reloj" className="h-4 w-4" />
+                        {min}′
+                      </span>
                     </span>
-                  </span>
-                  <span className="flex justify-between text-xs opacity-90">
-                    <span>
-                      #{p.numero}
-                      {piso ? ` · ${piso}` : ""}
-                      {estacion === "Todas" ? ` · ${p.estacion}` : ""}
+                    <span className="flex justify-between text-xs opacity-90">
+                      <span>
+                        {grupo.length} {grupo.length === 1 ? "comanda" : "comandas"}
+                        {piso ? ` · ${piso}` : ""}
+                      </span>
+                      <span suppressHydrationWarning>{horaCorta(primero.created_at, regionDe(ajustes))}</span>
                     </span>
-                    <span suppressHydrationWarning>{horaCorta(p.created_at, regionDe(ajustes))}</span>
-                  </span>
-                </button>
-                {p.estado === "preparando" && (
-                  <p className="bg-sky-100 px-3 py-0.5 text-xs font-semibold text-sky-800">En preparación</p>
-                )}
-                <ul className="flex-1 divide-y divide-stone-100 px-3 py-1">
-                  {(p.pedido_items ?? []).map((i) => (
-                    <li key={i.id}>
-                      <button
-                        type="button"
-                        onClick={() => alternarItem(i)}
-                        className={`flex w-full gap-2 py-1.5 text-left ${i.listo ? "text-stone-400 line-through" : ""}`}
-                      >
-                        <span className="w-6 shrink-0 text-right font-bold tabular-nums">{i.cantidad}×</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-semibold leading-tight">{i.nombre}</span>
-                          {i.nota && (
-                            <span className="block rounded bg-amber-100 px-1 text-xs font-medium text-amber-900">{i.nota}</span>
+                  </div>
+                  <div className="flex-1 divide-y-4 divide-stone-100">
+                    {grupo.map((p) => (
+                      <div key={p.id}>
+                        <button
+                          type="button"
+                          onClick={() => setDetalle(p.id)}
+                          className="flex w-full items-center gap-2 bg-stone-50 px-3 py-1 text-left text-xs text-stone-500 hover:bg-stone-100"
+                        >
+                          <span className="font-semibold text-stone-700">#{p.numero}</span>
+                          {estacion === "Todas" && <span>{p.estacion}</span>}
+                          {p.nombre && <span className="truncate">{p.nombre}</span>}
+                          {p.estado === "preparando" && (
+                            <span className="ml-auto rounded bg-sky-100 px-1.5 font-semibold text-sky-800">En preparación</span>
                           )}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                {p.nota && <p className="mx-3 mb-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-900">Nota: {p.nota}</p>}
-                <button
-                  type="button"
-                  onClick={() => cambiar(p, sig.estado)}
-                  className={`m-2 mt-0 rounded-lg py-2.5 text-sm font-bold uppercase tracking-wide text-white ${sig.clase}`}
+                        </button>
+                        <ul className="divide-y divide-stone-100 px-3 py-1">{lineas(p)}</ul>
+                        {p.nota && (
+                          <p className="mx-3 mb-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-900">Nota: {p.nota}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => cambiarVarias(nuevas.length ? nuevas : grupo, sig.estado)}
+                    className={`m-2 rounded-lg py-2.5 text-sm font-bold uppercase tracking-wide text-white ${sig.clase}`}
+                  >
+                    {sig.texto}
+                    {grupo.length > 1 ? (nuevas.length && nuevas.length < grupo.length ? ` (${nuevas.length})` : " todo") : ""}
+                  </button>
+                </article>
+              );
+            })}
+          {!agrupar &&
+            tarjetas.map((p) => {
+              const min = minutosDesde(p.created_at, ahora);
+              const { mesa, piso } = lugar(p);
+              const sig = SIGUIENTE[p.estado]!;
+              const moviendo = arrastre?.activo && arrastre.id === p.id;
+              return (
+                <article
+                  key={p.id}
+                  data-comanda={p.id}
+                  className={`flex flex-col overflow-hidden rounded-xl bg-superficie text-stone-900 shadow-lg ${moviendo ? "opacity-30 outline-2 outline-dashed outline-white/70" : ""}`}
                 >
-                  {sig.texto}
-                </button>
-              </article>
-            );
-          })}
+                  <button
+                    type="button"
+                    onClick={() => !recienArrastrado.current && setDetalle(p.id)}
+                    onPointerDown={(e) => empezarArrastre(e, p)}
+                    onPointerMove={moverArrastre}
+                    onPointerUp={soltar}
+                    onPointerCancel={() => setArrastre(null)}
+                    title="Toca para ver el detalle · arrastra para cambiar el orden"
+                    className={`cursor-grab touch-none select-none px-3 py-2 text-left text-white active:cursor-grabbing ${color(min)}`}
+                  >
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-lg font-bold">{mesa}</span>
+                      <span className="flex items-center gap-1 text-sm font-semibold tabular-nums" suppressHydrationWarning>
+                        <Icono nombre="reloj" className="h-4 w-4" />
+                        {min}′
+                      </span>
+                    </span>
+                    <span className="flex justify-between text-xs opacity-90">
+                      <span>
+                        #{p.numero}
+                        {piso ? ` · ${piso}` : ""}
+                        {estacion === "Todas" ? ` · ${p.estacion}` : ""}
+                      </span>
+                      <span suppressHydrationWarning>{horaCorta(p.created_at, regionDe(ajustes))}</span>
+                    </span>
+                  </button>
+                  {p.estado === "preparando" && (
+                    <p className="bg-sky-100 px-3 py-0.5 text-xs font-semibold text-sky-800">En preparación</p>
+                  )}
+                  <ul className="flex-1 divide-y divide-stone-100 px-3 py-1">{lineas(p)}</ul>
+                  {p.nota && <p className="mx-3 mb-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-900">Nota: {p.nota}</p>}
+                  <button
+                    type="button"
+                    onClick={() => cambiar(p, sig.estado)}
+                    className={`m-2 mt-0 rounded-lg py-2.5 text-sm font-bold uppercase tracking-wide text-white ${sig.clase}`}
+                  >
+                    {sig.texto}
+                  </button>
+                </article>
+              );
+            })}
         </div>
 
         {arrastre?.activo &&
@@ -557,23 +666,56 @@ export function Cocina({
           {listos.length === 0 && (
             <p className="text-xs text-stone-400">Lo que termines aparece aquí hasta que el mesero lo entregue.</p>
           )}
-          {listos.map((p) => (
-            <div key={p.id} className="flex items-center gap-2 rounded-lg bg-emerald-900/50 px-3 py-2">
-              <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setDetalle(p.id)}>
-                <span className="block font-semibold">{lugar(p).mesa}</span>
-                <span className="block truncate text-xs text-stone-300">
-                  {(p.pedido_items ?? []).map((i) => `${i.cantidad} ${i.nombre}`).join(", ")}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => cambiar(p, "entregado")}
-                className="rounded-md bg-white/15 px-2 py-1 text-xs font-semibold hover:bg-white/25"
-              >
-                Entregado
-              </button>
-            </div>
-          ))}
+          {agrupar &&
+            porMesa(listos).map(({ clave, pedidos: grupo }) => {
+              const faltan = faltanDe(clave);
+              return (
+                <div key={clave} className="flex items-center gap-2 rounded-lg bg-emerald-900/50 px-3 py-2">
+                  <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setDetalle(grupo[0].id)}>
+                    <span className="block font-semibold">
+                      {lugar(grupo[0]).mesa}
+                      {grupo.length > 1 && <span className="font-normal text-stone-300"> · {grupo.length} comandas</span>}
+                    </span>
+                    <span className="block truncate text-xs text-stone-300">
+                      {grupo
+                        .flatMap((p) => p.pedido_items ?? [])
+                        .map((i) => `${i.cantidad} ${i.nombre}`)
+                        .join(", ")}
+                    </span>
+                    {faltan > 0 && (
+                      <span className="block text-xs font-semibold text-amber-300">
+                        {faltan === 1 ? "Falta 1 comanda" : `Faltan ${faltan} comandas`} de esta mesa
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => cambiarVarias(grupo, "entregado")}
+                    className="rounded-md bg-white/15 px-2 py-1 text-xs font-semibold hover:bg-white/25"
+                  >
+                    Entregado
+                  </button>
+                </div>
+              );
+            })}
+          {!agrupar &&
+            listos.map((p) => (
+              <div key={p.id} className="flex items-center gap-2 rounded-lg bg-emerald-900/50 px-3 py-2">
+                <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setDetalle(p.id)}>
+                  <span className="block font-semibold">{lugar(p).mesa}</span>
+                  <span className="block truncate text-xs text-stone-300">
+                    {(p.pedido_items ?? []).map((i) => `${i.cantidad} ${i.nombre}`).join(", ")}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cambiar(p, "entregado")}
+                  className="rounded-md bg-white/15 px-2 py-1 text-xs font-semibold hover:bg-white/25"
+                >
+                  Entregado
+                </button>
+              </div>
+            ))}
           <button
             type="button"
             onClick={() => setVerEntregados(!verEntregados)}

@@ -271,9 +271,10 @@ export function Plano({
 
   return (
     <div
-      className={`overflow-x-auto rounded-2xl border p-3 sm:p-5 ${
+      // En el celular el plano es más ancho que la pantalla: se desliza dentro de su recuadro, no la página entera.
+      className={`w-full max-w-full overscroll-x-contain rounded-2xl border p-3 sm:p-5 ${
         ambientado ? "border-stone-800 bg-[#17130f] [color-scheme:dark]" : "border-borde bg-superficie"
-      } ${tres ? "overflow-hidden" : ""}`}
+      } ${tres ? "overflow-x-auto overflow-y-hidden" : "overflow-x-auto"}`}
     >
       <div
         className="relative mx-auto min-w-[620px] px-5 py-5"
@@ -289,7 +290,8 @@ export function Plano({
         <span className="absolute left-0 top-1/2 -translate-y-1/2 text-[11px] font-bold text-stone-400">{izquierda}</span>
         <div
           ref={lienzo}
-          className={`relative touch-none select-none rounded-lg ${ambientado ? "" : "bg-stone-50 ring-1 ring-stone-200"}`}
+          // Solo al editar se bloquea el gesto del dedo (para arrastrar mesas); si no, el plano se desliza con el dedo.
+          className={`relative select-none rounded-lg ${editando ? "touch-none" : ""} ${ambientado ? "" : "bg-stone-50 ring-1 ring-stone-200"}`}
           style={{
             aspectRatio: `${piso.columnas} / ${piso.filas}`,
             ...(ambientado

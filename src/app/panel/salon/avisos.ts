@@ -47,3 +47,17 @@ export function guardarSeguirAvisos(v: boolean) {
     localStorage.setItem("salon:seguir", v ? "si" : "no");
   } catch {}
 }
+
+// "Por mesa" en los avisos de la pantalla del salón: se recuerda en cada pantalla (apagado salvo que lo prendan).
+export function leerAgruparAvisos() {
+  try {
+    return localStorage.getItem("salon:agrupar") === "si";
+  } catch {
+    return false;
+  }
+}
+export function guardarAgruparAvisos(v: boolean) {
+  try {
+    localStorage.setItem("salon:agrupar", v ? "si" : "no");
+  } catch {}
+}

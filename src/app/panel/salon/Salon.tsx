@@ -525,8 +525,8 @@ export function Salon({
               )}
             </div>
           ) : (
-            <div className={`grid gap-4 ${editando ? "xl:grid-cols-[1fr_300px]" : ""}`}>
-              <div className="space-y-3">
+            <div className={`grid grid-cols-1 gap-4 ${editando ? "xl:grid-cols-[minmax(0,1fr)_300px]" : ""}`}>
+              <div className="min-w-0 space-y-3">
                 {!editando && ajustes.modulos.reservas && (
                   <ProximasReservas supabase={supabase} restauranteId={restaurante.id} region={regionDe(ajustes)} />
                 )}
