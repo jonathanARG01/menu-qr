@@ -478,16 +478,19 @@ function EditorOpciones({
                 maxLength={40}
                 onChange={(e) => cambiarValor(i, j, { nombre: e.target.value })}
                 placeholder={j === 0 ? "Ej: Papas fritas" : "Otra opción"}
-                className="campo py-1.5"
+                className="campo min-w-0 flex-1 py-1.5"
               />
-              <input
-                aria-label={`Precio extra (${moneda})`}
-                inputMode="decimal"
-                value={v.precio ? String(v.precio) : ""}
-                onChange={(e) => cambiarValor(i, j, { precio: Math.max(0, Number(e.target.value.replace(",", ".")) || 0) })}
-                placeholder="+0"
-                className="campo w-24 shrink-0 py-1.5 tabular-nums"
-              />
+              {/* El ancho va en un contenedor: .campo fuerza width 100% y ganaba al w-24, aplastando el nombre. */}
+              <span className="w-24 shrink-0">
+                <input
+                  aria-label={`Precio extra (${moneda})`}
+                  inputMode="decimal"
+                  value={v.precio ? String(v.precio) : ""}
+                  onChange={(e) => cambiarValor(i, j, { precio: Math.max(0, Number(e.target.value.replace(",", ".")) || 0) })}
+                  placeholder="+0"
+                  className="campo py-1.5 tabular-nums"
+                />
+              </span>
               <button
                 type="button"
                 onClick={() => cambiar(i, { valores: g.valores.filter((_, k) => k !== j) })}
