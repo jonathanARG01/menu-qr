@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Ajustes, Modulo, Seccion } from "./salon";
 import type { Restaurante } from "./types";
 import { paisDe } from "./region";
+import { PERIODOS, PLANES } from "@/components/inicio/datos";
 
 // Planes de Mesitto: qué incluye cada uno y la prueba de 14 días. La lista de precios del sitio de venta está en
 // components/inicio/datos.ts; lo que se habilita en el panel y en la carta sale de aquí.
@@ -171,13 +172,28 @@ export const enlaceContratar = (restaurante: string, plan?: string) =>
     : null;
 
 // ── Plan pago ─────────────────────────────────
-// Días desde que empezó el plan y en qué parte del período va (mes o año, según cómo paga), para el contador de /admin.
-export function periodoPlan(inicio: string, ciclo: "mensual" | "anual" = "mensual", ahora = new Date()) {
+// Cada cuánto paga un restaurante: los mismos períodos (y descuentos) de la lista de precios.
+export type Ciclo = (typeof PERIODOS)[number]["id"];
+export const CICLOS = PERIODOS;
+export const cicloDe = (ciclo: string | undefined) => CICLOS.find((c) => c.id === ciclo) ?? CICLOS[0];
+// Cómo se lee en una frase: "paga por mes", "paga cada 3 meses"...
+export const PAGA_CADA: Record<Ciclo, string> = {
+  mensual: "por mes",
+  trimestral: "cada 3 meses",
+  semestral: "cada 6 meses",
+  anual: "por año",
+};
+
+// Precio mensual de lista (CLP) de cada plan pago.
+export const PRECIO_PLAN = Object.fromEntries(PLANES.map((p) => [p.id, p.precio])) as Record<PlanPago, number>;
+
+// Días desde que empezó el plan y en qué parte del período va (mes, trimestre, semestre o año), para el contador de /admin.
+export function periodoPlan(inicio: string, ciclo: Ciclo = "mensual", ahora = new Date()) {
   const desde = new Date(`${inicio}T00:00:00`);
   const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
   const dias = Math.max(0, Math.round((hoy.getTime() - desde.getTime()) / DIA));
-  const paso = ciclo === "anual" ? 12 : 1;
-  // Inicio del período actual: se suman meses (o años) mientras no pasen de hoy.
+  const paso = cicloDe(ciclo).meses;
+  // Inicio del período actual: se suman períodos mientras no pasen de hoy.
   let n = 0;
   const sumar = (k: number) => new Date(desde.getFullYear(), desde.getMonth() + k * paso, desde.getDate());
   while (sumar(n + 1) <= hoy) n++;

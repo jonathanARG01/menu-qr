@@ -201,6 +201,12 @@ const TRAZOS: Record<string, React.ReactNode> = {
     </>
   ),
   rayo: <path d="M13 2 4 14h7l-1 8 9-12h-7z" />,
+  correo: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </>
+  ),
 };
 
 export function Icono({ nombre, className = "h-5 w-5" }: { nombre: string; className?: string }) {

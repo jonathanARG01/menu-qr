@@ -1,22 +1,27 @@
 "use client";
 
+import { useState } from "react";
+import { Icono } from "@/components/Icono";
 import { useToast } from "@/components/Toast";
 import { useUrlSitio } from "@/lib/useUrlSitio";
 import {
   NOMBRE_ESTADO_REFERIDO,
+  colorNivel,
   descuentoVigente,
+  nombreNivel,
   textoNivel,
   urlInvitacion,
   type Descuento,
   type EstadoReferido,
   type Nivel,
 } from "@/lib/referidos";
+import { PAGA_CADA, type Ciclo } from "@/lib/planes";
 import { PAIS_BASE } from "@/lib/region";
 
 type Props = {
   slug: string;
   nombre: string;
-  ciclo?: "mensual" | "anual";
+  ciclo?: Ciclo;
   activo: boolean;
   niveles: Nivel[];
   descuentos: Descuento[];
@@ -31,9 +36,9 @@ export function Referidos({ slug, nombre, ciclo, activo, niveles, descuentos, re
   const enlace = urlInvitacion(useUrlSitio(), slug);
   const confirmados = referidos.filter((r) => r.estado === "confirmado").length;
   const siguiente = niveles.find((n) => n.referidos > confirmados);
-  const ultimo = niveles[niveles.length - 1];
   const vigente = descuentoVigente(descuentos);
   const mensaje = `Hola! En ${nombre} usamos esta carta digital con QR y pedidos desde la mesa. Si te sumas con mi link, los dos salimos ganando: ${enlace}`;
+  const actual = [...niveles].reverse().find((n) => n.referidos <= confirmados);
 
   return (
     <div className="space-y-6">
@@ -69,8 +74,10 @@ export function Referidos({ slug, nombre, ciclo, activo, niveles, descuentos, re
             Copiar
           </button>
           <a className="boton" href={`https://wa.me/?text=${encodeURIComponent(mensaje)}`} target="_blank" rel="noreferrer">
+            <Icono nombre="whatsapp" className="h-4 w-4" />
             Enviar por WhatsApp
           </a>
+          <InvitarPorCorreo nombre={nombre} enlace={enlace} />
         </div>
         <p className="text-xs text-suave">
           Cuenta cuando el restaurante crea su cuenta con este link y después contrata un plan pago.
@@ -78,20 +85,20 @@ export function Referidos({ slug, nombre, ciclo, activo, niveles, descuentos, re
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <Dato titulo="Contrataron" valor={String(confirmados)} />
+        <Dato titulo="Contrataron" valor={String(confirmados)} nota={actual ? `Nivel ${nombreNivel(actual)}` : undefined} />
         <Dato
           titulo="Descuento en tu próximo cobro"
           valor={vigente.porcentaje > 0 ? `${vigente.porcentaje} %` : "—"}
           nota={
             vigente.permanente
               ? "Permanente"
-              : vigente.periodosPendientes > 1
-                ? `${vigente.periodosPendientes} períodos ganados`
+              : vigente.mesesPendientes > 1
+                ? `${vigente.mesesPendientes} meses con descuento`
                 : undefined
           }
         />
         <Dato
-          titulo={siguiente ? "Para el siguiente nivel" : "Nivel máximo"}
+          titulo={siguiente ? `Para llegar a ${nombreNivel(siguiente)}` : "Nivel máximo"}
           valor={siguiente ? `faltan ${siguiente.referidos - confirmados}` : "¡Logrado!"}
           nota={vigente.prioridad ? "Acceso prioritario a las mejoras" : undefined}
         />
@@ -116,8 +123,11 @@ export function Referidos({ slug, nombre, ciclo, activo, niveles, descuentos, re
                     {ganado ? "✓" : n.referidos}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">
-                      {n.referidos} {n.referidos === 1 ? "restaurante" : "restaurantes"}: {textoNivel(n, ciclo)}
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${colorNivel(n.nombre)}`}>
+                        {nombreNivel(n)}
+                      </span>
+                      {n.referidos} {n.referidos === 1 ? "restaurante" : "restaurantes"}: {textoNivel(n)}
                     </p>
                     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-stone-100">
                       <div className="h-full rounded-full bg-marca" style={{ width: `${avance * 100}%` }} />
@@ -128,11 +138,18 @@ export function Referidos({ slug, nombre, ciclo, activo, niveles, descuentos, re
             })}
           </ol>
         )}
-        {ultimo?.prioridad && (
-          <p className="mt-4 text-xs text-suave">
-            Acceso prioritario: recibes primero las funciones nuevas que se van sumando al sistema.
+        <div className="mt-4 space-y-1 text-xs text-suave">
+          <p>
+            Los descuentos se cuentan en meses.{" "}
+            {ciclo && ciclo !== "mensual"
+              ? `Como pagas ${PAGA_CADA[ciclo]}, a tu cobro se le resta el descuento de cada mes que cubre (además del descuento por pagar varios meses juntos).`
+              : "Como pagas por mes, se restan de tus próximos cobros mensuales."}{" "}
+            Los permanentes se aplican a todos los meses.
           </p>
-        )}
+          {niveles.some((n) => n.prioridad) && (
+            <p>Acceso prioritario: recibes primero las funciones nuevas que se van sumando al sistema.</p>
+          )}
+        </div>
       </section>
 
       {descuentos.length > 0 && (
@@ -143,15 +160,14 @@ export function Referidos({ slug, nombre, ciclo, activo, niveles, descuentos, re
             return (
               <div key={d.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
                 <span className="flex-1">
-                  {d.porcentaje} % · nivel de {d.referidos} {d.referidos === 1 ? "referido" : "referidos"}
-                  {d.prioridad && " · acceso prioritario"}
+                  <strong>{nombreNivel(d)}</strong> · {d.porcentaje} %{d.prioridad && " · acceso prioritario"}
                 </span>
                 <span className={quedan === 0 ? "text-suave" : "font-medium text-emerald-700"}>
                   {quedan == null
                     ? "Permanente"
                     : quedan === 0
                       ? "Ya usado"
-                      : `Le queda${quedan > 1 ? "n" : ""} ${quedan} ${quedan > 1 ? "períodos" : "período"}`}
+                      : `Te queda${quedan > 1 ? "n" : ""} ${quedan} ${quedan > 1 ? "meses" : "mes"}`}
                 </span>
               </div>
             );
@@ -193,6 +209,61 @@ function Dato({ titulo, valor, nota }: { titulo: string; valor: string; nota?: s
       <p className="text-xs text-suave">{titulo}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{valor}</p>
       {nota && <p className="mt-0.5 text-xs text-emerald-700">{nota}</p>}
+    </div>
+  );
+}
+
+// Abre un correo ya escrito con el link. Gmail y Outlook en el navegador (sirven en cualquier computador)
+// o la app de correo del equipo.
+function InvitarPorCorreo({ nombre, enlace }: { nombre: string; enlace: string }) {
+  const [abierto, setAbierto] = useState(false);
+  const asunto = `${nombre} te recomienda su carta digital con QR`;
+  const cuerpo = [
+    "Hola,",
+    "",
+    `En ${nombre} usamos Mesitto para la carta con QR, los pedidos desde la mesa y la cocina en vivo. Nos ha servido mucho y creo que a ustedes también les puede servir.`,
+    "",
+    `Pueden crear su cuenta y probarlo gratis 14 días con mi link: ${enlace}`,
+    "",
+    "Saludos,",
+    nombre,
+  ].join("\n");
+  const q = (s: string) => encodeURIComponent(s);
+  const opciones = [
+    { texto: "Gmail", href: `https://mail.google.com/mail/?view=cm&fs=1&su=${q(asunto)}&body=${q(cuerpo)}` },
+    { texto: "Outlook", href: `https://outlook.live.com/mail/0/deeplink/compose?subject=${q(asunto)}&body=${q(cuerpo)}` },
+    { texto: "App de correo", href: `mailto:?subject=${q(asunto)}&body=${q(cuerpo)}` },
+  ];
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className="boton-secundario"
+        aria-expanded={abierto}
+        onClick={() => setAbierto((a) => !a)}
+      >
+        <Icono nombre="correo" className="h-4 w-4" />
+        Enviar por correo
+      </button>
+      {abierto && (
+        <>
+          <button type="button" className="fixed inset-0 z-10 cursor-default" aria-label="Cerrar" onClick={() => setAbierto(false)} />
+          <div className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-2xl border border-borde bg-superficie py-1 shadow-lg">
+            {opciones.map((o) => (
+              <a
+                key={o.texto}
+                href={o.href}
+                target={o.href.startsWith("mailto:") ? undefined : "_blank"}
+                rel="noreferrer"
+                className="block px-4 py-2 text-sm hover:bg-stone-50"
+                onClick={() => setAbierto(false)}
+              >
+                {o.texto}
+              </a>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

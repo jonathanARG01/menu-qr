@@ -26,8 +26,9 @@ export async function cambiarEstado(id: string, estado: string) {
   return llamar("admin_estado_referido", { p_referido: id, p_estado: estado });
 }
 
-export async function usarPeriodo(id: string) {
-  return llamar("admin_usar_periodo", { p_restaurante: id });
+// Gasta los meses de descuento que cubre el cobro (1, 3, 6 o 12, según cómo paga).
+export async function registrarCobro(id: string) {
+  return llamar("admin_registrar_cobro", { p_restaurante: id });
 }
 
 export async function quitarDescuento(id: string) {

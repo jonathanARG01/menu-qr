@@ -7,7 +7,17 @@ import { Icono } from "@/components/Icono";
 import { Interruptor } from "@/components/Interruptor";
 import { useToast } from "@/components/Toast";
 import { PLANES } from "@/components/inicio/datos";
-import { DIAS_PRUEBA, NOMBRE_PLAN, estadoPrueba, periodoPlan, type EstadoPrueba, type Plan } from "@/lib/planes";
+import {
+  DIAS_PRUEBA,
+  NOMBRE_PLAN,
+  PAGA_CADA,
+  cicloDe,
+  estadoPrueba,
+  periodoPlan,
+  type Ciclo,
+  type EstadoPrueba,
+  type Plan,
+} from "@/lib/planes";
 import { PAIS_BASE, numeroWhatsapp } from "@/lib/region";
 import { formatoPrecio } from "@/lib/utils";
 import { EditarRestaurante } from "./EditarRestaurante";
@@ -26,7 +36,7 @@ export type FilaAdmin = {
   slug: string;
   nombre: string;
   plan: Plan;
-  ciclo: "mensual" | "anual";
+  ciclo: Ciclo;
   activo: boolean;
   pausa_motivo: "prueba" | "manual" | null;
   created_at: string;
@@ -509,7 +519,7 @@ function BloquePlan({ f, ahora, acciones: a }: { f: FilaAdmin; ahora: number | n
       <div className="flex items-baseline justify-between gap-2 text-sm">
         <span className="font-semibold">
           {p.futuro ? "Empieza pronto" : `Cliente hace ${plural(p.dias, "día", "días")}`}
-          <span className="font-normal text-suave"> · paga {f.ciclo === "anual" ? "por año" : "por mes"}</span>
+          <span className="font-normal text-suave"> · paga {PAGA_CADA[f.ciclo] ?? PAGA_CADA.mensual}</span>
         </span>
         <span className="text-xs font-semibold text-suave">{formatoPrecio(PRECIO[f.plan] ?? 0, "CLP")}/mes</span>
       </div>
@@ -520,7 +530,7 @@ function BloquePlan({ f, ahora, acciones: a }: { f: FilaAdmin; ahora: number | n
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-suave">
             <span>
-              {f.ciclo === "anual" ? "Año" : "Mes"} {p.periodos + 1} · próximo cobro el {fecha(p.proximo, false)} (
+              {f.ciclo === "anual" ? "Año" : cicloDe(f.ciclo).meses > 1 ? "Período" : "Mes"} {p.periodos + 1} · próximo cobro el {fecha(p.proximo, false)} (
               {p.quedan === 0 ? "hoy" : `en ${plural(p.quedan, "día", "días")}`})
             </span>
             <div className="flex-1" />

@@ -49,7 +49,7 @@ export type Restaurante = {
   // Puede faltar si aún no se ejecutó la migración 0004.
   ajustes?: Partial<Ajustes>;
   // Puede faltar si aún no se ejecutó la migración 0012.
-  ciclo?: "mensual" | "anual";
+  ciclo?: "mensual" | "trimestral" | "semestral" | "anual";
   // Prueba de 14 días y plan pago (migración 0016). prueba_fin null: no vence.
   prueba_inicio?: string | null;
   prueba_fin?: string | null;
