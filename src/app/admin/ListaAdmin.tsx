@@ -10,6 +10,7 @@ import { PLANES } from "@/components/inicio/datos";
 import { DIAS_PRUEBA, NOMBRE_PLAN, estadoPrueba, periodoPlan, type EstadoPrueba, type Plan } from "@/lib/planes";
 import { PAIS_BASE, numeroWhatsapp } from "@/lib/region";
 import { formatoPrecio } from "@/lib/utils";
+import { EditarRestaurante } from "./EditarRestaurante";
 import {
   actualizarRestaurante,
   cambiarPlanInicio,
@@ -72,6 +73,7 @@ export function ListaAdmin({ filas: iniciales }: { filas: FilaAdmin[] }) {
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [creando, setCreando] = useState(false);
+  const [editando, setEditando] = useState<FilaAdmin | null>(null);
   const [pendiente, empezar] = useTransition();
   // Los días se calculan en el navegador (la página no se cachea, pero así no hay desfase con la hora del servidor).
   const [ahora, setAhora] = useState<number | null>(null);
@@ -190,6 +192,7 @@ export function ListaAdmin({ filas: iniciales }: { filas: FilaAdmin[] }) {
         if (error) avisar(error, "error");
       }),
     dejar: (f) => hacer(f, { soy_staff: false }, () => dejarRestaurante(f.id), "Ya no editas este restaurante"),
+    cuenta: (f) => setEditando(f),
   };
 
   return (
@@ -292,6 +295,7 @@ export function ListaAdmin({ filas: iniciales }: { filas: FilaAdmin[] }) {
       )}
 
       {creando && <CrearParaCliente onCerrar={() => setCreando(false)} />}
+      {editando && <EditarRestaurante id={editando.id} nombre={editando.nombre} onCerrar={() => setEditando(null)} />}
     </div>
   );
 }
@@ -306,6 +310,7 @@ type Acciones = {
   ejemplo: (f: FilaAdmin) => void;
   editar: (f: FilaAdmin) => void;
   dejar: (f: FilaAdmin) => void;
+  cuenta: (f: FilaAdmin) => void;
 };
 
 const COLOR_PLAN: Record<Plan, string> = {
@@ -404,6 +409,10 @@ function TarjetaRestaurante({
             Dejar de editar
           </button>
         )}
+        <button type="button" className="boton-secundario py-1.5" onClick={() => a.cuenta(f)}>
+          <Icono nombre="personas" className="h-4 w-4" />
+          Datos y acceso
+        </button>
         <button type="button" className="boton-secundario py-1.5" disabled={a.pendiente} onClick={() => a.editar(f)}>
           <Icono nombre="lapiz" className="h-4 w-4" />
           Editar carta
