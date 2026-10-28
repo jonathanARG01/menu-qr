@@ -15,7 +15,10 @@ import {
   NOMBRE_TIPO,
   nombreMesa,
   nombreVisible,
+  textoOpciones,
 } from "@/lib/salon";
+import { Miniatura, mapaFotos } from "@/components/Miniatura";
+import { Avatar } from "@/components/Avatar";
 import type { Mesa, Restaurante } from "@/lib/types";
 import { avisarComensal } from "@/lib/push";
 import { sonar } from "@/lib/sonidos";
@@ -33,7 +36,7 @@ type Props = {
   pisos: Pick<Piso, "id" | "nombre">[];
   platos: PlatoAgotable[];
   categorias: { id: string; nombre: string }[];
-  equipo?: { user_id: string; nombre: string }[];
+  equipo?: { user_id: string; nombre: string; avatar?: string | null; color?: string | null }[];
 };
 
 const SIGUIENTE: Partial<Record<EstadoPedido, { estado: EstadoPedido; texto: string; clase: string }>> = {
@@ -120,6 +123,8 @@ export function Cocina({
   const [ancho, setAncho] = useState<AnchoTicket>("80");
   const [verImpresora, setVerImpresora] = useState(false);
   const agotadosAhora = listaPlatos.filter((p) => estaAgotado(p, ahora)).length;
+  // Miniatura de cada plato en las comandas (se apaga en Personalizar).
+  const fotos = useMemo(() => (ajustes.miniaturas ? mapaFotos(platos) : null), [platos, ajustes.miniaturas]);
 
   useEffect(() => {
     setEstacion(leer("cocina:estacion") ?? "Todas");
@@ -187,10 +192,19 @@ export function Cocina({
         tipo: "fila" as const,
         izq: `${i.cantidad} × ${i.nombre}`,
         fuerte: true,
-        nota: [i.nota, i.comensal ? `Comensal ${i.comensal}` : ""].filter(Boolean).join(" · ") || undefined,
+        nota:
+          [textoOpciones(i.opciones), i.nota, i.comensal ? `Comensal ${i.comensal}` : ""].filter(Boolean).join(" · ") ||
+          undefined,
       })),
       ...(p.nota ? [{ tipo: "separador" as const }, { tipo: "texto" as const, texto: `Nota: ${p.nota}`, fuerte: true }] : []),
     ];
+  }
+
+  // Foto, emoji o iniciales de quien tomó la comanda (o de quien atiende la mesa).
+  function avatarDe(p: Pedido) {
+    if (!ajustes.avatares) return null;
+    const id = p.origen === "cliente" ? cuentas.find((c) => c.id === p.cuenta_id)?.mesero_id : (p.creado_por ?? null);
+    return id ? (equipo.find((e) => e.user_id === id) ?? null) : null;
   }
 
   // Quién tomó la comanda: el mesero que la cargó, o si la pidió el cliente desde el QR, quién atiende esa mesa.
@@ -212,9 +226,13 @@ export function Cocina({
       const hora = cuenta?.para_hora ? `para las ${horaCorta(cuenta.para_hora, regionDe(ajustes))}` : "lo antes posible";
       return { mesa: NOMBRE_TIPO[p.tipo], piso: hora };
     }
-    const mesa = mesas.find(
-      (m) => m.numero === p.mesa_numero && (!p.sucursal_id || !m.sucursal_id || m.sucursal_id === p.sucursal_id),
-    );
+    // Por la mesa de la cuenta (el número puede repetirse en otro piso); si no, por número.
+    const mesaId = cuentas.find((c) => c.id === p.cuenta_id)?.mesa_id;
+    const mesa =
+      mesas.find((m) => m.id === mesaId) ??
+      mesas.find(
+        (m) => m.numero === p.mesa_numero && (!p.sucursal_id || !m.sucursal_id || m.sucursal_id === p.sucursal_id),
+      );
     const piso = pisos.find((x) => x.id === mesa?.piso_id)?.nombre;
     return { mesa: nombreMesa(p.mesa_numero), piso };
   }
@@ -365,11 +383,18 @@ export function Cocina({
         <button
           type="button"
           onClick={() => alternarItem(i)}
-          className={`flex w-full gap-2 py-1.5 text-left ${i.listo ? "text-stone-400 line-through" : ""}`}
+          className={`flex w-full items-center gap-2 py-1.5 text-left ${i.listo ? "text-stone-400 line-through" : ""}`}
         >
-          <span className="w-6 shrink-0 text-right font-bold tabular-nums">{i.cantidad}×</span>
+          {fotos && i.plato_id && fotos.get(i.plato_id) ? (
+            <Miniatura src={fotos.get(i.plato_id)} cantidad={i.cantidad} className={`h-10 w-10 ${i.listo ? "opacity-40" : ""}`} />
+          ) : (
+            <span className="w-6 shrink-0 text-right font-bold tabular-nums">{i.cantidad}×</span>
+          )}
           <span className="min-w-0 flex-1">
             <span className="block font-semibold leading-tight">{i.nombre}</span>
+            {i.opciones?.length ? (
+              <span className="block text-xs font-medium text-sky-800">{textoOpciones(i.opciones)}</span>
+            ) : null}
             {i.nota && <span className="block rounded bg-amber-100 px-1 text-xs font-medium text-amber-900">{i.nota}</span>}
           </span>
         </button>
@@ -611,7 +636,10 @@ export function Cocina({
                     className={`cursor-grab touch-none select-none px-3 py-2 text-left text-white active:cursor-grabbing ${color(min)}`}
                   >
                     <span className="flex items-center justify-between gap-2">
-                      <span className="text-lg font-bold">{mesa}</span>
+                      <span className="flex min-w-0 items-center gap-1.5 text-lg font-bold">
+                        <Avatar persona={avatarDe(p)} className="h-6 w-6 text-[9px]" />
+                        {mesa}
+                      </span>
                       <span className="flex items-center gap-1 text-sm font-semibold tabular-nums" suppressHydrationWarning>
                         <Icono nombre="reloj" className="h-4 w-4" />
                         {min}′

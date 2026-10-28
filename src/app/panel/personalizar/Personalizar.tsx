@@ -10,6 +10,8 @@ import { AJUSTES_BASE, PERMITIDAS, SECCIONES, type Ajustes, type Modulo, type Se
 import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { PAISES, ZONAS, paisDe } from "@/lib/region";
 import { revalidarCarta } from "../actions";
+import { eliminarMiRestaurante } from "../cuenta";
+import type { OtraMoneda } from "@/lib/salon";
 import { MONEDAS_MP } from "@/lib/mercadopago";
 import Link from "next/link";
 import { NOMBRE_PLAN, conservarBloqueado, moduloIncluido, planDeModulo, type Plan } from "@/lib/planes";
@@ -97,6 +99,8 @@ export function Personalizar({
   plan,
   iniciales,
   guardados,
+  dueno = false,
+  slug,
 }: {
   restauranteId: string;
   moneda: string;
@@ -104,6 +108,9 @@ export function Personalizar({
   iniciales: Ajustes;
   // Lo guardado sin el límite del plan: lo que el plan no incluye se vuelve a guardar igual.
   guardados: Ajustes;
+  // Solo el dueño puede eliminar el restaurante.
+  dueno?: boolean;
+  slug: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
@@ -546,6 +553,31 @@ export function Personalizar({
         )}
       </section>
 
+      <section className="tarjeta divide-y divide-borde">
+        <h2 className="px-5 py-3 font-semibold">Comandas y equipo</h2>
+        <div className="flex items-center gap-4 px-5 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">Miniatura del plato en comandas y avisos</p>
+            <p className="text-sm text-suave">
+              La foto del plato (o su ilustración) con la cantidad, en la pantalla de cocina y en “Pedido listo” del salón.
+            </p>
+          </div>
+          <Interruptor activo={a.miniaturas} onChange={(miniaturas) => set({ miniaturas })} etiqueta="Miniaturas" />
+        </div>
+        <div className="flex items-center gap-4 px-5 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">Foto o iniciales de cada mesero</p>
+            <p className="text-sm text-suave">
+              En el plano se ve quién atiende cada mesa y en cocina quién tomó la comanda. Cada uno elige su foto o emoji en
+              Equipo (o desde su nombre en el menú).
+            </p>
+          </div>
+          <Interruptor activo={a.avatares} onChange={(avatares) => set({ avatares })} etiqueta="Fotos del equipo" />
+        </div>
+      </section>
+
+      <OtrasMonedas moneda={moneda} valor={a.otras_monedas} onChange={(otras_monedas) => set({ otras_monedas })} />
+
       <section className="tarjeta grid gap-4 p-5 sm:grid-cols-2">
         <label className="block text-sm">
           <span className="font-semibold">País</span>
@@ -622,6 +654,8 @@ export function Personalizar({
           </section>
         </>
       )}
+
+      <TusDatos dueno={dueno} slug={slug} />
 
       <div className="fixed inset-x-0 bottom-16 z-10 px-4 lg:bottom-6 lg:left-64">
         <div className="mx-auto flex max-w-4xl items-center gap-3 rounded-2xl bg-tinta px-4 py-3 text-white shadow-xl">
@@ -805,6 +839,127 @@ function ListaEditable({
           Agregar
         </button>
       </form>
+    </section>
+  );
+}
+
+// Total de referencia en otras monedas para turistas: el local carga a cuánto toma cada una.
+function OtrasMonedas({ moneda, valor, onChange }: { moneda: string; valor: OtraMoneda[]; onChange: (v: OtraMoneda[]) => void }) {
+  const sugeridas = ["USD", "EUR", "BRL", "ARS"].filter((c) => c !== moneda && !valor.some((m) => m.codigo === c));
+  return (
+    <section className="tarjeta space-y-3 p-5">
+      <div>
+        <h2 className="font-semibold">Total en otras monedas</h2>
+        <p className="text-sm text-suave">
+          Para turistas: la carta, la cuenta y la precuenta muestran también el total aproximado. Tú pones el cambio (hasta 3).
+        </p>
+      </div>
+      {valor.map((m, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-2 text-sm">
+          1
+          <input
+            value={m.codigo}
+            maxLength={3}
+            onChange={(e) =>
+              onChange(valor.map((x, k) => (k === i ? { ...x, codigo: e.target.value.toUpperCase().replace(/[^A-Z]/g, "") } : x)))
+            }
+            className="w-16 rounded-lg border border-borde px-2 py-1 uppercase"
+            aria-label="Código de la moneda"
+          />
+          =
+          <input
+            type="number"
+            min={0}
+            step="any"
+            value={m.tasa || ""}
+            onChange={(e) => onChange(valor.map((x, k) => (k === i ? { ...x, tasa: Number(e.target.value) || 0 } : x)))}
+            className="w-28 rounded-lg border border-borde px-2 py-1 tabular-nums"
+            aria-label={`Cuánto vale 1 ${m.codigo} en ${moneda}`}
+          />
+          {moneda}
+          <button type="button" onClick={() => onChange(valor.filter((_, k) => k !== i))} className="text-red-600 hover:underline">
+            Quitar
+          </button>
+        </div>
+      ))}
+      {valor.length < 3 && (
+        <div className="flex flex-wrap gap-2">
+          {sugeridas.slice(0, 3).map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => onChange([...valor, { codigo: c, tasa: 0 }])}
+              className="rounded-full border border-borde px-3 py-1 text-sm hover:border-marca"
+            >
+              + {c}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-suave">Se cobra siempre en {moneda}: esto es solo una referencia. Actualiza el cambio cuando varíe.</p>
+    </section>
+  );
+}
+
+// Descargar todos los datos y eliminar el restaurante (Ley 21.719 de protección de datos personales).
+function TusDatos({ dueno, slug }: { dueno: boolean; slug: string }) {
+  const avisar = useToast();
+  const [abierto, setAbierto] = useState(false);
+  const [confirmacion, setConfirmacion] = useState("");
+  const [borrando, setBorrando] = useState(false);
+
+  async function eliminar() {
+    setBorrando(true);
+    const r = await eliminarMiRestaurante(confirmacion);
+    setBorrando(false);
+    if ("error" in r) return avisar(r.error, "error");
+    window.location.href = "/";
+  }
+
+  return (
+    <section className="tarjeta space-y-3 p-5">
+      <h2 className="font-semibold">Tus datos</h2>
+      <p className="text-sm text-suave">
+        Los datos son tuyos. Descárgalos cuando quieras (carta, mesas, clientes, reservas, ventas y caja) en un archivo que
+        puedes abrir o llevar a otro sistema.
+      </p>
+      <a href="/panel/exportar" download className="boton-secundario inline-flex">
+        <Icono nombre="externo" className="h-4 w-4" /> Descargar todos mis datos
+      </a>
+      {dueno && (
+        <div className="border-t border-borde pt-3">
+          {!abierto ? (
+            <button type="button" onClick={() => setAbierto(true)} className="text-sm text-red-600 hover:underline">
+              Eliminar el restaurante y mi cuenta…
+            </button>
+          ) : (
+            <div className="space-y-2 rounded-xl bg-red-50 p-3 text-sm text-red-900">
+              <p className="font-semibold">Se borra todo y no se puede deshacer.</p>
+              <p>
+                La carta, las mesas, los pedidos, los clientes, las reservas, la caja y las fotos. También las cuentas del equipo
+                que no estén en otro restaurante. Te recomendamos descargar tus datos antes.
+              </p>
+              <label className="block">
+                Para confirmar escribe <strong>{slug}</strong>
+                <input value={confirmacion} onChange={(e) => setConfirmacion(e.target.value)} className="campo mt-1 bg-white" />
+              </label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setAbierto(false)} className="boton-secundario">
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={eliminar}
+                  disabled={borrando || confirmacion.trim().toLowerCase() !== slug}
+                  className="boton bg-red-600 hover:bg-red-700"
+                >
+                  {borrando ? "Eliminando…" : "Eliminar para siempre"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }

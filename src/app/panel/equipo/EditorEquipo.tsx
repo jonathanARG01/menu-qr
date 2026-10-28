@@ -6,8 +6,21 @@ import { useToast } from "@/components/Toast";
 import { NOMBRE_ROL, type Rol } from "@/lib/salon";
 import { mensajeError } from "@/lib/utils";
 import { useUrlSitio } from "@/lib/useUrlSitio";
+import { Avatar } from "@/components/Avatar";
+import { EditorPerfil, type MesaElegible } from "./EditorPerfil";
 
-export type Miembro = { user_id: string | null; email: string; rol: Rol; pendiente: boolean; soy_yo: boolean };
+export type Miembro = {
+  user_id: string | null;
+  email: string;
+  rol: Rol;
+  pendiente: boolean;
+  soy_yo: boolean;
+  // Migración 0018: perfil y mesas a cargo.
+  nombre?: string | null;
+  avatar?: string | null;
+  color?: string | null;
+  mesas?: string[] | null;
+};
 
 const ROLES: { id: Exclude<Rol, "staff">; puede: string[]; noPuede: string[] }[] = [
   {
@@ -27,7 +40,15 @@ const ROLES: { id: Exclude<Rol, "staff">; puede: string[]; noPuede: string[] }[]
   },
 ];
 
-export function EditorEquipo({ restauranteId, iniciales }: { restauranteId: string; iniciales: Miembro[] }) {
+export function EditorEquipo({
+  restauranteId,
+  iniciales,
+  mesas = [],
+}: {
+  restauranteId: string;
+  iniciales: Miembro[];
+  mesas?: MesaElegible[];
+}) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
   const [miembros, setMiembros] = useState(iniciales);
@@ -35,6 +56,14 @@ export function EditorEquipo({ restauranteId, iniciales }: { restauranteId: stri
   const [rol, setRol] = useState<Exclude<Rol, "staff">>("mesero");
   const [enviando, setEnviando] = useState(false);
   const enlace = `${useUrlSitio()}/unirse`;
+  const [perfil, setPerfil] = useState<Miembro | null>(null);
+  // Sin la migración 0018 el equipo no trae perfiles: no se ofrece editarlos.
+  const conPerfiles = miembros.some((m) => "avatar" in m);
+  const nombreMesas = (ids?: string[] | null) =>
+    (ids ?? [])
+      .map((id) => mesas.find((m) => m.id === id)?.numero)
+      .filter(Boolean)
+      .join(", ");
 
   async function recargar() {
     const { data } = await supabase.rpc("equipo", { p_restaurante: restauranteId });
@@ -124,12 +153,22 @@ export function EditorEquipo({ restauranteId, iniciales }: { restauranteId: stri
       <div className="tarjeta divide-y divide-borde">
         {miembros.map((m) => (
           <div key={m.email} className="flex flex-wrap items-center gap-3 px-5 py-3">
+            {!m.pendiente && (
+              <Avatar persona={{ nombre: m.nombre || m.email.split("@")[0], avatar: m.avatar, color: m.color }} className="h-9 w-9 text-xs" />
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">
-                {m.email} {m.soy_yo && <span className="text-xs text-suave">(tú)</span>}
+                {m.nombre || m.email} {m.soy_yo && <span className="text-xs text-suave">(tú)</span>}
               </p>
+              {m.nombre && <p className="truncate text-xs text-suave">{m.email}</p>}
               {m.pendiente && <p className="text-xs text-amber-700">Invitado: se suma al crear su cuenta</p>}
+              {!!m.mesas?.length && <p className="truncate text-xs text-suave">Mesas a cargo: {nombreMesas(m.mesas)}</p>}
             </div>
+            {conPerfiles && !m.pendiente && m.user_id && (
+              <button type="button" onClick={() => setPerfil(m)} className="text-sm text-marca hover:underline">
+                {m.rol === "mesero" ? "Perfil y mesas" : "Perfil"}
+              </button>
+            )}
             {m.rol === "staff" ? (
               <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold">Soporte</span>
             ) : (
@@ -154,6 +193,23 @@ export function EditorEquipo({ restauranteId, iniciales }: { restauranteId: stri
           </div>
         ))}
       </div>
+
+      {perfil?.user_id && (
+        <EditorPerfil
+          supabase={supabase}
+          restauranteId={restauranteId}
+          usuarioId={perfil.user_id}
+          correo={perfil.email}
+          inicial={{ nombre: perfil.nombre ?? null, avatar: perfil.avatar ?? null, color: perfil.color ?? null }}
+          mesas={perfil.rol === "mesero" || perfil.rol === "dueno" ? mesas : undefined}
+          mesasIniciales={perfil.mesas ?? []}
+          onCerrar={() => setPerfil(null)}
+          onGuardado={() => {
+            setPerfil(null);
+            recargar();
+          }}
+        />
+      )}
 
       <div className="grid gap-3 sm:grid-cols-3">
         {ROLES.map((r) => (

@@ -14,8 +14,20 @@ export type TotalesCaja = {
   online: number;
   medios: FilaMedio[];
   personas: FilaPersona[];
-  // Efectivo: fondo inicial + lo cobrado en efectivo (ventas y propinas).
+  // Gastos del turno (migración 0018): total y lo que salió en efectivo.
+  gastos?: number;
+  gastos_efectivo?: number;
+  // Efectivo: fondo inicial + lo cobrado en efectivo (ventas y propinas) − los gastos pagados en efectivo.
   efectivo_esperado: number;
+};
+
+export type Gasto = {
+  id: string;
+  monto: number;
+  detalle: string;
+  medio: string;
+  registrado_por: string | null;
+  created_at: string;
 };
 
 export const esEfectivo = (medio: string) => /efectivo|cash/i.test(medio);
@@ -27,8 +39,10 @@ export function resumirCaja({
   cuentasCerradas,
   nombres,
   fondoInicial,
+  gastos = [],
 }: {
   pagos: Pago[];
+  gastos?: Pick<Gasto, "monto" | "medio">[];
   cuentasCerradas: { comensales: number }[];
   nombres: Map<string, string>;
   fondoInicial: number;
@@ -65,6 +79,8 @@ export function resumirCaja({
   }
   const lista = [...medios.values()].map((m) => ({ ...m, ventas: redondear(m.ventas), propinas: redondear(m.propinas) }));
   const efectivo = lista.filter((m) => esEfectivo(m.medio)).reduce((s, m) => s + m.ventas + m.propinas, 0);
+  const totalGastos = gastos.reduce((s, g) => s + Number(g.monto), 0);
+  const gastosEfectivo = gastos.filter((g) => esEfectivo(g.medio)).reduce((s, g) => s + Number(g.monto), 0);
   return {
     ventas: redondear(ventas),
     propinas: redondear(propinas),
@@ -74,6 +90,8 @@ export function resumirCaja({
     online: redondear(online),
     medios: lista.sort((a, b) => b.ventas + b.propinas - (a.ventas + a.propinas)),
     personas: [...personas.values()].sort((a, b) => b.ventas - a.ventas),
-    efectivo_esperado: redondear(fondoInicial + efectivo),
+    gastos: redondear(totalGastos),
+    gastos_efectivo: redondear(gastosEfectivo),
+    efectivo_esperado: redondear(fondoInicial + efectivo - gastosEfectivo),
   };
 }

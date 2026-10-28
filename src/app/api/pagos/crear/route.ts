@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   if (
     llevar
       ? !UUID.test(b.pedido!)
-      : !b.restaurante || !UUID.test(b.restaurante) || (b.sucursal && !UUID.test(b.sucursal)) || !b.mesa || b.mesa.length > 12
+      : !b.restaurante || !UUID.test(b.restaurante) || (b.sucursal && !UUID.test(b.sucursal)) || !b.mesa || b.mesa.length > 36
   ) {
     return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
   }

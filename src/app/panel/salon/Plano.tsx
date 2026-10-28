@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Avatar } from "@/components/Avatar";
 import { ELEMENTOS, type Elemento, type Piso, nombreMesa } from "@/lib/salon";
 import type { Mesa } from "@/lib/types";
 
@@ -16,6 +17,11 @@ export type EstadoMesa = {
   listo?: boolean;
   pendiente?: boolean;
   aviso?: "cuenta" | "mozo" | "pago" | null;
+  // Quién la atiende (o, libre, el mesero que la tiene asignada): foto, emoji o iniciales en la esquina.
+  mesero?: { nombre: string; avatar?: string | null; color?: string | null } | null;
+  // Búsqueda de un plato desde el plano: las mesas que lo pidieron se marcan y las demás se apagan.
+  destacada?: boolean;
+  apagada?: boolean;
 };
 
 export const cajaMesa = (m: Mesa): Caja => ({ x: m.x ?? 0, y: m.y ?? 0, ancho: m.ancho ?? 2, alto: m.alto ?? 2 });
@@ -375,7 +381,9 @@ export function Plano({
                   ambientado ? "text-[#fff7ed]" : `border-2 shadow-sm ${colorMesa(editando ? undefined : est)}`
                 } ${m.forma === "redonda" ? "rounded-full" : ambientado ? "rounded-md" : "rounded-xl"} ${
                   editando ? "cursor-grab active:cursor-grabbing" : "hover:shadow-md"
-                } ${elegido ? (editando ? "ring-2 ring-marca ring-offset-2" : "animate-pulse ring-4 ring-marca ring-offset-2") : ""} ${invalido ? "!border-red-500 !bg-red-50 opacity-80" : ""}`}
+                } ${elegido ? (editando ? "ring-2 ring-marca ring-offset-2" : "animate-pulse ring-4 ring-marca ring-offset-2") : ""} ${invalido ? "!border-red-500 !bg-red-50 opacity-80" : ""} ${
+                  !editando && est?.destacada ? "ring-4 ring-sky-400 ring-offset-2" : ""
+                } ${!editando && est?.apagada ? "opacity-35" : ""}`}
                 style={{
                   ...pct(caja),
                   ...(ambientado
@@ -429,6 +437,11 @@ export function Plano({
                     }`}
                   >
                     {est.aviso === "cuenta" || est.aviso === "pago" ? "$" : est.aviso ? "!" : est.pendiente ? "●" : "✓"}
+                  </span>
+                )}
+                {!editando && est?.mesero && (
+                  <span className={`absolute -bottom-1.5 -left-1.5 ${est.ocupada ? "" : "opacity-60"}`}>
+                    <Avatar persona={est.mesero} className="h-5 w-5 text-[8px] shadow" />
                   </span>
                 )}
               </button>

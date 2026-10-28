@@ -2,7 +2,7 @@ import { requerirSeccion } from "@/lib/panel";
 import { Personalizar } from "./Personalizar";
 
 export default async function PanelPersonalizar() {
-  const { restaurante, ajustes, ajustesGuardados } = await requerirSeccion("personalizar");
+  const { restaurante, ajustes, ajustesGuardados, rol } = await requerirSeccion("personalizar");
   if (restaurante.ajustes === undefined) {
     return (
       <p className="tarjeta p-5 text-sm text-suave">
@@ -17,6 +17,8 @@ export default async function PanelPersonalizar() {
       plan={restaurante.plan}
       iniciales={ajustes}
       guardados={ajustesGuardados}
+      dueno={rol === "dueno"}
+      slug={restaurante.slug}
     />
   );
 }

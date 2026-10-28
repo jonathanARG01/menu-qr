@@ -11,7 +11,14 @@ import type { Promo, Restaurante, Seccion } from "@/lib/types";
 export function useCartaViva(restaurante: Restaurante, secciones: Seccion[], promos: Promo[], vistaPrevia?: boolean) {
   const [ahora, setAhora] = useState<number | null>(null);
   const [agotados, setAgotados] = useState<Map<string, string> | null>(null);
-  const zona = leerAjustes(restaurante.ajustes).zona_horaria;
+  const ajustes = leerAjustes(restaurante.ajustes);
+  const zona = ajustes.zona_horaria;
+  // Sin mesa en el enlace y con pedidos para llevar por internet: se muestran los precios para llevar.
+  const llevarOnline = ajustes.modulos.llevar && ajustes.llevar.online;
+  const [paraLlevar, setParaLlevar] = useState(false);
+  useEffect(() => {
+    if (!vistaPrevia && llevarOnline) setParaLlevar(!new URLSearchParams(window.location.search).get("mesa"));
+  }, [vistaPrevia, llevarOnline]);
 
   useEffect(() => {
     setAhora(Date.now());
@@ -47,19 +54,21 @@ export function useCartaViva(restaurante: Restaurante, secciones: Seccion[], pro
   );
 
   const vivas = useMemo(() => {
-    if (!vigentes.length && !agotados?.size && ahora === null) return secciones;
+    if (!vigentes.length && !agotados?.size && ahora === null && !paraLlevar) return secciones;
     return secciones.map((s) => ({
       ...s,
-      platos: s.platos.map((p) => {
+      platos: s.platos.map((original) => {
+        const p =
+          paraLlevar && original.precio_llevar != null ? { ...original, precio: Number(original.precio_llevar) } : original;
         const hasta = agotados ? agotados.get(p.id) : p.agotado_hasta;
         const agotado = !!hasta && ahora !== null && Date.parse(hasta) > ahora;
         const precio = precioConPromo(p, vigentes);
-        return precio !== Number(p.precio) || agotado
+        return precio !== Number(p.precio) || agotado || p !== original
           ? { ...p, precio, precio_lista: precio !== Number(p.precio) ? Number(p.precio) : undefined, agotado }
           : p;
       }),
     }));
-  }, [secciones, vigentes, agotados, ahora]);
+  }, [secciones, vigentes, agotados, ahora, paraLlevar]);
 
   return { secciones: vivas, promos: vigentes };
 }

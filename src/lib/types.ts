@@ -91,7 +91,13 @@ export type Plato = {
   // Solo en la carta: precio de lista cuando hay una promo vigente, y si está agotado ahora.
   precio_lista?: number;
   agotado?: boolean;
+  // Migración 0018: opciones para elegir (tamaño, acompañamiento…) y precio distinto para llevar o delivery.
+  opciones?: GrupoOpciones[];
+  precio_llevar?: number | null;
 };
+
+// Un grupo de opciones del plato. min 1 = obligatorio; max = cuántas se pueden marcar.
+export type GrupoOpciones = { nombre: string; min: number; max: number; valores: { nombre: string; precio: number }[] };
 
 export type Promo = {
   id: string;
@@ -122,6 +128,8 @@ export type Mesa = {
   alto?: number;
   forma?: "cuadrada" | "redonda" | "rectangular";
   capacidad?: number;
+  // Mesero a cargo de esta mesa (migración 0018).
+  mesero_id?: string | null;
 };
 
 export type Sucursal = {

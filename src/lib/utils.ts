@@ -24,6 +24,13 @@ export function decimalesMoneda(moneda: string) {
   }
 }
 
+// Monto aproximado en otra moneda, con su código para no confundir "$" (USD 23,50).
+export function formatoOtraMoneda(valor: number, moneda: string) {
+  const decimales = decimalesMoneda(moneda);
+  const numero = new Intl.NumberFormat("es-CL", { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
+  return `${moneda} ${numero.format(valor)}`;
+}
+
 export function formatoPrecio(valor: number, moneda: string) {
   const decimales = decimalesMoneda(moneda);
   try {
@@ -56,10 +63,12 @@ export function urlSitio() {
 }
 
 // Dirección de la carta; con sucursal y mesa queda así: /cafe?s=centro&mesa=4
-export function urlCarta(slug: string, mesa?: string, base = urlSitio(), sucursal?: string) {
+// nombre: número visible de la mesa cuando "mesa" es su id (mesas con el mismo número en pisos distintos).
+export function urlCarta(slug: string, mesa?: string, base = urlSitio(), sucursal?: string, nombre?: string) {
   const params = new URLSearchParams();
   if (sucursal) params.set("s", sucursal);
   if (mesa) params.set("mesa", mesa);
+  if (nombre) params.set("n", nombre);
   const consulta = params.toString();
   return `${base}/${slug}${consulta ? `?${consulta}` : ""}`;
 }

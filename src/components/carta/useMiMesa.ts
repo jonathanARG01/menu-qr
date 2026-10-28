@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { EstadoPedido } from "@/lib/salon";
+import type { EstadoPedido, OpcionElegida } from "@/lib/salon";
 
-export type LineaMesa = { nombre: string; precio: number; cantidad: number; comensal: number | null };
+export type LineaMesa = { nombre: string; precio: number; cantidad: number; comensal: number | null; opciones?: OpcionElegida[] };
 export type PedidoMesa = { numero: number; estado: EstadoPedido; estacion?: string; items: LineaMesa[] };
 export type DatosMesa = {
   mesa: string;
@@ -16,7 +16,7 @@ export type DatosMesa = {
 export type EstadoAvisado = "preparando" | "listo" | "entregado";
 export type AvisoPedido = { id: number; estado: EstadoAvisado; pedidos: number[]; items: LineaMesa[] };
 
-const RANGO: Record<EstadoPedido, number> = { pendiente: 0, nuevo: 1, preparando: 2, listo: 3, entregado: 4, cancelado: -1 };
+const RANGO: Record<EstadoPedido, number> = { pendiente: 0, retenido: 0, nuevo: 1, preparando: 2, listo: 3, entregado: 4, cancelado: -1 };
 const AVISADOS: EstadoAvisado[] = ["preparando", "listo", "entregado"];
 const enCurso = (d: DatosMesa | null) => !!d?.cuenta?.pedidos.some((p) => p.estado !== "entregado" && p.estado !== "cancelado");
 

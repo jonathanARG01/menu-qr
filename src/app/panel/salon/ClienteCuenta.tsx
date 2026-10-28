@@ -7,6 +7,7 @@ import { Icono } from "@/components/Icono";
 import { regionDe, type Ajustes, type Cuenta } from "@/lib/salon";
 import { formatoFecha } from "@/lib/region";
 import { mensajeError } from "@/lib/utils";
+import { nombrePersona, useEquipo } from "@/lib/equipo";
 
 export type ClienteResumen = {
   id: string;
@@ -244,23 +245,11 @@ export function BuscarCliente({
   );
 }
 
-type Persona = { user_id: string; nombre: string; rol: string };
-let cacheEquipo: { restaurante: string; lista: Persona[] } | null = null;
-
-// Quién atiende la mesa (cuenta para los reportes por mesero). Se asigna solo a quien la abre o toma el primer pedido.
+// Quién atiende la mesa (cuenta para los reportes por mesero). Se asigna solo a quien la abre o toma el primer pedido,
+// o al mesero que tiene la mesa asignada.
 export function Atiende({ supabase, cuenta, onCambio }: { supabase: SupabaseClient; cuenta: Cuenta; onCambio: () => unknown }) {
   const avisar = useToast();
-  const [equipo, setEquipo] = useState<Persona[]>(cacheEquipo?.restaurante === cuenta.restaurante_id ? cacheEquipo.lista : []);
-
-  useEffect(() => {
-    if (cacheEquipo?.restaurante === cuenta.restaurante_id) return;
-    supabase.rpc("nombres_equipo", { p_restaurante: cuenta.restaurante_id }).then(({ data, error }) => {
-      if (error) return;
-      const lista = ((data ?? []) as Persona[]).filter((p) => p.rol !== "cocina");
-      cacheEquipo = { restaurante: cuenta.restaurante_id, lista };
-      setEquipo(lista);
-    });
-  }, [supabase, cuenta.restaurante_id]);
+  const equipo = useEquipo(supabase, cuenta.restaurante_id).equipo.filter((p) => p.rol !== "cocina");
 
   if (cuenta.mesero_id === undefined || equipo.length < 2) return null;
 
@@ -282,7 +271,7 @@ export function Atiende({ supabase, cuenta, onCambio }: { supabase: SupabaseClie
         <option value="">Sin asignar</option>
         {equipo.map((p) => (
           <option key={p.user_id} value={p.user_id}>
-            {p.nombre}
+            {nombrePersona(p)}
           </option>
         ))}
       </select>

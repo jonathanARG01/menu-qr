@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { montoPropina, partesIguales, totalLineas, type Propina } from "@/lib/cuenta";
 import type { ClaveTexto } from "@/lib/i18n";
-import type { SolicitudCuenta } from "@/lib/salon";
+import { textoOpciones, type SolicitudCuenta } from "@/lib/salon";
 import type { Restaurante } from "@/lib/types";
 import { formatoPrecio } from "@/lib/utils";
 import { SelectorPropina } from "@/components/SelectorPropina";
 import { useCarta } from "./contexto";
+import { EnOtrasMonedas } from "./EnOtrasMonedas";
 import type { DatosMesa } from "./useMiMesa";
 
 const COLOR: Record<string, string> = {
@@ -34,7 +35,7 @@ export function MiMesa({
   onCerrar: () => void;
   onAviso: (texto: string) => void;
 }) {
-  const { mesa, sucursal, ajustes, t } = useCarta();
+  const { mesa, mesaNombre, sucursal, ajustes, t } = useCarta();
   const [paso, setPaso] = useState<"mesa" | "cuenta">("mesa");
   const [modo, setModo] = useState<SolicitudCuenta["modo"]>("junto");
   const [partes, setPartes] = useState(2);
@@ -152,7 +153,7 @@ export function MiMesa({
       >
         <div className="flex items-center justify-between px-5 pb-2 pt-5">
           <h2 id="titulo-mesa" className="text-lg font-semibold">
-            {paso === "cuenta" ? t("pedirCuenta") : `${t("mesa")} ${mesa}`}
+            {paso === "cuenta" ? t("pedirCuenta") : `${t("mesa")} ${datos?.mesa ?? mesaNombre ?? ""}`}
           </h2>
           <button type="button" onClick={onCerrar} aria-label={t("cerrar")} className="text-2xl leading-none text-stone-400">
             ×
@@ -180,6 +181,7 @@ export function MiMesa({
                         <p key={k} className="flex justify-between gap-3 text-sm">
                           <span>
                             {i.cantidad} × {i.nombre}
+                            {i.opciones?.length ? <span className="block text-xs text-stone-500">{textoOpciones(i.opciones)}</span> : null}
                           </span>
                           <span className="tabular-nums text-stone-500">{precio(Number(i.precio) * i.cantidad)}</span>
                         </p>
@@ -192,6 +194,9 @@ export function MiMesa({
                 <div className="rounded-xl bg-stone-50 p-3 text-sm">
                   <p className="flex justify-between font-semibold">
                     <span>{t("total")}</span> <span className="tabular-nums">{precio(total)}</span>
+                  </p>
+                  <p className="text-right">
+                    <EnOtrasMonedas total={total} monedas={ajustes.otras_monedas} texto={t("aprox")} />
                   </p>
                   {Number(datos.cuenta?.pagado) > 0 && (
                     <>

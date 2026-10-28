@@ -20,7 +20,11 @@ export default async function PanelCocina() {
     supabase.from("mesas").select("id, numero, piso_id, sucursal_id").eq("restaurante_id", restaurante.id),
     supabase.from("pisos").select("id, nombre").eq("restaurante_id", restaurante.id),
     // Sin la migración 0009 no existe agotado_hasta: se piden solo los platos y no hay agotados.
-    supabase.from("platos").select("id, nombre, categoria_id, agotado_hasta").eq("restaurante_id", restaurante.id).order("orden"),
+    supabase
+      .from("platos")
+      .select("id, nombre, descripcion, foto_url, categoria_id, agotado_hasta")
+      .eq("restaurante_id", restaurante.id)
+      .order("orden"),
     supabase.from("categorias").select("id, nombre").eq("restaurante_id", restaurante.id).order("orden"),
     // Para la hora de retiro de los pedidos para llevar.
     supabase.from("cuentas").select("*").eq("restaurante_id", restaurante.id).eq("estado", "abierta"),
@@ -53,7 +57,7 @@ export default async function PanelCocina() {
       pisos={(pisos.data ?? []) as Pick<Piso, "id" | "nombre">[]}
       platos={listaPlatos as PlatoAgotable[]}
       categorias={(categorias.data ?? []) as { id: string; nombre: string }[]}
-      equipo={(equipo.data ?? []) as { user_id: string; nombre: string }[]}
+      equipo={(equipo.data ?? []) as { user_id: string; nombre: string; avatar?: string | null; color?: string | null }[]}
     />
   );
 }

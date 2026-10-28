@@ -1,10 +1,20 @@
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { obtenerContexto } from "@/lib/panel";
 import { ToastProvider } from "@/components/Toast";
 import { MarcoPanel } from "./NavPanel";
 import { Onboarding } from "./Onboarding";
+import type { Perfil } from "./equipo/EditorPerfil";
 
-export const metadata = { title: "Panel · Mesitto" };
+export const metadata: Metadata = {
+  title: "Panel · Mesitto",
+  // Instalable como app (Android, computadora y "Agregar a inicio" en iPhone).
+  manifest: "/panel.webmanifest",
+  appleWebApp: { capable: true, title: "Mesitto", statusBarStyle: "black-translucent" },
+};
+
+export const viewport: Viewport = { themeColor: "#172033" };
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const { user, restaurante, restaurantes, esSuperadmin, rol, secciones, bloqueadas, admin } = await obtenerContexto();
@@ -23,6 +33,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   // Modo oscuro por defecto; el botón del menú guarda la elección en esta cookie.
   const tema = (await cookies()).get("panel-tema")?.value === "claro" ? "claro" : "oscuro";
+  // Sin la migración 0018 la función no existe: queda sin perfil.
+  const { data: perfil } = await (await createClient()).rpc("mi_perfil", { p_restaurante: restaurante.id });
 
   return (
     <MarcoPanel
@@ -44,6 +56,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       rol={rol ?? "dueno"}
       email={user.email ?? ""}
       esSuperadmin={esSuperadmin}
+      usuarioId={user.id}
+      perfil={(perfil as Perfil | null) ?? null}
     >
       <ToastProvider>{children}</ToastProvider>
     </MarcoPanel>

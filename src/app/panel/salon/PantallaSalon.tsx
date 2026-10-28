@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Miniatura } from "@/components/Miniatura";
 import { Icono } from "@/components/Icono";
-import { nombreMesa, type Cuenta, type Pedido, type Piso } from "@/lib/salon";
+import { nombreMesa, type Cuenta, type Pedido, type PedidoItem, type Piso } from "@/lib/salon";
 import type { Mesa } from "@/lib/types";
 import { minutosDesde } from "@/lib/useServicio";
 import { ESTILOS_PLANO, Plano, type EstadoMesa, type EstiloPlano } from "./Plano";
@@ -15,6 +16,8 @@ type Aviso = {
   tipo: "cuenta" | "pago" | "mozo" | "pendiente" | "listo";
   desde: string;
   detalle?: string;
+  // Platos del pedido, para las miniaturas.
+  items?: PedidoItem[];
   // Comandas juntas en el mismo aviso (al agrupar por mesa).
   cuantos?: number;
 };
@@ -46,12 +49,15 @@ export function PantallaSalon({
   ahora,
   formato,
   region,
+  fotos,
   children,
 }: {
   nombre: string;
   pisos: Piso[];
   mesas: Mesa[];
   estados: Map<string, EstadoMesa>;
+  // Foto de cada plato (null: miniaturas apagadas en Personalizar).
+  fotos?: Map<string, string> | null;
   cuentas: Cuenta[];
   pedidos: Pedido[];
   estilo: EstiloPlano;
@@ -145,14 +151,16 @@ export function PantallaSalon({
     const tipo = p.estado === "listo" ? "listo" : "pendiente";
     const desde = p.estado === "listo" ? p.actualizado_at : p.created_at;
     const detalle = (p.pedido_items ?? []).map((i) => `${i.cantidad} ${i.nombre}`).join(", ");
+    const items = p.pedido_items ?? [];
     const junto = agrupar ? avisos.find((a) => a.mesa.id === mesa.id && a.tipo === tipo) : undefined;
     if (junto) {
       junto.cuantos = (junto.cuantos ?? 1) + 1;
       junto.detalle = [junto.detalle, detalle].filter(Boolean).join(", ");
+      junto.items = [...(junto.items ?? []), ...items];
       if (desde < junto.desde) junto.desde = desde;
       continue;
     }
-    avisos.push({ id: p.id, mesa, tipo, desde, detalle });
+    avisos.push({ id: p.id, mesa, tipo, desde, detalle, items });
   }
   avisos.sort((a, b) => PRIORIDAD.indexOf(a.tipo) - PRIORIDAD.indexOf(b.tipo) || a.desde.localeCompare(b.desde));
 
@@ -304,6 +312,16 @@ export function PantallaSalon({
                           : s.texto}
                       </span>
                       {a.detalle && <span className="block truncate text-xs opacity-80">{a.detalle}</span>}
+                      {fotos && a.items?.some((i) => i.plato_id && fotos.get(i.plato_id)) && (
+                        <span className="mt-1.5 flex flex-wrap gap-2">
+                          {a.items
+                            .filter((i) => i.plato_id && fotos.get(i.plato_id))
+                            .slice(0, 5)
+                            .map((i) => (
+                              <Miniatura key={i.id} src={fotos.get(i.plato_id!)} cantidad={i.cantidad} className="h-9 w-9" />
+                            ))}
+                        </span>
+                      )}
                     </span>
                     <span className="text-sm font-semibold tabular-nums" suppressHydrationWarning>
                       {min}′

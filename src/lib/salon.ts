@@ -140,7 +140,15 @@ export type Ajustes = {
   imagenes_defecto: boolean;
   // Redes sociales y sitio web que se muestran al final de la carta (ver lib/redes.ts).
   redes: Redes;
+  // Miniatura del plato en las comandas de cocina y en los avisos del salón.
+  miniaturas: boolean;
+  // Foto, emoji o iniciales de cada persona del equipo en el plano, la mesa y las comandas.
+  avatares: boolean;
+  // Total de referencia en otras monedas (para turistas): cuánto vale 1 unidad de cada una en la moneda del local.
+  otras_monedas: OtraMoneda[];
 };
+
+export type OtraMoneda = { codigo: string; tasa: number };
 
 export const SONIDOS_HOJA = ["papel", "hojas", "diario", "ninguno"] as const;
 export type SonidoHoja = (typeof SONIDOS_HOJA)[number];
@@ -174,6 +182,9 @@ export const AJUSTES_BASE: Ajustes = {
   cobro_online: { activo: false },
   imagenes_defecto: false,
   redes: REDES_VACIAS,
+  miniaturas: true,
+  avatares: true,
+  otras_monedas: [],
 };
 
 // Une lo guardado con los valores por defecto (lo que falte o venga mal se completa).
@@ -200,6 +211,14 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
     alertas: { ...AJUSTES_BASE.alertas, ...(g.alertas ?? {}) },
     imagenes_defecto: g.imagenes_defecto === true,
     redes: leerRedes(g.redes),
+    miniaturas: g.miniaturas !== false,
+    avatares: g.avatares !== false,
+    otras_monedas: Array.isArray(g.otras_monedas)
+      ? g.otras_monedas
+          .map((m) => ({ codigo: String(m?.codigo ?? "").toUpperCase().slice(0, 3), tasa: Number(m?.tasa) }))
+          .filter((m) => /^[A-Z]{3}$/.test(m.codigo) && Number.isFinite(m.tasa) && m.tasa > 0)
+          .slice(0, 3)
+      : [],
     sonido_hoja: SONIDOS_HOJA.includes(g.sonido_hoja as SonidoHoja) ? (g.sonido_hoja as SonidoHoja) : AJUSTES_BASE.sonido_hoja,
     pais: paisDe(g.pais).codigo,
     zona_horaria: typeof g.zona_horaria === "string" && g.zona_horaria ? g.zona_horaria : paisDe(g.pais).zona,
@@ -276,10 +295,12 @@ export type Piso = {
 };
 
 // ── Servicio ──────────────────────────────────
-export type EstadoPedido = "pendiente" | "nuevo" | "preparando" | "listo" | "entregado" | "cancelado";
+// retenido: "dejar para después" (tiempos de servicio): no llega a cocina hasta que el mesero lo marcha.
+export type EstadoPedido = "pendiente" | "retenido" | "nuevo" | "preparando" | "listo" | "entregado" | "cancelado";
 
 export const NOMBRE_ESTADO: Record<EstadoPedido, string> = {
   pendiente: "Por confirmar",
+  retenido: "En espera",
   nuevo: "Nuevo",
   preparando: "Preparando",
   listo: "Listo",
@@ -314,6 +335,10 @@ export type Cuenta = {
   envio?: number;
   despachado_at?: string | null;
   mesero_id?: string | null;
+  // Migración 0018: enlace del repartidor, cuándo lo entregó y si el cliente paga al retirar (falló Mercado Pago).
+  reparto_token?: string;
+  entregado_at?: string | null;
+  paga_al_retirar?: boolean;
 };
 
 export type TipoCuenta = "mesa" | "llevar" | "delivery";
@@ -330,8 +355,15 @@ export type PedidoItem = {
   nota: string | null;
   comensal: number | null;
   listo: boolean;
+  // Opciones elegidas (migración 0018), con el extra ya sumado al precio.
+  opciones?: OpcionElegida[];
   created_at: string;
 };
+
+export type OpcionElegida = { grupo: string; valor: string; precio?: number };
+
+// "Grande, papas fritas" para mostrar debajo del nombre del plato.
+export const textoOpciones = (o?: OpcionElegida[] | null) => (o ?? []).map((x) => x.valor).join(", ");
 
 export type Pedido = {
   id: string;

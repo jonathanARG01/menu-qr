@@ -6,7 +6,14 @@ import { useToast } from "@/components/Toast";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mensajeError } from "@/lib/utils";
 
-export type PlatoAgotable = { id: string; nombre: string; categoria_id: string; agotado_hasta?: string | null };
+export type PlatoAgotable = {
+  id: string;
+  nombre: string;
+  categoria_id: string;
+  agotado_hasta?: string | null;
+  descripcion?: string | null;
+  foto_url?: string | null;
+};
 
 export const estaAgotado = (p: { agotado_hasta?: string | null }, ahora = Date.now()) =>
   !!p.agotado_hasta && Date.parse(p.agotado_hasta) > ahora;
