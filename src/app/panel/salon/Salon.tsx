@@ -12,6 +12,7 @@ import {
   regionDe,
   textoOpciones,
   type Ajustes,
+  type Cuenta,
   type Elemento,
   type Piso,
   type TipoElemento,
@@ -108,6 +109,25 @@ export function Salon({
   }, []);
   const [seleccion, setSeleccion] = useState<Seleccion>(null);
   const [mesaAbierta, setMesaAbierta] = useState<string | null>(null);
+  // Mesas unidas a la cuenta de otra mesa (pegadas): cuál es su cuenta.
+  const unidas = useMemo(() => {
+    const mapa = new Map<string, Cuenta>();
+    for (const c of cuentas) for (const id of c.mesas_unidas ?? []) if (c.mesa_id) mapa.set(id, c);
+    return mapa;
+  }, [cuentas]);
+  // Mientras dura la cuenta, las mesas unidas se ven donde las dejaron (al editar el plano, en su lugar de siempre).
+  const mesasVista = useMemo(
+    () =>
+      editando
+        ? mesas
+        : mesas.map((m) => {
+            const p = unidas.get(m.id)?.posiciones?.[m.id];
+            return p ? { ...m, x: p.x, y: p.y } : m;
+          }),
+    [mesas, unidas, editando],
+  );
+  // Tocar una mesa unida abre la cuenta de la mesa principal.
+  const abrirMesa = useCallback((id: string) => setMesaAbierta(unidas.get(id)?.mesa_id ?? id), [unidas]);
   // Buscar un plato desde el plano: qué mesas lo pidieron y en qué va.
   const [buscarPlato, setBuscarPlato] = useState("");
   const { equipo } = useEquipo(supabase, restaurante.id);
@@ -137,8 +157,13 @@ export function Salon({
     for (const c of cuentas) {
       if (!c.mesa_id) continue;
       const suyos = pedidos.filter((p) => p.cuenta_id === c.id && p.estado !== "cancelado");
+      const grupo = (c.mesas_unidas ?? []).length
+        ? [c.mesa_id, ...(c.mesas_unidas ?? [])].map((id) => mesas.find((m) => m.id === id)?.numero ?? "?").join("+")
+        : undefined;
+      for (const id of c.mesas_unidas ?? []) mapa.set(id, { ocupada: true, unida: true, grupo, mesero: avatar(c.mesero_id) });
       mapa.set(c.mesa_id, {
         ocupada: true,
+        grupo,
         comensales: c.comensales,
         minutos: minutosDesde(c.abierta_at, ahora),
         total: totalLineas(suyos.flatMap((p) => p.pedido_items ?? [])),
@@ -345,7 +370,42 @@ export function Salon({
     guardarElementos(piso.elementos.map((e) => (e.id === id ? { ...e, ...cambios } : e)));
   }
 
+  // Posición de una mesa unida mientras dura la cuenta (no cambia el plano de siempre).
+  async function ubicarUnida(id: string, caja: Caja, c = unidas.get(id)) {
+    if (!c) return;
+    const { error } = await supabase
+      .from("cuentas")
+      .update({ posiciones: { ...(c.posiciones ?? {}), [id]: { x: caja.x, y: caja.y } } })
+      .eq("id", c.id);
+    if (error) avisar(mensajeError(error), "error");
+    await servicioVivo.recargar();
+  }
+
+  // Recién unida: se pega al lado de la mesa principal (a la derecha, izquierda, abajo o arriba, donde quepa).
+  function pegarAlLado(cuentaId: string, id: string) {
+    const c = cuentas.find((x) => x.id === cuentaId);
+    const principal = mesasVista.find((m) => m.id === c?.mesa_id);
+    const m = mesas.find((x) => x.id === id);
+    const suPiso = pisos.find((p) => p.id === principal?.piso_id);
+    if (!principal || !m || !suPiso || m.piso_id !== suPiso.id) return;
+    const p = cajaMesa(principal);
+    const t = cajaMesa(m);
+    const caja = [
+      { x: p.x + p.ancho, y: p.y },
+      { x: p.x - t.ancho, y: p.y },
+      { x: p.x, y: p.y + p.alto },
+      { x: p.x, y: p.y - t.alto },
+    ]
+      .map((o) => ({ ...t, ...o }))
+      .find((k) => lugarLibre(k, suPiso, mesasVista, m.id));
+    if (caja) ubicarUnida(id, caja, c);
+  }
+
   function mover(tipo: "mesa" | "elemento", id: string, caja: Caja) {
+    if (!editando) {
+      if (tipo === "mesa") ubicarUnida(id, caja);
+      return;
+    }
     if (tipo === "mesa") actualizarMesa(id, { x: caja.x, y: caja.y });
     else actualizarElemento(id, { x: caja.x, y: caja.y });
   }
@@ -366,6 +426,7 @@ export function Salon({
       platos={platos}
       servicio={servicioVivo}
       mesas={mesas.filter(delLocal)}
+      onUnida={pegarAlLado}
       onCerrar={() => setMesaAbierta(null)}
     />
   );
@@ -469,7 +530,7 @@ export function Salon({
               <button
                 key={m.id}
                 type="button"
-                onClick={() => setMesaAbierta(m.id)}
+                onClick={() => abrirMesa(m.id)}
                 className={`inline-flex animate-pulse items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold text-white ${
                   e.aviso === "cuenta"
                     ? "bg-violet-600"
@@ -585,18 +646,19 @@ export function Salon({
                       texto: `${x.item.cantidad}× ${x.item.nombre}${x.item.opciones?.length ? ` (${textoOpciones(x.item.opciones)})` : ""}`,
                       estado: NOMBRE_ESTADO[x.pedido.estado],
                     }))}
-                    onAbrir={setMesaAbierta}
+                    onAbrir={abrirMesa}
                   />
                 )}
                 <Plano
                   piso={piso}
-                  mesas={mesas}
+                  mesas={mesasVista}
                   estados={estados}
                   editando={editando}
+                  movibles={unidas}
                   seleccion={editando ? seleccion : resaltada ? { tipo: "mesa", id: resaltada } : null}
                   onSeleccionar={setSeleccion}
                   onMover={mover}
-                  onAbrirMesa={setMesaAbierta}
+                  onAbrirMesa={abrirMesa}
                   formato={formato}
                   estilo={estilo}
                 />
@@ -637,13 +699,7 @@ export function Salon({
               </p>
               <div className="flex flex-wrap gap-2">
                 {sinUbicar.map((m) => (
-                  <BotonMesa
-                    key={m.id}
-                    mesa={m}
-                    estado={estados.get(m.id)}
-                    onClick={() => setMesaAbierta(m.id)}
-                    formato={formato}
-                  />
+                  <BotonMesa key={m.id} mesa={m} estado={estados.get(m.id)} onClick={() => abrirMesa(m.id)} formato={formato} />
                 ))}
               </div>
             </div>
@@ -671,7 +727,7 @@ export function Salon({
                         key={m.id}
                         mesa={m}
                         estado={estados.get(m.id)}
-                        onClick={() => setMesaAbierta(m.id)}
+                        onClick={() => abrirMesa(m.id)}
                         formato={formato}
                         grande
                       />
@@ -693,13 +749,13 @@ export function Salon({
         <PantallaSalon
           nombre={restaurante.nombre}
           pisos={pisosVisibles}
-          mesas={mesasLocal}
+          mesas={mesasVista.filter(delLocal)}
           estados={estados}
           cuentas={cuentas}
           pedidos={pedidos}
           estilo={estilo}
           onEstilo={elegirEstilo}
-          onAbrirMesa={setMesaAbierta}
+          onAbrirMesa={abrirMesa}
           onSalir={salirPantalla}
           enVivo={servicioVivo.enVivo}
           ahora={ahora}
@@ -771,11 +827,16 @@ function BotonMesa({
       onClick={onClick}
       className={`relative rounded-xl border-2 px-3 text-left transition hover:shadow-md ${color} ${grande ? "py-3" : "py-1.5"}`}
     >
-      <span className="block font-bold">{nombreMesa(mesa.numero)}</span>
+      <span className="block font-bold">
+        {nombreMesa(mesa.numero)}
+        {estado?.grupo && !estado.unida && <span className="ml-1.5 text-xs font-semibold text-marca">{estado.grupo}</span>}
+      </span>
       <span className="block text-xs text-suave" suppressHydrationWarning>
-        {estado?.ocupada
-          ? `${estado.comensales} pers. · ${estado.minutos} min${estado.total ? ` · ${formato(estado.total)}` : ""}`
-          : `Libre · ${mesa.capacidad ?? 4} lugares`}
+        {estado?.unida
+          ? `Unida · ${estado.grupo}`
+          : estado?.ocupada
+            ? `${estado.comensales} pers. · ${estado.minutos} min${estado.total ? ` · ${formato(estado.total)}` : ""}`
+            : `Libre · ${mesa.capacidad ?? 4} lugares`}
       </span>
       {(estado?.aviso || estado?.pendiente) && (
         <span className="absolute right-2 top-2 h-2.5 w-2.5 animate-pulse rounded-full bg-red-600" />
