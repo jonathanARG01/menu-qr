@@ -296,6 +296,9 @@ function HojaPedido({
   } = useCarta();
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Platos que el cliente deja "para después" (el postre, el café): quedan en espera hasta que los pida.
+  const [despues, setDespues] = useState<Set<string>>(new Set());
+  const conDespues = pedidosMesa && !!mesa;
   const [nombre, setNombre] = useState("");
   const [nota, setNota] = useState("");
   // Para llevar: cómo lo quiere, su teléfono y, para delivery, la dirección (se recuerdan en este teléfono).
@@ -344,7 +347,12 @@ function HojaPedido({
       p_restaurante: restaurante.id,
       p_sucursal: sucursal?.id ?? null,
       p_mesa: mesa,
-      p_items: lineas.map((l) => ({ id: l.plato.id, cantidad: l.cantidad, opciones: l.opciones })),
+      p_items: lineas.map((l) => ({
+        id: l.plato.id,
+        cantidad: l.cantidad,
+        opciones: l.opciones,
+        ...(despues.has(l.clave) ? { despues: true } : {}),
+      })),
       p_nombre: nombre.trim() || null,
       p_nota: nota.trim() || null,
     });
@@ -355,6 +363,15 @@ function HojaPedido({
     }
     onEnviado((data as { pendiente?: boolean } | null)?.pendiente ? t("pedidoPorConfirmar") : t("pedidoEnviado"));
     vaciar();
+    setDespues(new Set());
+  }
+
+  function alternarDespues(clave: string) {
+    setDespues((actual) => {
+      const nuevo = new Set(actual);
+      if (!nuevo.delete(clave)) nuevo.add(clave);
+      return nuevo;
+    });
   }
 
   // Para llevar o delivery: el pedido entra al panel y el cliente sigue su estado (y lo paga) en otra página.
@@ -452,6 +469,20 @@ function HojaPedido({
                   <p className="truncate font-medium">{traducir(plato, idioma, ["nombre"]).nombre}</p>
                   {opciones.length > 0 && <p className="truncate text-xs text-stone-500">{textoOpciones(opciones)}</p>}
                   <p className="text-sm tabular-nums text-stone-500">{precio(unitario)}</p>
+                  {conDespues && (
+                    <button
+                      type="button"
+                      onClick={() => alternarDespues(clave)}
+                      aria-pressed={despues.has(clave)}
+                      title={t("paraDespuesAyuda")}
+                      className={`mt-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                        despues.has(clave) ? "border-violet-300 bg-violet-50 text-violet-700" : "border-stone-200 text-stone-500"
+                      }`}
+                    >
+                      {despues.has(clave) ? "✓ " : "⏸ "}
+                      {t("paraDespues")}
+                    </button>
+                  )}
                 </div>
                 <span className="flex items-center rounded-full border border-stone-200">
                   <button

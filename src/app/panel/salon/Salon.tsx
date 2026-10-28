@@ -160,7 +160,8 @@ export function Salon({
       const grupo = (c.mesas_unidas ?? []).length
         ? [c.mesa_id, ...(c.mesas_unidas ?? [])].map((id) => mesas.find((m) => m.id === id)?.numero ?? "?").join("+")
         : undefined;
-      for (const id of c.mesas_unidas ?? []) mapa.set(id, { ocupada: true, unida: true, grupo, mesero: avatar(c.mesero_id) });
+      for (const id of c.mesas_unidas ?? [])
+        mapa.set(id, { ocupada: true, unida: true, principal: c.mesa_id, grupo, mesero: avatar(c.mesero_id) });
       mapa.set(c.mesa_id, {
         ocupada: true,
         grupo,

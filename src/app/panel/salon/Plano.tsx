@@ -25,6 +25,8 @@ export type EstadoMesa = {
   // Mesas pegadas con una sola cuenta: "1+2" en todas; unida = no es la principal.
   grupo?: string;
   unida?: boolean;
+  // Mesa unida: id de la mesa principal, para dibujar la cuerda que las une.
+  principal?: string;
 };
 
 export const cajaMesa = (m: Mesa): Caja => ({ x: m.x ?? 0, y: m.y ?? 0, ancho: m.ancho ?? 2, alto: m.alto ?? 2 });
@@ -375,6 +377,37 @@ export function Plano({
               </div>
             );
           })}
+
+          {/* Cuerda verde entre mesas unidas (por debajo: si quedaron pegadas, casi no se ve). */}
+          {!editando && enPiso.some((m) => estados.get(m.id)?.principal) && (
+            <svg
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              viewBox={`0 0 ${piso.columnas} ${piso.filas}`}
+              preserveAspectRatio="none"
+              aria-hidden
+            >
+              {enPiso.map((m) => {
+                const principal = enPiso.find((x) => x.id === estados.get(m.id)?.principal);
+                if (!principal) return null;
+                const a = cajaDe("mesa", m.id, cajaMesa(m));
+                const b = cajaMesa(principal);
+                const linea = {
+                  x1: a.x + a.ancho / 2,
+                  y1: a.y + a.alto / 2,
+                  x2: b.x + b.ancho / 2,
+                  y2: b.y + b.alto / 2,
+                  vectorEffect: "non-scaling-stroke" as const,
+                  strokeLinecap: "round" as const,
+                };
+                return (
+                  <g key={m.id}>
+                    <line {...linea} stroke="#14532d" strokeWidth={7} />
+                    <line {...linea} stroke="#22c55e" strokeWidth={4} strokeDasharray="7 5" />
+                  </g>
+                );
+              })}
+            </svg>
+          )}
 
           {enPiso.map((m) => {
             const caja = cajaDe("mesa", m.id, cajaMesa(m));
