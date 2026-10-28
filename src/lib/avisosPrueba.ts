@@ -2,6 +2,7 @@ import webpush from "web-push";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { numeroWhatsapp } from "./region";
+import { escaparCorreo, htmlCorreo } from "./correo";
 
 // Envío diario de la prueba de 14 días (lo llama /api/recordatorios con el Vercel Cron): pausa las pruebas vencidas
 // y avisa 4 días antes, 1 día antes y al vencer, al dueño del restaurante y a ti (superadmin).
@@ -90,11 +91,16 @@ async function enviarPush(db: SupabaseClient, usuarios: string[], mensaje: (user
   return enviados;
 }
 
-async function enviarCorreo(para: string[], m: Mensaje) {
+async function enviarCorreo(para: string[], m: Mensaje, sitio: string, motivo: string) {
   if (!RESEND || !REMITENTE || !para.length) return false;
-  const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#1c1917;max-width:480px">
-<h2 style="font-size:18px">${m.titulo}</h2><p>${m.cuerpo}</p>
-<p><a href="${m.url}" style="display:inline-block;background:#23345c;color:#fff;padding:10px 16px;border-radius:10px;text-decoration:none">Abrir Mesitto</a></p></div>`;
+  const html = htmlCorreo({
+    sitio,
+    titulo: escaparCorreo(m.titulo),
+    resumen: escaparCorreo(m.cuerpo),
+    parrafos: [escaparCorreo(m.cuerpo)],
+    boton: { texto: m.url.endsWith("/plan") ? "Elegir mi plan" : "Abrir Mesitto", url: m.url },
+    motivo,
+  });
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
@@ -120,13 +126,15 @@ export async function procesarPruebas(db: SupabaseClient, sitio: string) {
     const admin = paraAdmin(f, sitio);
     const duenos = (f.usuarios ?? []).filter((u) => !idsAdmin.includes(u));
     avisos += await enviarPush(db, [...duenos, ...idsAdmin], (u) => (idsAdmin.includes(u) ? admin : dueno));
-    if (await enviarCorreo(f.correos ?? [], dueno)) avisos++;
+    if (await enviarCorreo(f.correos ?? [], dueno, sitio, `Te llega porque ${escaparCorreo(f.nombre)} usa Mesitto.`)) avisos++;
     const whatsapp = f.whatsapp ? ` · WhatsApp: https://wa.me/${numeroWhatsapp(f.whatsapp)}` : "";
     if (
-      await enviarCorreo(CORREOS_ADMIN, {
-        ...admin,
-        cuerpo: `${admin.cuerpo} Dueño: ${(f.correos ?? []).join(", ") || "—"}${whatsapp}`,
-      })
+      await enviarCorreo(
+        CORREOS_ADMIN,
+        { ...admin, cuerpo: `${admin.cuerpo} Dueño: ${(f.correos ?? []).join(", ") || "—"}${whatsapp}` },
+        sitio,
+        "Aviso para el administrador de Mesitto.",
+      )
     )
       avisos++;
   }

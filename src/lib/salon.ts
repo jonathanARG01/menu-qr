@@ -349,6 +349,8 @@ export type Pedido = {
   orden?: number | null;
   // De mesa, para llevar o delivery (migración 0014).
   tipo?: TipoCuenta;
+  // Quién del equipo cargó la comanda (vacío si la pidió el cliente desde el QR).
+  creado_por?: string | null;
   created_at: string;
   actualizado_at: string;
   pedido_items?: PedidoItem[];
@@ -382,3 +384,15 @@ export type SolicitudCuenta = {
 // "5" → "Mesa 5"; si ya la llamaron "Mesa 5", "Terraza 2" o "Barra", queda como está.
 export const nombreMesa = (numero: string | null | undefined) =>
   !numero ? "Mostrador" : /^\d+$/.test(numero.trim()) ? `Mesa ${numero.trim()}` : numero.trim();
+
+// Nombre para mostrar de alguien del equipo a partir de la parte de su correo antes de la @
+// ("eliana.perez" → "Eliana Perez"). Si queda vacío se deja tal cual.
+export function nombreVisible(usuario: string) {
+  const limpio = usuario
+    .replace(/[._\-+]+/g, " ")
+    .replace(/\d+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+  if (!limpio) return usuario;
+  return limpio.replace(/(^|\s)(\p{L})/gu, (_, e: string, l: string) => e + l.toUpperCase());
+}

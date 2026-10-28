@@ -10,7 +10,7 @@ export default async function PanelCocina() {
   const { supabase, restaurante, ajustes } = await requerirSeccion("cocina");
   const desde = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
 
-  const [pedidos, mesas, pisos, platos, categorias, cuentas] = await Promise.all([
+  const [pedidos, mesas, pisos, platos, categorias, cuentas, equipo] = await Promise.all([
     supabase
       .from("pedidos")
       .select("*, pedido_items(*)")
@@ -24,6 +24,8 @@ export default async function PanelCocina() {
     supabase.from("categorias").select("id, nombre").eq("restaurante_id", restaurante.id).order("orden"),
     // Para la hora de retiro de los pedidos para llevar.
     supabase.from("cuentas").select("*").eq("restaurante_id", restaurante.id).eq("estado", "abierta"),
+    // Para poner en la comanda quién la tomó (sin la migración 0014 no hay nombres y no se muestran).
+    supabase.rpc("nombres_equipo", { p_restaurante: restaurante.id }),
   ]);
   const listaPlatos = platos.error
     ? ((await supabase.from("platos").select("id, nombre, categoria_id").eq("restaurante_id", restaurante.id).order("orden"))
@@ -51,6 +53,7 @@ export default async function PanelCocina() {
       pisos={(pisos.data ?? []) as Pick<Piso, "id" | "nombre">[]}
       platos={listaPlatos as PlatoAgotable[]}
       categorias={(categorias.data ?? []) as { id: string; nombre: string }[]}
+      equipo={(equipo.data ?? []) as { user_id: string; nombre: string }[]}
     />
   );
 }
