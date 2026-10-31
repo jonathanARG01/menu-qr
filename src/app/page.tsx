@@ -65,7 +65,7 @@ function Cabecera() {
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0f1626]/90 text-slate-50 backdrop-blur">
       <Contenedor className="flex h-16 items-center gap-6">
-        <Link href="/" aria-label="Mesitto, inicio">
+        <Link href="/" aria-label="Platovi, inicio">
           <Logo oscuro className="text-2xl" />
         </Link>
         <nav className="hidden items-center gap-6 text-sm text-slate-200/80 md:flex">
@@ -239,7 +239,7 @@ function Recorrido() {
       <Contenedor>
         <div className="max-w-2xl">
           <p className="text-sm font-semibold uppercase tracking-wider text-marca-claro">El sistema por dentro</p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-balance sm:text-4xl">Así se ve un servicio con Mesitto</h2>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-balance sm:text-4xl">Así se ve un servicio con Platovi</h2>
           <p className="mt-3 text-lg text-slate-300">Capturas reales del sistema, desde que el cliente pide hasta que paga.</p>
         </div>
         <div className="mt-16 space-y-24">
@@ -402,7 +402,7 @@ function Servicios() {
         <Titulo
           etiqueta="Servicios"
           titulo="No te dejamos solo con el sistema"
-          texto="Mesitto lo hace Brote Digital. Te acompañamos desde la primera carta hasta que tu equipo lo usa sin pensar."
+          texto="Platovi lo hace Brote Digital. Te acompañamos desde la primera carta hasta que tu equipo lo usa sin pensar."
         />
         <div className="grid gap-4 sm:grid-cols-2">
           {SERVICIOS.map(([titulo, texto]) => (
@@ -475,7 +475,7 @@ function Cierre() {
     <section className="pb-20">
       <Contenedor>
         <div className="rounded-3xl bg-marca px-6 py-12 text-center text-white sm:px-12">
-          <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">Prueba Mesitto en tu local</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">Prueba Platovi en tu local</h2>
           <p className="mx-auto mt-3 max-w-xl text-lg text-white/85">
             Crea tu cuenta, carga tu carta y pega el primer QR hoy. Los primeros {DIAS_PRUEBA} días van por nuestra cuenta.
           </p>

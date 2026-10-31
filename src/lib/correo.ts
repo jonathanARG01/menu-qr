@@ -1,4 +1,4 @@
-// Diseño único de los correos de Mesitto: el logo arriba, una tarjeta blanca con el título, el texto y un botón,
+// Diseño único de los correos de Platovi: el logo arriba, una tarjeta blanca con el título, el texto y un botón,
 // y un pie con la marca. Lo usan los correos que manda la app (Resend) y, ya armados, las plantillas de
 // Supabase Auth de supabase/correos (se regeneran con `node scripts/correos-supabase.mjs`).
 // Tablas y estilos en línea para que se vea igual en Gmail, Outlook y el celular.
@@ -60,7 +60,7 @@ ${resumen ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;col
 <tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
 <tr><td align="center" style="padding:0 0 20px">
-<img src="${sitio}/correo/logo.png" width="200" height="56" alt="Mesitto" style="display:block;border:0;width:200px;height:auto;font:bold 24px ${FUENTE};color:${c.tinta}">
+<img src="${sitio}/correo/logo.png" width="200" height="56" alt="Platovi" style="display:block;border:0;width:200px;height:auto;font:bold 24px ${FUENTE};color:${c.tinta}">
 </td></tr>
 <tr><td bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${c.borde};border-radius:18px;overflow:hidden">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -74,7 +74,7 @@ ${nota ? `<p style="margin:0 0 16px;font:13px/1.5 ${FUENTE};color:${c.suave}">${
 </table>
 </td></tr>
 <tr><td align="center" style="padding:24px 16px 0">
-<p style="margin:0 0 6px;font:bold 13px/1.5 ${FUENTE};color:${c.tinta}">Mesitto<span style="color:${c.acento}">.</span> · Cartas QR y gestión de salón para restaurantes</p>
+<p style="margin:0 0 6px;font:bold 13px/1.5 ${FUENTE};color:${c.tinta}">Platovi<span style="color:${c.acento}">.</span> · Cartas QR y gestión de salón para restaurantes</p>
 ${motivo ? `<p style="margin:0;font:12px/1.5 ${FUENTE};color:${c.suave}">${motivo}</p>` : ""}
 </td></tr>
 </table>

@@ -3,11 +3,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Mesitto · Carta digital y gestión para restaurantes",
+    default: "Platovi · Carta digital y gestión para restaurantes",
     template: "%s",
   },
-  description: "Mesitto: carta digital con QR, pedidos desde la mesa y gestión del salón para restaurantes.",
-  applicationName: "Mesitto",
+  description: "Platovi: carta digital con QR, pedidos desde la mesa y gestión del salón para restaurantes.",
+  applicationName: "Platovi",
 };
 
 export const viewport: Viewport = {

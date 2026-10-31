@@ -252,7 +252,7 @@ export function ListaAdmin({ filas: iniciales }: { filas: FilaAdmin[] }) {
                 >
                   {p.vencida ? "Venció · carta pausada" : p.quedan === 1 ? "Último día" : `Quedan ${p.quedan} días`}
                 </span>
-                <Contacto f={f} texto={p.vencida ? "Tu prueba de Mesitto terminó" : "Tu prueba de Mesitto termina pronto"} />
+                <Contacto f={f} texto={p.vencida ? "Tu prueba de Platovi terminó" : "Tu prueba de Platovi termina pronto"} />
                 <button
                   type="button"
                   className="boton-secundario py-1.5 text-xs"
@@ -561,7 +561,7 @@ function Barra({ partes, llenas, color }: { partes: number; llenas: number; colo
 }
 
 function Contacto({ f, texto }: { f: FilaAdmin; texto: string }) {
-  const mensaje = `Hola, te escribo de Mesitto por la carta de ${f.nombre}. ${texto}: ¿te ayudo a elegir un plan para que siga en línea?`;
+  const mensaje = `Hola, te escribo de Platovi por la carta de ${f.nombre}. ${texto}: ¿te ayudo a elegir un plan para que siga en línea?`;
   const correo = f.duenos?.split(",")[0]?.trim();
   return (
     <span className="flex gap-1.5">

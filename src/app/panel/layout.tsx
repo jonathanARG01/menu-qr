@@ -8,10 +8,10 @@ import { Onboarding } from "./Onboarding";
 import type { Perfil } from "./equipo/EditorPerfil";
 
 export const metadata: Metadata = {
-  title: "Panel · Mesitto",
+  title: "Panel · Platovi",
   // Instalable como app (Android, computadora y "Agregar a inicio" en iPhone).
   manifest: "/panel.webmanifest",
-  appleWebApp: { capable: true, title: "Mesitto", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Platovi", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = { themeColor: "#172033" };

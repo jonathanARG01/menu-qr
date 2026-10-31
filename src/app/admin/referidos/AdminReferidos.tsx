@@ -284,7 +284,7 @@ function ComoFunciona() {
           cobro. Si paga cada 3, 6 o 12 meses, primero va el descuento de ese período y después el de referidos, solo sobre
           los meses que cubre. Los permanentes se restan de todos los meses.
         </p>
-        <p>Mesitto no cobra en automático: abajo ves cuánto cobrarle a cada uno y lo anotas con «Cobré».</p>
+        <p>Platovi no cobra en automático: abajo ves cuánto cobrarle a cada uno y lo anotas con «Cobré».</p>
       </div>
     </section>
   );

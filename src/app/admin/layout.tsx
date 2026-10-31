@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ToastProvider } from "@/components/Toast";
 import { MarcoAdmin } from "./MarcoAdmin";
 
-export const metadata = { title: "Administración · Mesitto" };
+export const metadata = { title: "Administración · Platovi" };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();

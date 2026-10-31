@@ -253,7 +253,7 @@ function TarjetaMiembro({ restauranteId, m, onCambio }: { restauranteId: string;
   }
 
   const mensaje = enlace
-    ? `Hola, te dejo el enlace para crear tu nueva contraseña de Mesitto (vale por 1 hora y se usa una sola vez): ${enlace}`
+    ? `Hola, te dejo el enlace para crear tu nueva contraseña de Platovi (vale por 1 hora y se usa una sola vez): ${enlace}`
     : "";
 
   return (
@@ -338,7 +338,7 @@ function TarjetaMiembro({ restauranteId, m, onCambio }: { restauranteId: string;
                   <Icono nombre="whatsapp" className="h-4 w-4" /> WhatsApp
                 </a>
                 <a
-                  href={`mailto:${m.email}?subject=${encodeURIComponent("Tu nueva contraseña de Mesitto")}&body=${encodeURIComponent(mensaje)}`}
+                  href={`mailto:${m.email}?subject=${encodeURIComponent("Tu nueva contraseña de Platovi")}&body=${encodeURIComponent(mensaje)}`}
                   className="inline-flex items-center rounded-xl border border-borde px-3 py-1.5 text-xs font-semibold hover:bg-stone-100"
                 >
                   Correo

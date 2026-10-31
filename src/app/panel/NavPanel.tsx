@@ -248,14 +248,14 @@ function MenuLateral({
   const [editando, setEditando] = useState(false);
   const yo = { nombre: perfil?.nombre || email, avatar: perfil?.avatar, color: perfil?.color };
   const ayuda = WHATSAPP_VENTAS
-    ? `https://wa.me/${WHATSAPP_VENTAS}?text=${encodeURIComponent(`Hola, soy de ${restaurante.nombre} y necesito ayuda con Mesitto.`)}`
+    ? `https://wa.me/${WHATSAPP_VENTAS}?text=${encodeURIComponent(`Hola, soy de ${restaurante.nombre} y necesito ayuda con Platovi.`)}`
     : null;
 
   return (
     <div className="flex min-h-0 w-full flex-col">
       <div className="flex items-center gap-2 px-5 pt-5 pb-3">
-        <Link href="/panel" className="text-xl" aria-label="Mesitto, inicio del panel">
-          <MarcaMesitto oscuro />
+        <Link href="/panel" className="text-xl" aria-label="Platovi, inicio del panel">
+          <MarcaPlatovi oscuro />
         </Link>
         {onCerrar && (
           <button
@@ -498,13 +498,13 @@ function useInstalar() {
   };
 }
 
-// Símbolo y nombre de Mesitto; en oscuro, el nombre en blanco.
-function MarcaMesitto({ oscuro }: { oscuro?: boolean }) {
+// Símbolo y nombre de Platovi; en oscuro, el nombre en blanco.
+function MarcaPlatovi({ oscuro }: { oscuro?: boolean }) {
   return (
     <span className="inline-flex items-center gap-2">
       <Marca className="h-8 w-8" oscuro={oscuro} />
       <span className="font-marca text-lg font-bold leading-none tracking-tight">
-        Mesitto<span className="text-marca-claro">.</span>
+        Platovi<span className="text-marca-claro">.</span>
       </span>
     </span>
   );

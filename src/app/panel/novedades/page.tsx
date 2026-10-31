@@ -1,10 +1,10 @@
 import Link from "next/link";
 
-export const metadata = { title: "Novedades · Mesitto" };
+export const metadata = { title: "Novedades · Platovi" };
 
 type Novedad = { titulo: string; texto: string; donde?: { href: string; texto: string } };
 
-// Lo nuevo en Mesitto, lo más reciente primero. Cada entrada dice qué cambió y dónde encontrarlo.
+// Lo nuevo en Platovi, lo más reciente primero. Cada entrada dice qué cambió y dónde encontrarlo.
 const NOVEDADES: { fecha: string; titulo: string; items: Novedad[] }[] = [
   {
     fecha: "Octubre 2026",
@@ -47,7 +47,7 @@ const NOVEDADES: { fecha: string; titulo: string; items: Novedad[] }[] = [
       },
       {
         titulo: "Vuelto al cobrar en efectivo",
-        texto: "Anota con cuánto paga el cliente y Mesitto calcula el vuelto.",
+        texto: "Anota con cuánto paga el cliente y Platovi calcula el vuelto.",
       },
       {
         titulo: "Gastos en caja",
@@ -98,7 +98,7 @@ export default function Novedades() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Novedades</h1>
-        <p className="mt-1 text-sm text-suave">Lo nuevo en Mesitto. ¿Echas algo de menos? Escríbenos desde “Ayuda” en el menú.</p>
+        <p className="mt-1 text-sm text-suave">Lo nuevo en Platovi. ¿Echas algo de menos? Escríbenos desde “Ayuda” en el menú.</p>
       </div>
       {NOVEDADES.map((n) => (
         <section key={n.fecha} className="tarjeta p-5">

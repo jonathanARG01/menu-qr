@@ -15,7 +15,7 @@ import {
 } from "@/lib/planes";
 import { formatoPrecio } from "@/lib/utils";
 
-export const metadata = { title: "Tu plan · Mesitto" };
+export const metadata = { title: "Tu plan · Platovi" };
 export const dynamic = "force-dynamic";
 
 const NOMBRE_MODULO: Record<Modulo, string> = {
