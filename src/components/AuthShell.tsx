@@ -22,7 +22,7 @@ export function AuthShell({ titulo, children, pie }: { titulo: string; children:
               "radial-gradient(ellipse at 20% 10%, rgb(242 163 58 / 0.18), transparent 55%), radial-gradient(ellipse at 90% 90%, rgb(42 56 88 / 0.7), transparent 55%), radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px) 0 0/22px 22px",
           }}
         />
-        <Link href="/" className="relative flex items-end gap-3" aria-label="Mesitto, inicio">
+        <Link href="/" className="relative flex items-end gap-3" aria-label="Platovi, inicio">
           <Logo oscuro className="text-3xl" />
           <span className="pb-0.5 text-xs text-slate-300/70">por Brote Digital</span>
         </Link>
@@ -61,7 +61,7 @@ export function AuthShell({ titulo, children, pie }: { titulo: string; children:
 
       <section className="flex items-center justify-center px-4 py-10 sm:px-8">
         <div className="w-full max-w-md">
-          <Link href="/" className="mb-8 flex justify-center lg:hidden" aria-label="Mesitto, inicio">
+          <Link href="/" className="mb-8 flex justify-center lg:hidden" aria-label="Platovi, inicio">
             <Logo className="text-3xl" />
           </Link>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{titulo}</h1>

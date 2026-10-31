@@ -43,7 +43,7 @@ const plural = (n: number) => `${n} ${n === 1 ? "día" : "días"}`;
 function paraDueno(f: Fila, sitio: string): Mensaje {
   return f.vencida
     ? {
-        titulo: "Terminó tu prueba de Mesitto",
+        titulo: "Terminó tu prueba de Platovi",
         cuerpo: `La carta de ${f.nombre} quedó pausada. Elige un plan y vuelve a mostrarla al instante: no se borró nada.`,
         url: `${sitio}/panel/plan`,
       }
@@ -98,7 +98,7 @@ async function enviarCorreo(para: string[], m: Mensaje, sitio: string, motivo: s
     titulo: escaparCorreo(m.titulo),
     resumen: escaparCorreo(m.cuerpo),
     parrafos: [escaparCorreo(m.cuerpo)],
-    boton: { texto: m.url.endsWith("/plan") ? "Elegir mi plan" : "Abrir Mesitto", url: m.url },
+    boton: { texto: m.url.endsWith("/plan") ? "Elegir mi plan" : "Abrir Platovi", url: m.url },
     motivo,
   });
   const r = await fetch("https://api.resend.com/emails", {
@@ -126,14 +126,14 @@ export async function procesarPruebas(db: SupabaseClient, sitio: string) {
     const admin = paraAdmin(f, sitio);
     const duenos = (f.usuarios ?? []).filter((u) => !idsAdmin.includes(u));
     avisos += await enviarPush(db, [...duenos, ...idsAdmin], (u) => (idsAdmin.includes(u) ? admin : dueno));
-    if (await enviarCorreo(f.correos ?? [], dueno, sitio, `Te llega porque ${escaparCorreo(f.nombre)} usa Mesitto.`)) avisos++;
+    if (await enviarCorreo(f.correos ?? [], dueno, sitio, `Te llega porque ${escaparCorreo(f.nombre)} usa Platovi.`)) avisos++;
     const whatsapp = f.whatsapp ? ` · WhatsApp: https://wa.me/${numeroWhatsapp(f.whatsapp)}` : "";
     if (
       await enviarCorreo(
         CORREOS_ADMIN,
         { ...admin, cuerpo: `${admin.cuerpo} Dueño: ${(f.correos ?? []).join(", ") || "—"}${whatsapp}` },
         sitio,
-        "Aviso para el administrador de Mesitto.",
+        "Aviso para el administrador de Platovi.",
       )
     )
       avisos++;

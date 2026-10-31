@@ -221,7 +221,7 @@ function InvitarPorCorreo({ nombre, enlace }: { nombre: string; enlace: string }
   const cuerpo = [
     "Hola,",
     "",
-    `En ${nombre} usamos Mesitto para la carta con QR, los pedidos desde la mesa y la cocina en vivo. Nos ha servido mucho y creo que a ustedes también les puede servir.`,
+    `En ${nombre} usamos Platovi para la carta con QR, los pedidos desde la mesa y la cocina en vivo. Nos ha servido mucho y creo que a ustedes también les puede servir.`,
     "",
     `Pueden crear su cuenta y probarlo gratis 14 días con mi link: ${enlace}`,
     "",

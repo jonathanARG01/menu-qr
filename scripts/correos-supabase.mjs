@@ -10,8 +10,8 @@ const ignorar = "Si no fuiste tú, puedes ignorar este correo: no se hará ning�
 
 const plantillas = {
   "confirmar-registro": {
-    asunto: "Confirma tu correo para empezar con Mesitto",
-    titulo: "¡Bienvenido a Mesitto!",
+    asunto: "Confirma tu correo para empezar con Platovi",
+    titulo: "¡Bienvenido a Platovi!",
     resumen: "Confirma tu correo y entra a tu panel para armar tu carta.",
     parrafos: [
       "Gracias por crear tu cuenta. Solo falta confirmar que este correo es tuyo para entrar a tu panel.",
@@ -20,28 +20,28 @@ const plantillas = {
     ],
     boton: { texto: "Confirmar mi correo", url: enlace },
     nota: "El enlace sirve una sola vez y caduca en 24 horas.",
-    motivo: `Te llega porque se creó una cuenta en Mesitto con {{ .Email }}. ${ignorar}`,
+    motivo: `Te llega porque se creó una cuenta en Platovi con {{ .Email }}. ${ignorar}`,
   },
   invitacion: {
-    asunto: "Te invitaron a Mesitto",
-    titulo: "Te invitaron a Mesitto",
+    asunto: "Te invitaron a Platovi",
+    titulo: "Te invitaron a Platovi",
     resumen: "Acepta la invitación y crea tu contraseña.",
-    parrafos: ["Te invitaron a usar Mesitto. Acepta la invitación para crear tu contraseña y entrar al panel."],
+    parrafos: ["Te invitaron a usar Platovi. Acepta la invitación para crear tu contraseña y entrar al panel."],
     boton: { texto: "Aceptar invitación", url: enlace },
     nota: "El enlace sirve una sola vez y caduca en 24 horas.",
     motivo: `Te llega porque alguien invitó a {{ .Email }}. ${ignorar}`,
   },
   "enlace-magico": {
-    asunto: "Tu enlace para entrar a Mesitto",
+    asunto: "Tu enlace para entrar a Platovi",
     titulo: "Entra a tu panel",
     resumen: "Toca el botón para entrar sin contraseña.",
-    parrafos: ["Toca el botón para entrar a tu panel de Mesitto sin escribir la contraseña."],
-    boton: { texto: "Entrar a Mesitto", url: enlace },
+    parrafos: ["Toca el botón para entrar a tu panel de Platovi sin escribir la contraseña."],
+    boton: { texto: "Entrar a Platovi", url: enlace },
     nota: "El enlace sirve una sola vez y caduca en 1 hora.",
     motivo: `Te llega porque se pidió entrar con {{ .Email }}. ${ignorar}`,
   },
   "cambiar-correo": {
-    asunto: "Confirma tu nuevo correo en Mesitto",
+    asunto: "Confirma tu nuevo correo en Platovi",
     titulo: "Confirma tu nuevo correo",
     resumen: "Confirma el cambio de correo de tu cuenta.",
     parrafos: [
@@ -53,7 +53,7 @@ const plantillas = {
     motivo: `Si no pediste este cambio, ignora este correo y cambia tu contraseña.`,
   },
   "recuperar-clave": {
-    asunto: "Crea una contraseña nueva para Mesitto",
+    asunto: "Crea una contraseña nueva para Platovi",
     titulo: "¿Olvidaste tu contraseña?",
     resumen: "Toca el botón para crear una contraseña nueva.",
     parrafos: [
@@ -64,14 +64,14 @@ const plantillas = {
     motivo: `Si no lo pediste tú, ignora este correo: tu contraseña actual sigue funcionando.`,
   },
   "codigo-seguridad": {
-    asunto: "Tu código de seguridad de Mesitto",
+    asunto: "Tu código de seguridad de Platovi",
     titulo: "Tu código de seguridad",
     resumen: "Usa este código para confirmar que eres tú.",
     parrafos: [
       "Usa este código para confirmar que eres tú:",
       `<span style="display:inline-block;padding:12px 20px;border-radius:12px;background:#f4f1ea;font:bold 28px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:6px;color:#172033">{{ .Token }}</span>`,
     ],
-    nota: "El código caduca en pocos minutos. Nadie de Mesitto te lo va a pedir.",
+    nota: "El código caduca en pocos minutos. Nadie de Platovi te lo va a pedir.",
     motivo: ignorar,
   },
 };

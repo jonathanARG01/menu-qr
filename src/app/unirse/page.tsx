@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AuthShell } from "@/components/AuthShell";
 import { RegistroForm } from "../registro/RegistroForm";
 
-export const metadata = { title: "Unirme a un equipo · Mesitto" };
+export const metadata = { title: "Unirme a un equipo · Platovi" };
 
 // Para meseros y cocina: el administrador los suma por correo y ellos crean su cuenta aquí.
 export default function UnirsePage() {

@@ -1,4 +1,4 @@
-# Mesitto
+# Platovi
 
 Plataforma multi-restaurante de cartas digitales con QR. Cada restaurante tiene su carta pública en `/<slug>` y un panel en `/panel` donde el dueño edita categorías, platos, precios, fotos, marca y descarga los QR.
 

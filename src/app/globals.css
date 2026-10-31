@@ -54,7 +54,7 @@ body {
    (pantalla de cocina, que ya es oscura, y la vista previa de la carta). */
 .tema-oscuro {
   color-scheme: dark;
-  /* Grafito con un toque del azul tinta de Mesitto (en vez del marrón cálido de antes). */
+  /* Grafito con un toque del azul tinta de Platovi (en vez del marrón cálido de antes). */
   --color-marca: #5b78c4;
   --color-marca-oscuro: #4a66ad;
   --color-superficie: #1a1e27;

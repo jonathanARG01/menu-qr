@@ -4,7 +4,7 @@ import type { Restaurante } from "./types";
 import { paisDe } from "./region";
 import { PERIODOS, PLANES } from "@/components/inicio/datos";
 
-// Planes de Mesitto: qué incluye cada uno y la prueba de 14 días. La lista de precios del sitio de venta está en
+// Planes de Platovi: qué incluye cada uno y la prueba de 14 días. La lista de precios del sitio de venta está en
 // components/inicio/datos.ts; lo que se habilita en el panel y en la carta sale de aquí.
 
 export type Plan = Restaurante["plan"];
@@ -161,13 +161,13 @@ export async function prepararRestaurante(
   }
 }
 
-// WhatsApp de ventas de Mesitto (para "quiero contratar"). Se configura en Vercel; sin él, no se muestra el botón.
+// WhatsApp de ventas de Platovi (para "quiero contratar"). Se configura en Vercel; sin él, no se muestra el botón.
 export const WHATSAPP_VENTAS = (process.env.NEXT_PUBLIC_WHATSAPP_VENTAS || "56941497083").replace(/\D/g, "");
 
 export const enlaceContratar = (restaurante: string, plan?: string) =>
   WHATSAPP_VENTAS
     ? `https://wa.me/${WHATSAPP_VENTAS}?text=${encodeURIComponent(
-        `Hola, soy de ${restaurante} y quiero contratar Mesitto${plan ? ` (plan ${plan})` : ""}.`,
+        `Hola, soy de ${restaurante} y quiero contratar Platovi${plan ? ` (plan ${plan})` : ""}.`,
       )}`
     : null;
 

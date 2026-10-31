@@ -43,7 +43,7 @@ export function MarcoAdmin({ tema: temaInicial, email, children }: { tema: Tema;
         <div className="flex items-center gap-2 px-5 pt-5 pb-3">
           <Marca className="h-8 w-8" oscuro />
           <span className="font-marca text-lg font-bold leading-none tracking-tight">
-            Mesitto<span className="text-marca-claro">.</span>
+            Platovi<span className="text-marca-claro">.</span>
           </span>
           <span className="ml-auto rounded-full bg-stone-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
             Admin

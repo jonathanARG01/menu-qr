@@ -53,7 +53,7 @@ export async function GET() {
   return new NextResponse(JSON.stringify(datos, null, 2), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Content-Disposition": `attachment; filename="mesitto-${restaurante.slug}-${fecha}.json"`,
+      "Content-Disposition": `attachment; filename="platovi-${restaurante.slug}-${fecha}.json"`,
       "Cache-Control": "no-store",
     },
   });

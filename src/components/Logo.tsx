@@ -1,4 +1,4 @@
-// Símbolo de Mesitto: una mesa redonda vista desde arriba, con cuatro sillas, y sobre la mesa un código QR
+// Símbolo de Platovi: una mesa redonda vista desde arriba, con cuatro sillas, y sobre la mesa un código QR
 // cuya cuarta esquina es un plato. Mesa azul tinta, sillas y plato mostaza.
 export const COLORES_LOGO = { mesa: "#172033", mesaOscuro: "#2a3858", acento: "#f2a33a" };
 
@@ -54,7 +54,7 @@ export function Logo({ oscuro = false, className = "" }: { oscuro?: boolean; cla
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <Marca oscuro={oscuro} className="h-[1.75em] w-[1.75em]" />
       <span className={`font-marca font-bold leading-none tracking-tight ${oscuro ? "text-white" : "text-marca-tinta"}`}>
-        Mesitto<span className="text-marca-claro">.</span>
+        Platovi<span className="text-marca-claro">.</span>
       </span>
     </span>
   );

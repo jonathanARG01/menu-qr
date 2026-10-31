@@ -1,6 +1,6 @@
 {
-  "name": "Mesitto · Panel",
-  "short_name": "Mesitto",
+  "name": "Platovi · Panel",
+  "short_name": "Platovi",
   "description": "Salón, cocina, caja y carta de tu restaurante.",
   "id": "/panel",
   "start_url": "/panel",

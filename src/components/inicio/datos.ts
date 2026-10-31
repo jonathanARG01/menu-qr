@@ -108,7 +108,7 @@ export const MODULOS: { icono: string; titulo: string; texto: string }[] = [
   { icono: "personas", titulo: "Pagos divididos y propinas", texto: "Divide por persona, en partes iguales o por consumo, con la propina sugerida que tú definas." },
   { icono: "sucursales", titulo: "Sucursales", texto: "Varios locales con su carta, sus mesas y su equipo, administrados desde una sola cuenta." },
   { icono: "estadisticas", titulo: "Estadísticas", texto: "Qué platos se miran y se piden más, y en qué horarios se llena el local." },
-  { icono: "referidos", titulo: "Referidos", texto: "Recomienda Mesitto a otro local y gana descuentos en tu plan cuando se suma." },
+  { icono: "referidos", titulo: "Referidos", texto: "Recomienda Platovi a otro local y gana descuentos en tu plan cuando se suma." },
 ];
 
 export const PASOS: [string, string][] = [
@@ -138,7 +138,7 @@ export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; punto
     imagen: "/inicio/salon-3d.webp",
     ancho: 1440,
     alto: 1000,
-    alt: "Panel de Mesitto con el plano 3D del salón, las mesas numeradas y el aviso de la mesa 4 que pide la cuenta",
+    alt: "Panel de Platovi con el plano 3D del salón, las mesas numeradas y el aviso de la mesa 4 que pide la cuenta",
   },
   {
     etiqueta: "Cocina",
@@ -148,7 +148,7 @@ export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; punto
     imagen: "/inicio/cocina.webp",
     ancho: 1440,
     alto: 900,
-    alt: "Pantalla de cocina en el panel de Mesitto con las comandas de las mesas 4 y 1",
+    alt: "Pantalla de cocina en el panel de Platovi con las comandas de las mesas 4 y 1",
   },
   {
     etiqueta: "Cuenta",
