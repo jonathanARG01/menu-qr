@@ -4,7 +4,7 @@ import type { Restaurante } from "@/lib/types";
 // Todo lo de sellos vive en src/lib/sellos, src/app/s y src/app/panel/sellos, y en las tablas sellos_* de la base,
 // para poder venderlo después como producto independiente sin desarmar el resto de Platovi.
 
-export const NOMBRE_SELLOS = "Platovi Sellos";
+export const NOMBRE_SELLOS = "Platovi Loyalty";
 
 // Precio del complemento (CLP al mes, por local). Grupo: todas las sucursales.
 export const PRECIO_SELLOS = { local: 12990, grupo: 19990 };
@@ -23,6 +23,12 @@ export type ProgramaSellos = {
   icono: IconoSello;
   diseno: DisenoSello;
   condiciones: string;
+  // "Para que vuelvan" (migración 0026).
+  dias_dobles: number[]; // 0 = domingo … 6 = sábado
+  pedir_resena: boolean;
+  extranamos_dias: number; // 0 = apagado
+  extranamos_sellos: number;
+  cumple_sellos: number;
 };
 
 export const PROGRAMA_BASE: ProgramaSellos = {
@@ -37,6 +43,11 @@ export const PROGRAMA_BASE: ProgramaSellos = {
   icono: "cafe",
   diseno: "clasica",
   condiciones: "",
+  dias_dobles: [],
+  pedir_resena: true,
+  extranamos_dias: 30,
+  extranamos_sellos: 0,
+  cumple_sellos: 1,
 };
 
 // Lo que se dibuja en cada sello de la tarjeta.
@@ -90,16 +101,37 @@ export type EstadoTarjeta = {
 export type MovimientoPublico = {
   tipo: "sello" | "canje" | "ajuste";
   cantidad: number;
-  origen: "qr" | "manual" | "bienvenida" | "migracion" | "anulada";
+  origen: "qr" | "manual" | "bienvenida" | "migracion" | "anulada" | "cumpleanos" | "regreso";
   created_at: string;
 };
 
 export type TarjetaPublica = EstadoTarjeta & {
   activa: boolean;
-  restaurante: { nombre: string; slug: string; logo_url: string | null; color: string; restaurante_id: string };
+  restaurante: {
+    nombre: string;
+    slug: string;
+    logo_url: string | null;
+    color: string;
+    restaurante_id: string;
+    // Enlace de reseña de Google, si el local lo pide (0026).
+    resena_url?: string | null;
+  };
   programa: ProgramaSellos | null;
   movimientos: MovimientoPublico[];
+  // Hoy es día de sello doble en el local (0026).
+  dia_doble?: boolean;
 };
+
+// "Lunes y martes", "Lunes, martes y miércoles" (días de sello doble).
+const NOMBRES_DIA = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+export const ORDEN_DIAS = [1, 2, 3, 4, 5, 6, 0];
+export function textoDias(dias: number[]) {
+  const n = ORDEN_DIAS.filter((d) => dias.includes(d)).map((d) => NOMBRES_DIA[d]);
+  if (!n.length) return "";
+  const t = n.length === 1 ? n[0] : `${n.slice(0, -1).join(", ")} y ${n[n.length - 1]}`;
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+export const letraDia = (d: number) => NOMBRES_DIA[d].charAt(0).toUpperCase() + NOMBRES_DIA[d].slice(1, 3);
 
 // Fila de sellos_tarjetas que ve el equipo en el panel.
 export type FilaTarjeta = EstadoTarjeta & {

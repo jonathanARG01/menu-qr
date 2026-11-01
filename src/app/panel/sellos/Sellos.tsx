@@ -11,6 +11,9 @@ import { Inclinable } from "@/components/sellos/Inclinable";
 import { avisarTarjeta } from "@/lib/sellos/cliente";
 import {
   DISENOS_SELLO,
+  ORDEN_DIAS,
+  letraDia,
+  textoDias,
   ICONOS_SELLO,
   PROGRAMA_BASE,
   codigoDeEscaneo,
@@ -77,7 +80,7 @@ export function Sellos({
     <div className="space-y-5">
       <div className="flex flex-wrap items-end gap-3">
         <div className="mr-auto min-w-0">
-          <h1 className="text-xl font-semibold">Tarjeta de sellos</h1>
+          <h1 className="text-xl font-semibold">Loyalty Cards</h1>
           <p className="text-sm text-suave">
             {programaGuardado
               ? `${programa.meta} sellos = ${programa.premio} · ${textoRegla(programa, (n) => formatoPrecio(n, restaurante.moneda))}`
@@ -118,12 +121,21 @@ export function Sellos({
         />
       )}
       {pestana === "configurar" && admin && (
-        <Configurar restaurante={restaurante} programa={programa} nueva={!programaGuardado} onGuardado={setPrograma} />
+        <Configurar
+          restaurante={restaurante}
+          ajustes={ajustes}
+          programa={programa}
+          nueva={!programaGuardado}
+          onGuardado={setPrograma}
+        />
       )}
       {pestana === "carteles" && admin && <Carteles restaurante={restaurante} programa={programa} />}
     </div>
   );
 }
+
+const COLUMNAS_0025 = ["diseno"];
+const COLUMNAS_0026 = ["dias_dobles", "pedir_resena", "extranamos_dias", "extranamos_sellos", "cumple_sellos"];
 
 // ── Tarjetas de los clientes ─────────────────────
 function Tarjetas({
@@ -380,7 +392,7 @@ function FichaTarjeta({
     });
     if (!ok) return;
     setTrabajando(true);
-    const { error } = await supabase.rpc("sellos_sumar_manual", {
+    const { data, error } = await supabase.rpc("sellos_sumar_manual", {
       p_tarjeta: t.codigo,
       p_cantidad: n,
       p_pin: ok.pin,
@@ -388,7 +400,13 @@ function FichaTarjeta({
     });
     setTrabajando(false);
     if (error) return avisar(mensajeError(error), "error");
-    avisar(n > 0 ? (n === 1 ? "Sello sumado" : `${n} sellos sumados`) : "Sellos quitados");
+    const r = (data ?? {}) as { sumados?: number; doble?: boolean };
+    const sumados = r.sumados ?? n;
+    avisar(
+      sumados > 0
+        ? `${sumados === 1 ? "Sello sumado" : `${sumados} sellos sumados`}${r.doble ? " (día de sello doble)" : ""}`
+        : "Sellos quitados",
+    );
     avisarTarjeta(t.codigo);
     setCantidad(1);
     await onCambio();
@@ -434,6 +452,8 @@ function FichaTarjeta({
     manual: "Sello del equipo",
     bienvenida: "Sello de bienvenida",
     anulada: "Mesa anulada: se quitó el sello",
+    cumpleanos: "Regalo de cumpleaños",
+    regreso: "Regalo “te extrañamos”",
   };
 
   return (
@@ -691,11 +711,13 @@ function Escaner({ onLeido, onCerrar }: { onLeido: (texto: string) => void; onCe
 // ── La tarjeta del local ─────────────────────────
 function Configurar({
   restaurante,
+  ajustes,
   programa,
   nueva,
   onGuardado,
 }: {
   restaurante: Restaurante;
+  ajustes: Ajustes;
   programa: ProgramaSellos;
   nueva: boolean;
   onGuardado: (p: ProgramaSellos) => void;
@@ -716,17 +738,20 @@ function Configurar({
     setGuardando(true);
     const fila = { ...p, premio: p.premio.trim() || PROGRAMA_BASE.premio, condiciones: p.condiciones.trim() };
     let { error } = await supabase.from("sellos_programas").upsert({ restaurante_id: restaurante.id, ...fila });
-    // Sin la migración 0025 no existe la columna del diseño: se guarda el resto y se avisa.
-    let sinDiseno = false;
-    if (error && /diseno/.test(error.message)) {
-      const { diseno: _omitido, ...resto } = fila;
-      void _omitido;
+    // Sin las migraciones 0025/0026 faltan columnas: se guarda lo que existe y se avisa qué SQL falta.
+    let falta = "";
+    if (error && /diseno|dias_dobles|pedir_resena|extranamos|cumple_sellos/.test(error.message)) {
+      const nuevas = /diseno/.test(error.message) ? COLUMNAS_0025.concat(COLUMNAS_0026) : COLUMNAS_0026;
+      const resto = Object.fromEntries(Object.entries(fila).filter(([k]) => !nuevas.includes(k)));
       ({ error } = await supabase.from("sellos_programas").upsert({ restaurante_id: restaurante.id, ...resto }));
-      sinDiseno = !error;
+      if (!error)
+        falta = /diseno/.test(nuevas.join())
+          ? "0025_sellos_disenos.sql y 0026_sellos_para_que_vuelvan.sql"
+          : "0026_sellos_para_que_vuelvan.sql";
     }
     setGuardando(false);
     if (error) return avisar(mensajeError(error), "error");
-    if (sinDiseno) avisar("Se guardó todo menos el diseño: falta ejecutar el SQL 0025_sellos_disenos.sql en Supabase.", "error");
+    if (falta) avisar(`Se guardó, pero falta ejecutar ${falta} en Supabase para el diseño y "Para que vuelvan".`, "error");
     onGuardado(fila);
     avisar(nueva ? "Tarjeta lista. Ya puedes imprimir el QR para unirse." : "Tarjeta guardada");
   }
@@ -828,6 +853,112 @@ function Configurar({
           </div>
           <p className="text-xs text-suave">
             {textoRegla(p, formato)}. Con la tarjeta llena el cliente gana {p.premio || "el premio"} y empieza una nueva.
+          </p>
+        </section>
+
+        <section className="tarjeta space-y-5 p-5">
+          <div>
+            <h2 className="font-semibold">Para que vuelvan</h2>
+            <p className="text-sm text-suave">
+              Detalles automáticos que hacen volver al cliente. Los avisos llegan solo a quien aceptó recibirlos.
+            </p>
+          </div>
+
+          <div>
+            <p className="etiqueta-campo">Días de sello doble</p>
+            <div className="flex flex-wrap gap-1.5">
+              {ORDEN_DIAS.map((d) => {
+                const activo = p.dias_dobles.includes(d);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={activo}
+                    onClick={() =>
+                      cambiar({ dias_dobles: activo ? p.dias_dobles.filter((x) => x !== d) : [...p.dias_dobles, d].sort() })
+                    }
+                    className={`h-10 w-12 rounded-xl border text-sm font-semibold ${
+                      activo ? "border-marca bg-marca text-white" : "border-borde text-suave hover:border-marca/50"
+                    }`}
+                  >
+                    {letraDia(d)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-xs text-suave">
+              {p.dias_dobles.length
+                ? `${textoDias(p.dias_dobles)}: cada sello vale 2 (con el QR de la cuenta o el "+1" del equipo). Úsalo en los días flojos.`
+                : "Elige los días más flojos: ese día cada sello vale 2."}
+            </p>
+          </div>
+
+          <div className="flex items-start justify-between gap-3">
+            <div className="text-sm">
+              <p className="font-medium">Invitar a dejar reseña en Google</p>
+              <p className="text-suave">
+                {ajustes.resenas.google_url
+                  ? "Después de sumar un sello, la tarjeta invita al cliente a dejar su reseña."
+                  : "Primero pega tu enlace de reseñas de Google en Personalizar."}
+              </p>
+            </div>
+            <Interruptor
+              activo={p.pedir_resena && !!ajustes.resenas.google_url}
+              onChange={(v) => cambiar({ pedir_resena: v })}
+              etiqueta="Invitar a dejar reseña en Google"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="etiqueta-campo">“Te extrañamos” si no vuelve en</span>
+              <select
+                id="extranamos"
+                value={p.extranamos_dias}
+                onChange={(e) => cambiar({ extranamos_dias: Number(e.target.value) })}
+                className="campo"
+              >
+                <option value={0}>No enviar</option>
+                {[21, 30, 45, 60, 90].map((n) => (
+                  <option key={n} value={n}>
+                    {n} días
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm">
+              <span className="etiqueta-campo">Regalo con el “te extrañamos”</span>
+              <select
+                id="extranamos-sellos"
+                value={p.extranamos_sellos}
+                disabled={p.extranamos_dias === 0}
+                onChange={(e) => cambiar({ extranamos_sellos: Number(e.target.value) })}
+                className="campo"
+              >
+                <option value={0}>Solo el aviso</option>
+                <option value={1}>1 sello de regalo</option>
+                <option value={2}>2 sellos de regalo</option>
+              </select>
+            </label>
+            <label className="block text-sm">
+              <span className="etiqueta-campo">Regalo de cumpleaños</span>
+              <select
+                id="cumple"
+                value={p.cumple_sellos}
+                onChange={(e) => cambiar({ cumple_sellos: Number(e.target.value) })}
+                className="campo"
+              >
+                <option value={0}>Solo el saludo</option>
+                <option value={1}>1 sello de regalo</option>
+                <option value={2}>2 sellos de regalo</option>
+                <option value={3}>3 sellos de regalo</option>
+              </select>
+            </label>
+          </div>
+          <p className="text-xs text-suave">
+            El “te extrañamos” se manda una vez por ausencia, y el saludo de cumpleaños el mismo día (a quien dio su fecha al
+            unirse). Llegan como aviso al celular y en Google Wallet. El aviso de “te falta 1 sello” sale solo después de cada
+            sello.
           </p>
         </section>
 

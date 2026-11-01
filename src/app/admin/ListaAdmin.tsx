@@ -431,7 +431,7 @@ function TarjetaRestaurante({
         {a.sellos && (
           <label className="flex items-center gap-2" title={`${NOMBRE_SELLOS}: complemento pagado aparte`}>
             <Interruptor activo={!!f.sellos} onChange={(v) => a.sellos!(f, v)} etiqueta={NOMBRE_SELLOS} color="#d97706" />
-            <span className="text-suave">Sellos</span>
+            <span className="text-suave">Loyalty</span>
           </label>
         )}
         <div className="flex-1" />

@@ -8,19 +8,19 @@ type Novedad = { titulo: string; texto: string; donde?: { href: string; texto: s
 const NOVEDADES: { fecha: string; titulo: string; items: Novedad[] }[] = [
   {
     fecha: "Noviembre 2026",
-    titulo: "Platovi Sellos",
+    titulo: "Platovi Loyalty",
     items: [
       {
         titulo: "Tarjeta de sellos en el celular",
         texto:
           "Tus clientes se unen con un QR, guardan la tarjeta en el celular (o en Google Wallet) y suman un sello escaneando el QR de la precuenta. Al completarla ganan el premio que elijas y el mesero lo canjea. Reemplaza al antiguo “premio cada tantas visitas”. Es un complemento que se contrata aparte del plan.",
-        donde: { href: "/panel/sellos", texto: "Tarjeta de sellos" },
+        donde: { href: "/panel/sellos", texto: "Loyalty Cards" },
       },
       {
         titulo: "12 diseños para tu tarjeta",
         texto:
           "Elige entre Clásica, Boleto, De época, Neón, Pasaporte, Editorial, Aurora, Pizarra, Camino, Círculo, Pop y Premium. Todos usan tu logo, tu color y el dibujo de los sellos que elijas.",
-        donde: { href: "/panel/sellos", texto: "Tarjeta de sellos" },
+        donde: { href: "/panel/sellos", texto: "Loyalty Cards" },
       },
     ],
   },

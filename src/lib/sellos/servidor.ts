@@ -26,5 +26,4 @@ export function datosWallet(t: TarjetaPublica, sitio: string): DatosWallet {
   };
 }
 
-export const sitioDe = (request: Request) =>
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || new URL(request.url).origin;
+export const sitioDe = (request: Request) => process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || new URL(request.url).origin;
