@@ -20,9 +20,11 @@ import {
 } from "@/lib/planes";
 import { PAIS_BASE, numeroWhatsapp } from "@/lib/region";
 import { formatoPrecio } from "@/lib/utils";
+import { NOMBRE_SELLOS, PRECIO_SELLOS } from "@/lib/sellos/tipos";
 import { EditarRestaurante } from "./EditarRestaurante";
 import {
   actualizarRestaurante,
+  cambiarComplemento,
   cambiarPlanInicio,
   cambiarPrueba,
   cargarEjemplo,
@@ -52,6 +54,8 @@ export type FilaAdmin = {
   visitas_30d: number;
   pedidos_30d: number;
   soy_staff: boolean;
+  // Platovi Sellos contratado (migración 0024).
+  sellos?: boolean;
 };
 
 const PLANES_SELECT: Plan[] = ["free", "carta", "pro", "grupo"];
@@ -77,7 +81,7 @@ const isoDia = (d: Date) =>
 
 const esDemo = (f: FilaAdmin) => !f.duenos;
 
-export function ListaAdmin({ filas: iniciales }: { filas: FilaAdmin[] }) {
+export function ListaAdmin({ filas: iniciales, complementos = true }: { filas: FilaAdmin[]; complementos?: boolean }) {
   const avisar = useToast();
   const [filas, setFilas] = useState(iniciales);
   const [busqueda, setBusqueda] = useState("");
@@ -125,7 +129,11 @@ export function ListaAdmin({ filas: iniciales }: { filas: FilaAdmin[] }) {
       total: filas.length,
       prueba: filas.filter((f) => f.plan === "free" && f.activo && !esDemo(f)).length,
       pagos: pagos.length,
-      ingreso: pagos.reduce((n, f) => n + (PRECIO[f.plan] ?? 0), 0),
+      ingreso:
+        pagos.reduce((n, f) => n + (PRECIO[f.plan] ?? 0), 0) +
+        filas
+          .filter((f) => f.sellos && f.activo)
+          .reduce((n, f) => n + (f.plan === "grupo" ? PRECIO_SELLOS.grupo : PRECIO_SELLOS.local), 0),
       visitas: filas.reduce((n, f) => n + Number(f.visitas_30d), 0),
       pedidos: filas.reduce((n, f) => n + Number(f.pedidos_30d), 0),
     };
@@ -204,6 +212,15 @@ export function ListaAdmin({ filas: iniciales }: { filas: FilaAdmin[] }) {
       }),
     dejar: (f) => hacer(f, { soy_staff: false }, () => dejarRestaurante(f.id), "Ya no editas este restaurante"),
     cuenta: (f) => setEditando(f),
+    sellos: complementos
+      ? (f, activo) =>
+          hacer(
+            f,
+            { sellos: activo },
+            () => cambiarComplemento(f.id, "sellos", activo),
+            activo ? `${NOMBRE_SELLOS} activado para ${f.nombre}` : `${NOMBRE_SELLOS} pausado`,
+          )
+      : null,
   };
 
   return (
@@ -322,6 +339,8 @@ type Acciones = {
   editar: (f: FilaAdmin) => void;
   dejar: (f: FilaAdmin) => void;
   cuenta: (f: FilaAdmin) => void;
+  // null: falta la migración 0024.
+  sellos: ((f: FilaAdmin, activo: boolean) => void) | null;
 };
 
 const COLOR_PLAN: Record<Plan, string> = {
@@ -409,6 +428,12 @@ function TarjetaRestaurante({
           <Interruptor activo={f.activo} onChange={(v) => a.cambiarActivo(f, v)} etiqueta="Carta activa" />
           <span className="text-suave">{f.activo ? "Activa" : "Pausada"}</span>
         </label>
+        {a.sellos && (
+          <label className="flex items-center gap-2" title={`${NOMBRE_SELLOS}: complemento pagado aparte`}>
+            <Interruptor activo={!!f.sellos} onChange={(v) => a.sellos!(f, v)} etiqueta={NOMBRE_SELLOS} color="#d97706" />
+            <span className="text-suave">Sellos</span>
+          </label>
+        )}
         <div className="flex-1" />
         {f.platos === 0 && (
           <button type="button" className="text-suave hover:text-tinta" disabled={a.pendiente} onClick={() => a.ejemplo(f)}>

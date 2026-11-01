@@ -55,6 +55,8 @@ export type Restaurante = {
   prueba_fin?: string | null;
   plan_inicio?: string | null;
   pausa_motivo?: "prueba" | "manual" | null;
+  // Complementos contratados aparte del plan (migración 0024). Solo los cambia el superadmin.
+  complementos?: { sellos?: { activo?: boolean; desde?: string | null } };
 };
 
 export type Categoria = {

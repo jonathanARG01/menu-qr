@@ -7,7 +7,16 @@ export const dynamic = "force-dynamic";
 // El acceso (solo superadmin) lo controla el layout; la función de la base lo vuelve a comprobar.
 export default async function Admin() {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("admin_restaurantes");
+  const [{ data, error }, complementos] = await Promise.all([
+    supabase.rpc("admin_restaurantes"),
+    // Sin la migración 0024 no existe: nadie tiene complementos.
+    supabase.rpc("admin_complementos"),
+  ]);
+  const sellos = new Set(
+    ((complementos.data ?? []) as { id: string; complementos: { sellos?: { activo?: boolean } } | null }[])
+      .filter((c) => c.complementos?.sellos?.activo === true)
+      .map((c) => c.id),
+  );
 
   if (error) {
     return (
@@ -18,5 +27,6 @@ export default async function Admin() {
       </p>
     );
   }
-  return <ListaAdmin filas={(data ?? []) as FilaAdmin[]} />;
+  const filas = ((data ?? []) as FilaAdmin[]).map((f) => ({ ...f, sellos: sellos.has(f.id) }));
+  return <ListaAdmin filas={filas} complementos={!complementos.error} />;
 }

@@ -31,7 +31,7 @@ const MODULOS: { id: Modulo; titulo: string; ayuda: string }[] = [
     titulo: "Reservas y lista de espera",
     ayuda: "Reservas del día, lista de espera con QR y aviso por WhatsApp",
   },
-  { id: "clientes", titulo: "Clientes frecuentes", ayuda: "Visitas y gasto de cada cliente, y premios a los que vuelven" },
+  { id: "clientes", titulo: "Clientes frecuentes", ayuda: "Visitas y gasto de cada cliente" },
   { id: "estadisticas", titulo: "Estadísticas", ayuda: "Visitas, horarios y lo más pedido" },
   { id: "sucursales", titulo: "Sucursales", ayuda: "Varios locales con la misma carta" },
   { id: "equipo", titulo: "Equipo", ayuda: "Meseros y cocina con su propio usuario" },
@@ -518,34 +518,6 @@ export function Personalizar({
         </section>
       )}
 
-      {a.modulos.clientes && (
-        <section id="clientes" className="tarjeta scroll-mt-24 space-y-3 p-5">
-          <h2 className="font-semibold">Premio a los clientes frecuentes</h2>
-          <p className="text-sm text-suave">
-            Cuando un cliente anotado llega a esa visita, el mesero lo ve en la ficha de la mesa y en Clientes.
-          </p>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            Cada
-            <input
-              type="number"
-              min={0}
-              max={50}
-              value={a.clientes.premio_cada}
-              onChange={(e) => set({ clientes: { ...a.clientes, premio_cada: Math.max(0, Number(e.target.value) || 0) } })}
-              className="w-16 rounded-lg border border-borde px-2 py-1"
-            />
-            visitas, regalar
-            <input
-              value={a.clientes.premio}
-              maxLength={60}
-              onChange={(e) => set({ clientes: { ...a.clientes, premio: e.target.value } })}
-              placeholder="un postre"
-              className="campo w-48 flex-1 py-1.5"
-            />
-          </div>
-          <p className="text-xs text-suave">Con 0 no hay premio. Ejemplo: cada 5 visitas, un postre de la casa.</p>
-        </section>
-      )}
 
       <section className="tarjeta space-y-4 p-5">
         <div className="flex items-center gap-4">
