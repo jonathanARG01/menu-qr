@@ -25,6 +25,13 @@ export function RegistroForm({ equipo = false, referido }: { equipo?: boolean; r
     setCargando(true);
     setError(null);
 
+    // Los correos de Platovi son del equipo del sistema: no pueden abrir un restaurante a su nombre.
+    if (!equipo && /@platovi\.(cl|com)$/i.test(String(datos.get("email")).trim())) {
+      setError("Los correos @platovi.cl son del equipo de Platovi y no pueden ser dueños de un restaurante.");
+      setCargando(false);
+      return;
+    }
+
     const supabase = createClient();
     const { data, error } = await supabase.auth.signUp({
       email: String(datos.get("email")),

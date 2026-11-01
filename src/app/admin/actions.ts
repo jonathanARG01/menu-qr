@@ -70,7 +70,7 @@ export async function dejarRestaurante(id: string) {
   return null;
 }
 
-// Alta de un restaurante para un cliente: quedas como dueño y luego le pasas la cuenta o lo sumas.
+// Alta de un restaurante para un cliente: quedas como Soporte (SQL 0022) y luego sumas al cliente como Administrador.
 export async function crearParaCliente(_prev: string | null, formData: FormData): Promise<string | null> {
   const supabase = await createClient();
   const slug = String(formData.get("slug") ?? "");
