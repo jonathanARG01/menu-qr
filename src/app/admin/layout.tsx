@@ -27,9 +27,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     );
   }
 
+  // Restaurantes donde entraste como Soporte (con "Editar carta" en cada tarjeta).
+  const { count: enSoporte } = await supabase
+    .from("usuarios")
+    .select("restaurante_id", { count: "exact", head: true })
+    .eq("user_id", sesion.user.id);
   const tema = (await cookies()).get("panel-tema")?.value === "claro" ? "claro" : "oscuro";
   return (
-    <MarcoAdmin tema={tema} email={sesion.user.email ?? ""}>
+    <MarcoAdmin tema={tema} email={sesion.user.email ?? ""} enSoporte={enSoporte ?? 0}>
       <ToastProvider>{children}</ToastProvider>
     </MarcoAdmin>
   );

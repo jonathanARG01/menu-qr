@@ -15,7 +15,18 @@ const MENU = [
 ];
 
 // Marco de /admin con el mismo estilo del panel: menú lateral flotante en computadora y pestañas arriba en el teléfono.
-export function MarcoAdmin({ tema: temaInicial, email, children }: { tema: Tema; email: string; children: React.ReactNode }) {
+export function MarcoAdmin({
+  tema: temaInicial,
+  email,
+  enSoporte = 0,
+  children,
+}: {
+  tema: Tema;
+  email: string;
+  // Restaurantes en los que entraste como Soporte. Sin ninguno no hay panel al que ir (el superadmin no es dueño).
+  enSoporte?: number;
+  children: React.ReactNode;
+}) {
   const ruta = usePathname();
   const [tema, setTema] = useState(temaInicial);
 
@@ -76,16 +87,20 @@ export function MarcoAdmin({ tema: temaInicial, email, children }: { tema: Tema;
               </Link>
             );
           })}
-          <p className="mt-4 mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400">Tu restaurante</p>
-          <Link
-            href="/panel"
-            className="group flex items-center gap-3 rounded-2xl px-2 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-tinta"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-stone-100 text-stone-500 group-hover:text-tinta">
-              <Icono nombre="carta" className="h-[18px] w-[18px]" />
-            </span>
-            Ir a mi panel
-          </Link>
+          {enSoporte > 0 && (
+            <>
+              <p className="mt-4 mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400">Como soporte</p>
+              <Link
+                href="/panel"
+                className="group flex items-center gap-3 rounded-2xl px-2 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-tinta"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-stone-100 text-stone-500 group-hover:text-tinta">
+                  <Icono nombre="carta" className="h-[18px] w-[18px]" />
+                </span>
+                {enSoporte === 1 ? "Abrir el restaurante" : `Abrir restaurantes (${enSoporte})`}
+              </Link>
+            </>
+          )}
         </nav>
         <div className="m-3 space-y-2 rounded-2xl border border-borde bg-stone-50 p-3">
           <p className="truncate text-xs font-semibold">{email}</p>
@@ -103,7 +118,7 @@ export function MarcoAdmin({ tema: temaInicial, email, children }: { tema: Tema;
           <span className="ml-auto">{botonTema}</span>
         </div>
         <nav className="sin-barra flex gap-1 overflow-x-auto px-3 py-2">
-          {[...MENU, { href: "/panel", texto: "Mi panel", icono: "carta", ayuda: "" }].map((m) => (
+          {[...MENU, ...(enSoporte > 0 ? [{ href: "/panel", texto: "Soporte", icono: "carta", ayuda: "" }] : [])].map((m) => (
             <Link
               key={m.href}
               href={m.href}
