@@ -11,7 +11,7 @@ import { Icono } from "@/components/Icono";
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const siguiente = params.get("next")?.startsWith("/") ? params.get("next")! : "/panel";
+  const pedido = params.get("next")?.startsWith("/") ? params.get("next") : null;
   const [error, setError] = useState<string | null>(params.get("error"));
   const [cargando, setCargando] = useState(false);
   const [ver, setVer] = useState(false);
@@ -21,7 +21,8 @@ export function LoginForm() {
     const datos = new FormData(e.currentTarget);
     setCargando(true);
     setError(null);
-    const { error } = await createClient().auth.signInWithPassword({
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({
       email: String(datos.get("email")),
       password: String(datos.get("password")),
     });
@@ -29,6 +30,13 @@ export function LoginForm() {
       setError(mensajeError(error));
       setCargando(false);
       return;
+    }
+    // El superadmin siempre parte en /admin, aunque haya entrado como soporte a algún restaurante.
+    let siguiente = pedido ?? "/panel";
+    // "/panel" a secas llega cuando el middleware te mandó al login: tampoco cuenta como destino pedido.
+    if (!pedido || pedido === "/panel") {
+      const { data: esAdmin } = await supabase.rpc("es_superadmin");
+      if (esAdmin) siguiente = "/admin";
     }
     router.replace(siguiente);
     router.refresh();
