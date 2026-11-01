@@ -13,7 +13,10 @@ export function pieMarca(ajustes: Ajustes): LineaTicket[] {
   if (t.mensaje.trim()) lineas.push({ tipo: "texto", texto: t.mensaje.trim(), fuerte: true, centro: true });
   if (t.qr_resena && ajustes.resenas.google_url)
     lineas.push({ tipo: "qr", url: ajustes.resenas.google_url, texto: "¿Te gustó? Déjanos tu reseña en Google" });
-  for (const renglon of t.pie.split("\n").map((x) => x.trim()).filter(Boolean))
+  for (const renglon of t.pie
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean))
     lineas.push({ tipo: "texto", texto: renglon, chico: true, centro: true });
   lineas.push({ tipo: "texto", texto: "No válido como boleta", chico: true, centro: true });
   return lineas;

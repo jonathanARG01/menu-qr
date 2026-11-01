@@ -605,8 +605,8 @@ export function Personalizar({
           <div className="min-w-0 flex-1">
             <p className="font-medium">Pedir PIN de encargado</p>
             <p className="text-sm text-suave">
-              Un mesero necesita el PIN de un encargado para anular una mesa con pedidos o quitar un plato que ya está en
-              cocina. Los descuentos siempre lo piden. Queda registrado en Reportes → Autorizaciones. Los PIN se ponen en{" "}
+              Un mesero necesita el PIN de un encargado para anular una mesa con pedidos o quitar un plato que ya está en cocina.
+              Los descuentos siempre lo piden. Queda registrado en Reportes → Autorizaciones. Los PIN se ponen en{" "}
               <Link href="/panel/equipo#pin" className="underline">
                 Equipo
               </Link>
@@ -978,7 +978,11 @@ function OtrasMonedas({ moneda, valor, onChange }: { moneda: string; valor: Otra
             aria-label={`Cuánto vale 1 ${m.codigo} en ${moneda}`}
           />
           {moneda}
-          <button type="button" onClick={() => onChange(valor.filter((_, k) => k !== i))} className="text-red-600 hover:underline">
+          <button
+            type="button"
+            onClick={() => onChange(valor.filter((_, k) => k !== i))}
+            className="text-red-600 hover:underline"
+          >
             Quitar
           </button>
         </div>
@@ -997,7 +1001,9 @@ function OtrasMonedas({ moneda, valor, onChange }: { moneda: string; valor: Otra
           ))}
         </div>
       )}
-      <p className="text-xs text-suave">Se cobra siempre en {moneda}: esto es solo una referencia. Actualiza el cambio cuando varíe.</p>
+      <p className="text-xs text-suave">
+        Se cobra siempre en {moneda}: esto es solo una referencia. Actualiza el cambio cuando varíe.
+      </p>
     </section>
   );
 }
@@ -1021,8 +1027,8 @@ function TusDatos({ dueno, slug }: { dueno: boolean; slug: string }) {
     <section className="tarjeta space-y-3 p-5">
       <h2 className="font-semibold">Tus datos</h2>
       <p className="text-sm text-suave">
-        Los datos son tuyos. Descárgalos cuando quieras (carta, mesas, clientes, reservas, ventas y caja) en un archivo que
-        puedes abrir o llevar a otro sistema.
+        Los datos son tuyos. Descárgalos cuando quieras (carta, mesas, clientes, reservas, ventas y caja) en un archivo que puedes
+        abrir o llevar a otro sistema.
       </p>
       <a href="/panel/exportar" download className="boton-secundario inline-flex">
         <Icono nombre="externo" className="h-4 w-4" /> Descargar todos mis datos

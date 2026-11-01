@@ -305,11 +305,7 @@ export function EditorCarta({ restaurante, estaciones, categoriasIniciales, plat
             Añadir
           </button>
         </form>
-        <button
-          type="button"
-          onClick={() => setImportando(true)}
-          className="text-sm font-medium text-marca hover:underline"
-        >
+        <button type="button" onClick={() => setImportando(true)} className="text-sm font-medium text-marca hover:underline">
           Importar carta desde Excel
         </button>
         {importando && (

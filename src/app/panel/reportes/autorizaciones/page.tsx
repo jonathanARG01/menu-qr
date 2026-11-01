@@ -94,7 +94,12 @@ export default async function Autorizaciones() {
                       {f.motivo ? <span className="font-normal text-suave"> · “{f.motivo}”</span> : null}
                     </span>
                     <span className="block text-xs text-suave">
-                      {formatoFecha(f.created_at, region, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}{" "}
+                      {formatoFecha(f.created_at, region, {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}{" "}
                       · pidió {quien(f.pedido_por)}
                       {f.autorizado_por && f.autorizado_por !== f.pedido_por ? ` · autorizó ${quien(f.autorizado_por)}` : ""}
                     </span>

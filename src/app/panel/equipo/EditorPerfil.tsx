@@ -95,7 +95,9 @@ export function EditorPerfil({
       );
     }
     // Las fotos que se subieron y no quedaron, y la anterior si se cambió.
-    [...subidas.current, inicial.avatar].filter((u) => u && u !== avatar && u.startsWith("https://")).forEach((u) => borrarFoto(supabase, u));
+    [...subidas.current, inicial.avatar]
+      .filter((u) => u && u !== avatar && u.startsWith("https://"))
+      .forEach((u) => borrarFoto(supabase, u));
     olvidarEquipo();
     avisar("Perfil guardado");
     onGuardado();
@@ -187,7 +189,8 @@ export function EditorPerfil({
             <div>
               <p className="text-sm font-medium">Mesas a cargo</p>
               <p className="mb-2 text-xs text-suave">
-                Se abren a su nombre y el resto del equipo ve un aviso antes de atenderlas. Así dos meseros no van a la misma mesa.
+                Se abren a su nombre y el resto del equipo ve un aviso antes de atenderlas. Así dos meseros no van a la misma
+                mesa.
               </p>
               {mesas.length === 0 ? (
                 <p className="text-sm text-suave">Todavía no hay mesas en el plano.</p>

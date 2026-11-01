@@ -45,7 +45,8 @@ export function htmlTicket(lineas: LineaTicket[], ancho: AnchoTicket = anchoGuar
       if (l.tipo === "imagen") return `<img class="img" src="${escapar(l.src)}" style="max-height:${l.alto ?? 18}mm" alt="">`;
       if (l.tipo === "qr")
         return `<div class="qr"><img src="${escapar(l.url)}" alt="">${l.texto ? `<p class="s">${escapar(l.texto)}</p>` : ""}</div>`;
-      if (l.tipo === "texto") return `<p class="${l.fuerte ? "b" : ""} ${l.chico ? "s" : ""} ${l.centro ? "c" : ""}">${escapar(l.texto)}</p>`;
+      if (l.tipo === "texto")
+        return `<p class="${l.fuerte ? "b" : ""} ${l.chico ? "s" : ""} ${l.centro ? "c" : ""}">${escapar(l.texto)}</p>`;
       return `<div class="f ${l.fuerte ? "b" : ""}"><span>${escapar(l.izq)}</span>${l.der ? `<span>${escapar(l.der)}</span>` : ""}</div>${
         l.nota ? `<p class="s n">${escapar(l.nota)}</p>` : ""
       }`;
@@ -103,17 +104,19 @@ export async function imprimirTicket(lineas: LineaTicket[], ancho: AnchoTicket =
         }),
     );
     const cargadas = Promise.race([Promise.all(imagenes), new Promise((r) => setTimeout(r, 3000))]);
-    cargadas.then(() => setTimeout(() => {
-      try {
-        marco.contentWindow!.addEventListener("afterprint", terminar, { once: true });
-        marco.contentWindow!.focus();
-        marco.contentWindow!.print();
-      } catch {
-        terminar();
-      }
-      // Por si el navegador no avisa al terminar.
-      setTimeout(terminar, 60000);
-    }, 50));
+    cargadas.then(() =>
+      setTimeout(() => {
+        try {
+          marco.contentWindow!.addEventListener("afterprint", terminar, { once: true });
+          marco.contentWindow!.focus();
+          marco.contentWindow!.print();
+        } catch {
+          terminar();
+        }
+        // Por si el navegador no avisa al terminar.
+        setTimeout(terminar, 60000);
+      }, 50),
+    );
   });
 }
 

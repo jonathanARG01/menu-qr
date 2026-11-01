@@ -186,9 +186,7 @@ export function Caja({
       nota: nota.trim() || null,
     };
     setCortando(true);
-    const { error } = await supabase
-      .from("cierres_caja")
-      .insert({ restaurante_id: restaurante.id, ...foto, tipo: "parcial" });
+    const { error } = await supabase.from("cierres_caja").insert({ restaurante_id: restaurante.id, ...foto, tipo: "parcial" });
     setCortando(false);
     if (error && !/tipo/.test(error.message)) return avisar(mensajeError(error), "error");
     avisar(error ? "Corte impreso (para guardarlo falta el SQL 0023)" : "Corte parcial guardado");
@@ -205,9 +203,7 @@ export function Caja({
     await cargar();
   }
 
-  function imprimir(
-    c: Pick<Cierre, "desde" | "hasta" | "totales" | "efectivo_inicial" | "efectivo_contado" | "nota" | "tipo">,
-  ) {
+  function imprimir(c: Pick<Cierre, "desde" | "hasta" | "totales" | "efectivo_inicial" | "efectivo_contado" | "nota" | "tipo">) {
     const t = c.totales;
     const lineas: LineaTicket[] = [
       { tipo: "titulo", texto: esParcial(c) ? "Corte parcial (X)" : "Cierre de caja" },
@@ -711,7 +707,9 @@ function Gastos({
           value={detalle}
           onChange={(e) => setDetalle(e.target.value)}
           maxLength={120}
-          placeholder={tipo === "retiro" ? "Ej.: billetes grandes a la caja fuerte" : "¿En qué? Ej.: hielo, gas, propina al repartidor"}
+          placeholder={
+            tipo === "retiro" ? "Ej.: billetes grandes a la caja fuerte" : "¿En qué? Ej.: hielo, gas, propina al repartidor"
+          }
           className="campo"
           aria-label="Detalle del gasto"
           required
@@ -771,7 +769,8 @@ function Gastos({
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium">{g.detalle}</span>
                 <span className="block text-xs text-suave" suppressHydrationWarning>
-                  {hora(g.created_at)} · {esRetiro(g) ? "Retiro a caja fuerte" : [g.categoria, g.proveedor, g.medio].filter(Boolean).join(" · ")}
+                  {hora(g.created_at)} ·{" "}
+                  {esRetiro(g) ? "Retiro a caja fuerte" : [g.categoria, g.proveedor, g.medio].filter(Boolean).join(" · ")}
                 </span>
               </span>
               <span className="font-semibold tabular-nums">{formato(Number(g.monto))}</span>
@@ -794,8 +793,8 @@ function Gastos({
         </ul>
       )}
       <p className="mt-2 text-xs text-suave">
-        Los gastos en efectivo y los retiros a la caja fuerte se restan del efectivo esperado. El reporte mensual por
-        categoría está en Reportes → Gastos.
+        Los gastos en efectivo y los retiros a la caja fuerte se restan del efectivo esperado. El reporte mensual por categoría
+        está en Reportes → Gastos.
       </p>
     </section>
   );

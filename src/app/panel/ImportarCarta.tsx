@@ -37,12 +37,7 @@ const ALIAS: Record<keyof Omit<Fila, "error">, RegExp> = {
   etiquetas: /^(etiqueta|tags?)/i,
 };
 
-const sinTildes = (t: string) =>
-  t
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
+const sinTildes = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
 // "$12.990" → 12990 · "12.990,50" → 12990.5 · "4,5" → 4.5 · "1,200" → 1200.
 export function leerPrecio(texto: string): number | null {
@@ -68,7 +63,11 @@ export function leerPrecio(texto: string): number | null {
 export function leerTabla(texto: string): string[][] {
   const limpio = texto.replace(/^﻿/, "");
   const primera = limpio.split(/\r?\n/)[0] ?? "";
-  const sep = primera.includes("\t") ? "\t" : (primera.match(/;/g)?.length ?? 0) >= (primera.match(/,/g)?.length ?? 0) ? ";" : ",";
+  const sep = primera.includes("\t")
+    ? "\t"
+    : (primera.match(/;/g)?.length ?? 0) >= (primera.match(/,/g)?.length ?? 0)
+      ? ";"
+      : ",";
   const filas: string[][] = [];
   let fila: string[] = [];
   let celda = "";
@@ -225,8 +224,7 @@ export function ImportarCarta({
             );
           continue;
         }
-        const orden =
-          ordenPorCategoria.get(categoria_id) ?? platos.filter((p) => p.categoria_id === categoria_id).length;
+        const orden = ordenPorCategoria.get(categoria_id) ?? platos.filter((p) => p.categoria_id === categoria_id).length;
         ordenPorCategoria.set(categoria_id, orden + 1);
         crear.push({
           restaurante_id: restauranteId,
@@ -267,8 +265,8 @@ export function ImportarCarta({
           <div>
             <h2 className="text-lg font-semibold">Importar carta desde Excel</h2>
             <p className="mt-1 text-sm text-suave">
-              Columnas: <strong>{COLUMNAS.join(" · ")}</strong>. Solo Plato y Precio son obligatorias. Sirve también el
-              Excel que exportan Fudo, Toteat u otros sistemas (se reconocen los nombres de columna más comunes).
+              Columnas: <strong>{COLUMNAS.join(" · ")}</strong>. Solo Plato y Precio son obligatorias. Sirve también el Excel que
+              exportan Fudo, Toteat u otros sistemas (se reconocen los nombres de columna más comunes).
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-sm">
@@ -277,7 +275,12 @@ export function ImportarCarta({
             </button>
             <label className="boton-secundario cursor-pointer">
               Subir CSV
-              <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" className="hidden" onChange={(e) => leerArchivo(e.target.files?.[0])} />
+              <input
+                type="file"
+                accept=".csv,.txt,.tsv,.xls,.xlsx"
+                className="hidden"
+                onChange={(e) => leerArchivo(e.target.files?.[0])}
+              />
             </label>
           </div>
           <label className="block text-sm">
@@ -295,7 +298,12 @@ export function ImportarCarta({
             <>
               <p className="text-sm">
                 <strong>{validas.length}</strong> platos listos
-                {nuevas.length > 0 && <> · {nuevas.length} categorías nuevas ({nuevas.join(", ")})</>}
+                {nuevas.length > 0 && (
+                  <>
+                    {" "}
+                    · {nuevas.length} categorías nuevas ({nuevas.join(", ")})
+                  </>
+                )}
                 {filas.length - validas.length > 0 && (
                   <span className="text-red-600"> · {filas.length - validas.length} filas con error (no se importan)</span>
                 )}
@@ -326,7 +334,9 @@ export function ImportarCarta({
                         </td>
                         <td className="px-2 py-1.5 text-right tabular-nums">
                           {f.precio !== null ? formato(f.precio) : "—"}
-                          {f.precio_llevar !== null && <span className="block text-suave">llevar {formato(f.precio_llevar)}</span>}
+                          {f.precio_llevar !== null && (
+                            <span className="block text-suave">llevar {formato(f.precio_llevar)}</span>
+                          )}
                         </td>
                         <td className="px-2 py-1.5 text-suave">
                           {f.error ? <span className="text-red-600">{f.error}</span> : platoExistente(f) ? "ya existe" : "nuevo"}

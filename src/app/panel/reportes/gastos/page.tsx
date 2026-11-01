@@ -53,11 +53,13 @@ export default async function ReporteGastos({ searchParams }: { searchParams: Pr
   const formato = (n: number) => formatoPrecio(n, restaurante.moneda);
   const total = gastos.reduce((s, g) => s + Number(g.monto), 0);
   const porCategoria = new Map<string, number>();
-  for (const g of gastos) porCategoria.set(g.categoria ?? "Otros", (porCategoria.get(g.categoria ?? "Otros") ?? 0) + Number(g.monto));
+  for (const g of gastos)
+    porCategoria.set(g.categoria ?? "Otros", (porCategoria.get(g.categoria ?? "Otros") ?? 0) + Number(g.monto));
   const categorias = [...porCategoria].sort((a, b) => b[1] - a[1]);
   const maximo = Math.max(1, ...categorias.map((c) => c[1]));
   const nombreMes = formatoFecha(`${mes}-15T12:00:00Z`, { ...region, zona: "UTC" }, { month: "long", year: "numeric" });
-  const fecha = (iso: string) => formatoFecha(iso, region, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const fecha = (iso: string) =>
+    formatoFecha(iso, region, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="space-y-5">
@@ -68,11 +70,19 @@ export default async function ReporteGastos({ searchParams }: { searchParams: Pr
           <p className="text-sm text-suave">Lo anotado en Caja, por categoría. Expórtalo para tu contador.</p>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Link href={`/panel/reportes/gastos?mes=${mesAnterior}`} className="boton-secundario px-3 py-1.5" aria-label="Mes anterior">
+          <Link
+            href={`/panel/reportes/gastos?mes=${mesAnterior}`}
+            className="boton-secundario px-3 py-1.5"
+            aria-label="Mes anterior"
+          >
             ←
           </Link>
           <span className="min-w-32 text-center font-medium capitalize">{nombreMes}</span>
-          <Link href={`/panel/reportes/gastos?mes=${mesSiguiente}`} className="boton-secundario px-3 py-1.5" aria-label="Mes siguiente">
+          <Link
+            href={`/panel/reportes/gastos?mes=${mesSiguiente}`}
+            className="boton-secundario px-3 py-1.5"
+            aria-label="Mes siguiente"
+          >
             →
           </Link>
           <ExportarGastos

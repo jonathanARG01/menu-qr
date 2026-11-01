@@ -54,7 +54,12 @@ export default async function RankingProductos({
   ]);
 
   const enlace = (cambios: Record<string, string | number>) => {
-    const p = new URLSearchParams({ dias: String(dias), canal, orden, ...Object.fromEntries(Object.entries(cambios).map(([k, v]) => [k, String(v)])) });
+    const p = new URLSearchParams({
+      dias: String(dias),
+      canal,
+      orden,
+      ...Object.fromEntries(Object.entries(cambios).map(([k, v]) => [k, String(v)])),
+    });
     return `/panel/reportes/productos?${p}`;
   };
 
@@ -176,7 +181,9 @@ export default async function RankingProductos({
         <Dato
           titulo="Vendido"
           valor={formato(total)}
-          nota={variacion(total, totalAntes) === null ? undefined : `${signo(variacion(total, totalAntes)!)} vs. período anterior`}
+          nota={
+            variacion(total, totalAntes) === null ? undefined : `${signo(variacion(total, totalAntes)!)} vs. período anterior`
+          }
         />
         <Dato titulo="Unidades" valor={formatoNumero(unidades, region)} />
         <Dato titulo="Productos distintos" valor={String(lista.length)} />
@@ -221,9 +228,7 @@ export default async function RankingProductos({
                         {p.categoria} · {orden === "monto" ? `${p.unidades} u.` : formato(p.monto)} ·{" "}
                         {total ? Math.round((p.monto / total) * 100) : 0}% de la venta
                       </span>
-                      {v !== null && (
-                        <span className={v >= 0 ? "text-emerald-700" : "text-red-600"}>{signo(v)}</span>
-                      )}
+                      {v !== null && <span className={v >= 0 ? "text-emerald-700" : "text-red-600"}>{signo(v)}</span>}
                     </span>
                   </span>
                 </li>

@@ -212,8 +212,8 @@ export function Descuento({
             "Los platos vuelven a su precio de carta."
           ) : (
             <>
-              Se descuentan <strong className="tabular-nums">{formato(descuento)}</strong> de {formato(base)}. Reemplaza
-              cualquier descuento anterior sobre esos platos.
+              Se descuentan <strong className="tabular-nums">{formato(descuento)}</strong> de {formato(base)}. Reemplaza cualquier
+              descuento anterior sobre esos platos.
             </>
           )}
         </p>
