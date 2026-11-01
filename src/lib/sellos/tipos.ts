@@ -21,6 +21,7 @@ export type ProgramaSellos = {
   max_por_dia: number;
   color: string;
   icono: IconoSello;
+  diseno: DisenoSello;
   condiciones: string;
 };
 
@@ -34,6 +35,7 @@ export const PROGRAMA_BASE: ProgramaSellos = {
   max_por_dia: 1,
   color: "#23345c",
   icono: "cafe",
+  diseno: "clasica",
   condiciones: "",
 };
 
@@ -54,6 +56,24 @@ export const ICONOS_SELLO = {
 } as const;
 export type IconoSello = keyof typeof ICONOS_SELLO;
 export const emojiSello = (i: string | undefined) => ICONOS_SELLO[(i ?? "") as IconoSello] ?? ICONOS_SELLO.estrella;
+
+// Diseños de la tarjeta (columna sellos_programas.diseno, migración 0025). Todos usan el color, el logo y el dibujo del local.
+export const DISENOS_SELLO = {
+  clasica: { nombre: "Clásica", texto: "Tu color, simple y clara." },
+  boleto: { nombre: "Boleto", texto: "Ticket de papel con troquel y código de barras." },
+  epoca: { nombre: "De época", texto: "Papel crema, marco ornamental y sellos de goma." },
+  neon: { nombre: "Neón", texto: "Fondo oscuro con sellos que brillan." },
+  pasaporte: { nombre: "Pasaporte", texto: "Letras doradas y un sello distinto en cada visita." },
+  editorial: { nombre: "Editorial", texto: "Blanca, mínima, con el número en grande." },
+  aurora: { nombre: "Aurora", texto: "Degradado de tu color con vidrio esmerilado." },
+  pizarra: { nombre: "Pizarra", texto: "Tiza sobre pizarra con marco de madera." },
+  camino: { nombre: "Camino", texto: "Cada sello avanza por un camino hasta el premio." },
+  circulo: { nombre: "Círculo", texto: "Los sellos rodean tu logo como un reloj." },
+  pop: { nombre: "Pop", texto: "Bordes gruesos, sombra dura y puntos de cómic." },
+  premium: { nombre: "Premium", texto: "Negra con dorado, como una tarjeta de crédito." },
+} as const;
+export type DisenoSello = keyof typeof DISENOS_SELLO;
+export const disenoSello = (d: string | undefined): DisenoSello => (d && d in DISENOS_SELLO ? (d as DisenoSello) : "clasica");
 
 export type EstadoTarjeta = {
   codigo: string;

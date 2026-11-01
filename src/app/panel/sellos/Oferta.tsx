@@ -15,6 +15,7 @@ const VENTAJAS = [
   "El sello se suma solo: el cliente escanea el QR de la precuenta.",
   "Avisos al celular: “te falta 1 sello”, “tu premio está listo”.",
   "El mesero canjea el premio con su PIN, y todo queda registrado.",
+  "12 diseños para elegir (boleto, pasaporte, neón, pizarra, premium y más), con tu logo y tu color.",
   "Reemplaza la tarjeta de cartón: no se pierde y sabes quién vuelve.",
 ];
 

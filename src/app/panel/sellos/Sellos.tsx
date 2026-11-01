@@ -9,6 +9,7 @@ import { useAutorizar } from "@/components/Autorizar";
 import { TarjetaVisual } from "@/components/sellos/TarjetaVisual";
 import { avisarTarjeta } from "@/lib/sellos/cliente";
 import {
+  DISENOS_SELLO,
   ICONOS_SELLO,
   PROGRAMA_BASE,
   codigoDeEscaneo,
@@ -16,6 +17,7 @@ import {
   rutaUnirse,
   textoRegla,
   type FilaTarjeta,
+  type DisenoSello,
   type IconoSello,
   type ProgramaSellos,
 } from "@/lib/sellos/tipos";
@@ -686,9 +688,18 @@ function Configurar({
     e.preventDefault();
     setGuardando(true);
     const fila = { ...p, premio: p.premio.trim() || PROGRAMA_BASE.premio, condiciones: p.condiciones.trim() };
-    const { error } = await supabase.from("sellos_programas").upsert({ restaurante_id: restaurante.id, ...fila });
+    let { error } = await supabase.from("sellos_programas").upsert({ restaurante_id: restaurante.id, ...fila });
+    // Sin la migración 0025 no existe la columna del diseño: se guarda el resto y se avisa.
+    let sinDiseno = false;
+    if (error && /diseno/.test(error.message)) {
+      const { diseno: _omitido, ...resto } = fila;
+      void _omitido;
+      ({ error } = await supabase.from("sellos_programas").upsert({ restaurante_id: restaurante.id, ...resto }));
+      sinDiseno = !error;
+    }
     setGuardando(false);
     if (error) return avisar(mensajeError(error), "error");
+    if (sinDiseno) avisar("Se guardó todo menos el diseño: falta ejecutar el SQL 0025_sellos_disenos.sql en Supabase.", "error");
     onGuardado(fila);
     avisar(nueva ? "Tarjeta lista. Ya puedes imprimir el QR para unirse." : "Tarjeta guardada");
   }
@@ -794,7 +805,39 @@ function Configurar({
         </section>
 
         <section className="tarjeta space-y-4 p-5">
-          <h2 className="font-semibold">Diseño</h2>
+          <div>
+            <h2 className="font-semibold">Diseño</h2>
+            <p className="text-sm text-suave">Elige el estilo. Todos usan tu logo, tu color y el dibujo de los sellos.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {(Object.keys(DISENOS_SELLO) as DisenoSello[]).map((dis) => (
+              <button
+                key={dis}
+                type="button"
+                onClick={() => cambiar({ diseno: dis })}
+                aria-pressed={p.diseno === dis}
+                className={`group flex flex-col overflow-hidden rounded-2xl border text-left transition ${
+                  p.diseno === dis ? "border-marca ring-2 ring-marca/30" : "border-borde hover:border-marca/50"
+                }`}
+              >
+                <span className="pointer-events-none flex h-40 items-start justify-center overflow-hidden bg-fondo pt-3" aria-hidden>
+                  <span className="w-[384px] shrink-0" style={{ zoom: 0.4 }}>
+                    <TarjetaVisual
+                      local={restaurante.nombre}
+                      logo={restaurante.logo_url}
+                      programa={{ ...p, meta: Math.min(p.meta, 10), diseno: dis }}
+                      sellos={Math.min(p.meta, 10) - 3}
+                      nombre="Camila"
+                    />
+                  </span>
+                </span>
+                <span className="border-t border-borde px-3 py-2">
+                  <span className="block text-sm font-semibold">{DISENOS_SELLO[dis].nombre}</span>
+                  <span className="block text-xs leading-snug text-suave">{DISENOS_SELLO[dis].texto}</span>
+                </span>
+              </button>
+            ))}
+          </div>
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <label className="flex items-center gap-2">
               Color
