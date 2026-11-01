@@ -55,15 +55,16 @@ Stack: Next.js 15 (App Router) + Supabase (Postgres, Auth, Storage, RLS) + Verce
 - El envío diario (`/api/recordatorios`, Vercel Cron) avisa cuando quedan 4 días y 1 día y, al vencer, pausa la carta (el cliente ve "estamos actualizando la carta"). En `/admin` puedes extenderla, quitarle el vencimiento o ponerle un plan (eso la reactiva y anota el inicio del plan).
 - Variables en Vercel: `CRON_SECRET` y `SUPABASE_SERVICE_ROLE_KEY` (obligatorias para el envío diario). Opcionales: `NEXT_PUBLIC_WHATSAPP_VENTAS` (cambia el WhatsApp del botón "Quiero contratar"; por defecto +56 9 4149 7083), `RESEND_API_KEY` + `AVISOS_CORREO_DE` (correo con dominio verificado en resend.com) + `AVISOS_CORREO_ADMIN` (dónde te llegan a ti) para mandar los avisos por correo.
 
-## Platovi Sellos (migración 0024)
+## Platovi Loyalty: tarjetas de sellos (migraciones 0024, 0025 y 0026)
 
 Tarjeta digital de sellos que se contrata aparte del plan ($12.990/mes por local, $19.990 Grupo). Reemplaza al antiguo "premio cada N visitas".
 
-- Se activa por restaurante en `/admin` (interruptor "Sellos"). El local arma su tarjeta en `/panel/sellos` (sellos, premio, regla por visita o por monto, colores) y descarga el QR para unirse.
+- Se activa por restaurante en `/admin` (interruptor "Loyalty"). El local arma su tarjeta en `/panel/sellos` (sellos, premio, regla por visita o por monto, colores) y descarga el QR para unirse.
 - El cliente se une en `/s/unirse/<slug>` y su tarjeta queda en `/s/<código>`. La precuenta trae un QR de un solo uso (24 h) que suma el sello de esa visita; si la mesa se anula, el sello se quita.
 - El mesero suma o canjea desde `/panel/sellos`, desde la ficha de la mesa ("Ver tarjeta") o escaneando la tarjeta con la cámara del celular con su sesión iniciada. Con "Pedir PIN de encargado" activo, un mesero necesita el PIN.
 - Avisos al celular de la tarjeta web: usan las mismas claves VAPID y `SUPABASE_SERVICE_ROLE_KEY`.
 - Google Wallet (opcional): `GOOGLE_WALLET_ISSUER_ID`, `GOOGLE_WALLET_CLIENT_EMAIL` y `GOOGLE_WALLET_PRIVATE_KEY` (cuenta de emisor en Google Pay & Wallet Console y una cuenta de servicio de Google Cloud con acceso). Sin ellas el botón no aparece.
+- "Para que vuelvan" (0026): días de sello doble, invitación a reseña de Google tras el sello, y el cron diario `/api/sellos/campanas` (vercel.json) que manda el saludo de cumpleaños y el "te extrañamos" con sus sellos de regalo. Usa `CRON_SECRET` y `SUPABASE_SERVICE_ROLE_KEY`.
 - Todo vive en `src/lib/sellos`, `src/app/s`, `src/app/panel/sellos`, `src/app/api/sellos` y las tablas `sellos_*`, para poder separarlo después como producto independiente.
 
 Las fotos de `public/demo/cafe` salen de una infografía de terceros y son solo para la demo: para clientes reales usa fotos propias o libres de derechos.
@@ -74,7 +75,7 @@ Las fotos de `public/demo/cafe` salen de una infografía de terceros y son solo 
 src/app/[slug]/          carta pública
 src/app/panel/           panel del dueño (carta, marca, qr, sucursales, estadísticas)
 src/app/admin/           administración del servicio (superadmin)
-src/app/s/               tarjeta de sellos del cliente (Platovi Sellos)
+src/app/s/               tarjeta de sellos del cliente (Platovi Loyalty)
 src/components/carta/    diseños de la carta, idiomas, pedidos y barra inferior
 src/app/login|registro|recuperar|nueva-clave/
 src/app/auth/confirm/    enlaces de correo (confirmar cuenta, recuperar contraseña)

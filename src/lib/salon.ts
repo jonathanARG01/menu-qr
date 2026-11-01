@@ -52,7 +52,7 @@ export const SECCIONES: InfoSeccion[] = [
   { id: "estadisticas", href: "/panel/estadisticas", texto: "Estadísticas", grupo: "Negocio", ayuda: "Visitas y lo más pedido" },
   { id: "reportes", href: "/panel/reportes", texto: "Reportes", grupo: "Negocio", ayuda: "Ventas y propinas por mesero" },
   { id: "clientes", href: "/panel/clientes", texto: "Clientes", grupo: "Negocio", ayuda: "Clientes frecuentes" },
-  { id: "sellos", href: "/panel/sellos", texto: "Tarjeta de sellos", grupo: "Negocio", ayuda: "Sellos y premios en el celular" },
+  { id: "sellos", href: "/panel/sellos", texto: "Loyalty Cards", grupo: "Negocio", ayuda: "Tarjetas de sellos y premios en el celular" },
   { id: "sucursales", href: "/panel/sucursales", texto: "Sucursales", grupo: "Negocio", ayuda: "Locales del mismo negocio" },
   { id: "equipo", href: "/panel/equipo", texto: "Equipo", grupo: "Negocio", ayuda: "Meseros, cocina y administradores" },
   {

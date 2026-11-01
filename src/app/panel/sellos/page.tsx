@@ -3,7 +3,7 @@ import { PROGRAMA_BASE, sellosContratado, type FilaTarjeta, type ProgramaSellos 
 import { OfertaSellos } from "./Oferta";
 import { Sellos } from "./Sellos";
 
-export const metadata = { title: "Tarjeta de sellos · Platovi" };
+export const metadata = { title: "Loyalty Cards · Platovi" };
 export const dynamic = "force-dynamic";
 
 export default async function PanelSellos() {

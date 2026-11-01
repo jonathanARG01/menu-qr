@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { TarjetaVisual } from "@/components/sellos/TarjetaVisual";
 import { Inclinable } from "@/components/sellos/Inclinable";
 import { guardarTarjeta, tarjetaGuardada } from "@/lib/sellos/cliente";
-import { rutaTarjeta, type ProgramaSellos } from "@/lib/sellos/tipos";
+import { rutaTarjeta, textoDias, type ProgramaSellos } from "@/lib/sellos/tipos";
 import { mensajeError } from "@/lib/utils";
 
 export type DatosUnirse = {
@@ -78,6 +78,11 @@ export function Unirse({ datos, sello }: { datos: DatosUnirse; sello: string | n
         <Inclinable giroscopio>
           <TarjetaVisual local={r.nombre} logo={r.logo_url} programa={p} sellos={p.bienvenida} nombre={nombre || undefined} />
         </Inclinable>
+        {p.dias_dobles?.length > 0 && (
+          <p className="rounded-full bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-900">
+            🔥 {textoDias(p.dias_dobles)}: sello doble
+          </p>
+        )}
         {p.bienvenida > 0 && (
           <p className="-mt-3 text-center text-sm font-medium text-emerald-700">
             {p.bienvenida === 1 ? "Empiezas con 1 sello de regalo" : `Empiezas con ${p.bienvenida} sellos de regalo`}
@@ -147,7 +152,7 @@ export function Unirse({ datos, sello }: { datos: DatosUnirse; sello: string | n
           </button>
           {p.condiciones && <p className="text-xs text-suave">{p.condiciones}</p>}
         </form>
-        <p className="text-xs text-suave">Tarjeta digital por Platovi</p>
+        <p className="text-xs text-suave">Platovi Loyalty</p>
       </div>
     </main>
   );

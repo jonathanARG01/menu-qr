@@ -7,7 +7,7 @@ import { useAutorizar } from "@/components/Autorizar";
 import { TarjetaVisual } from "@/components/sellos/TarjetaVisual";
 import { Inclinable } from "@/components/sellos/Inclinable";
 import { avisarTarjeta, guardarTarjeta, suscribirTarjeta } from "@/lib/sellos/cliente";
-import { PROGRAMA_BASE, faltan, type TarjetaPublica } from "@/lib/sellos/tipos";
+import { PROGRAMA_BASE, faltan, textoDias, type TarjetaPublica } from "@/lib/sellos/tipos";
 import { iphoneSinInstalar, soportaPush } from "@/lib/push";
 import { qrSvg } from "@/lib/qr";
 import { mensajeError, urlSitio } from "@/lib/utils";
@@ -18,6 +18,8 @@ const TEXTO_ORIGEN: Record<string, string> = {
   bienvenida: "Sello de bienvenida",
   migracion: "Visitas anteriores",
   anulada: "Visita anulada",
+  cumpleanos: "Regalo de cumpleaños 🎂",
+  regreso: "Regalo por volver",
 };
 
 export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPublica; googleWallet: boolean }) {
@@ -35,6 +37,23 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
   const [equipo, setEquipo] = useState<{ pidePin: boolean } | null>(null);
   const { pedir: autorizar, dialogo } = useAutorizar();
   const [trabajando, setTrabajando] = useState(false);
+  // Después de sumar un sello con el QR, invitar a dejar reseña en Google (una vez cada 60 días en este celular).
+  const [pedirResena, setPedirResena] = useState(false);
+  const [resenaVista, setResenaVista] = useState(true);
+  useEffect(() => {
+    try {
+      const vista = Number(localStorage.getItem(`sellos-resena:${t.restaurante.slug}`) || 0);
+      setResenaVista(Date.now() - vista < 60 * 86400000);
+    } catch {
+      setResenaVista(false);
+    }
+  }, [t.restaurante.slug]);
+  function marcarResena() {
+    setResenaVista(true);
+    try {
+      localStorage.setItem(`sellos-resena:${t.restaurante.slug}`, String(Date.now()));
+    } catch {}
+  }
 
   const recargar = useCallback(async () => {
     const { data } = await supabase.rpc("sellos_tarjeta", { p_codigo: t.codigo });
@@ -54,9 +73,18 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
     router.replace(ruta, { scroll: false });
     supabase.rpc("sellos_sumar_qr", { p_tarjeta: t.codigo, p_codigo: sello }).then(async ({ data, error }) => {
       if (error) return setAviso({ tipo: "error", texto: mensajeError(error) });
-      const n = Number((data as { sumados?: number })?.sumados ?? 1);
+      const r = (data ?? {}) as { sumados?: number; doble?: boolean };
+      const n = Number(r.sumados ?? 1);
       setNuevos(n);
-      setAviso({ tipo: "ok", texto: n === 1 ? "¡Sumaste un sello por tu visita!" : `¡Sumaste ${n} sellos por tu visita!` });
+      setAviso({
+        tipo: "ok",
+        texto: r.doble
+          ? `¡Día de sello doble! Sumaste ${n} sellos por tu visita.`
+          : n === 1
+            ? "¡Sumaste un sello por tu visita!"
+            : `¡Sumaste ${n} sellos por tu visita!`,
+      });
+      setPedirResena(true);
       await recargar();
       avisarTarjeta(t.codigo);
     });
@@ -107,7 +135,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
     });
     if (!ok) return;
     setTrabajando(true);
-    const { error } = await supabase.rpc("sellos_sumar_manual", {
+    const { data, error } = await supabase.rpc("sellos_sumar_manual", {
       p_tarjeta: t.codigo,
       p_cantidad: cantidad,
       p_pin: ok.pin,
@@ -115,8 +143,13 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
     });
     setTrabajando(false);
     if (error) return setAviso({ tipo: "error", texto: mensajeError(error) });
-    setNuevos(Math.max(0, cantidad));
-    setAviso({ tipo: "ok", texto: cantidad > 0 ? "Sello sumado" : "Sello quitado" });
+    const r = (data ?? {}) as { sumados?: number; doble?: boolean };
+    const sumados = r.sumados ?? cantidad;
+    setNuevos(Math.max(0, sumados));
+    setAviso({
+      tipo: "ok",
+      texto: sumados > 0 ? (r.doble ? `Día de sello doble: ${sumados} sellos sumados` : "Sello sumado") : "Sello quitado",
+    });
     await recargar();
     avisarTarjeta(t.codigo);
   }
@@ -160,6 +193,35 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
           </p>
         )}
 
+        {pedirResena && !resenaVista && t.restaurante.resena_url && (
+          <section className="w-full rounded-2xl bg-white p-4 text-center shadow-sm ring-1 ring-black/5">
+            <p className="text-2xl" aria-hidden>
+              ⭐⭐⭐⭐⭐
+            </p>
+            <p className="mt-1 font-semibold">¿Te gustó tu visita a {t.restaurante.nombre}?</p>
+            <p className="text-sm text-suave">Tu reseña en Google nos ayuda muchísimo. Toma menos de un minuto.</p>
+            <div className="mt-3 flex justify-center gap-2">
+              <a
+                href={t.restaurante.resena_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={marcarResena}
+                className="boton"
+              >
+                Dejar mi reseña
+              </a>
+              <button type="button" className="boton-secundario" onClick={marcarResena}>
+                Ahora no
+              </button>
+            </div>
+          </section>
+        )}
+        {t.dia_doble && t.activa && (
+          <p className="w-full rounded-xl bg-amber-100 px-4 py-3 text-center text-sm font-semibold text-amber-900">
+            🔥 Hoy es día de sello doble: cada sello vale 2.
+          </p>
+        )}
+
         <Inclinable giroscopio>
           <TarjetaVisual
             local={t.restaurante.nombre}
@@ -186,6 +248,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
               : `Te faltan ${restan} sellos para ${p.premio}.`}{" "}
           {p.regla === "monto" ? "Sumas sellos según tu consumo." : "Sumas un sello en cada visita."} Escanea el QR de tu cuenta
           para sumarlo.
+          {p.dias_dobles.length > 0 && ` ${textoDias(p.dias_dobles)}: sello doble.`}
         </p>
 
         {equipo && (
@@ -262,7 +325,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
           </section>
         )}
         {p.condiciones && <p className="text-center text-xs text-suave">{p.condiciones}</p>}
-        <p className="text-xs text-suave">Tarjeta digital por Platovi · {t.total_sellos} sellos en total</p>
+        <p className="text-xs text-suave">Platovi Loyalty · {t.total_sellos} sellos en total</p>
       </div>
       {dialogo}
     </main>
