@@ -165,7 +165,7 @@ export function TomarPedido({
   const unidades = lineas.reduce((t, l) => t + l.cantidad, 0);
 
   return (
-    <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[1fr_320px]">
+    <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-h-0 flex-col gap-3">
         <input
           type="search"
@@ -260,12 +260,12 @@ export function TomarPedido({
                     </button>
                   </span>
                 </div>
-                <div className="mt-1.5 flex gap-1.5">
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
                   <input
                     value={l.nota}
                     onChange={(e) => cambiar(l.clave, { nota: e.target.value.slice(0, 120) })}
                     placeholder="Nota (sin sal, a punto…)"
-                    className="min-w-0 flex-1 rounded-lg border border-borde px-2 py-1 text-xs"
+                    className="w-full min-w-0 rounded-lg border border-borde px-2 py-1 text-xs sm:w-auto sm:flex-1"
                   />
                   <select
                     value={l.comensal ?? ""}

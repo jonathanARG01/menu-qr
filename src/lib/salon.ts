@@ -144,6 +144,8 @@ export type Ajustes = {
   miniaturas: boolean;
   // Foto, emoji o iniciales de cada persona del equipo en el plano, la mesa y las comandas.
   avatares: boolean;
+  // Orden del equipo que eligió el administrador (correos, de arriba abajo). Los que no figuran van al final.
+  orden_equipo: string[];
   // Total de referencia en otras monedas (para turistas): cuánto vale 1 unidad de cada una en la moneda del local.
   otras_monedas: OtraMoneda[];
 };
@@ -184,6 +186,7 @@ export const AJUSTES_BASE: Ajustes = {
   redes: REDES_VACIAS,
   miniaturas: true,
   avatares: true,
+  orden_equipo: [],
   otras_monedas: [],
 };
 
@@ -213,6 +216,7 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
     redes: leerRedes(g.redes),
     miniaturas: g.miniaturas !== false,
     avatares: g.avatares !== false,
+    orden_equipo: listaTextos(g.orden_equipo, []).slice(0, 200),
     otras_monedas: Array.isArray(g.otras_monedas)
       ? g.otras_monedas
           .map((m) => ({

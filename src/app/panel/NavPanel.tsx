@@ -113,7 +113,8 @@ export function MarcoPanel(props: Props) {
         </div>
       )}
 
-      <div className="pb-28 lg:pb-10 lg:pl-[16.5rem]">
+      {/* overflow-x-clip: nada de la pantalla puede generar scroll horizontal en el celular. */}
+      <div className="overflow-x-clip pb-28 lg:pb-10 lg:pl-[16.5rem]">
         <BarraSuperior {...props} botonTema={botonTema} />
         {!enLinea && (
           <p
