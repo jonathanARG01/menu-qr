@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { TarjetaVisual } from "@/components/sellos/TarjetaVisual";
+import { Inclinable } from "@/components/sellos/Inclinable";
 import { guardarTarjeta, tarjetaGuardada } from "@/lib/sellos/cliente";
 import { rutaTarjeta, type ProgramaSellos } from "@/lib/sellos/tipos";
 import { mensajeError } from "@/lib/utils";
@@ -74,7 +75,9 @@ export function Unirse({ datos, sello }: { datos: DatosUnirse; sello: string | n
           </p>
         </div>
 
-        <TarjetaVisual local={r.nombre} logo={r.logo_url} programa={p} sellos={p.bienvenida} nombre={nombre || undefined} />
+        <Inclinable giroscopio>
+          <TarjetaVisual local={r.nombre} logo={r.logo_url} programa={p} sellos={p.bienvenida} nombre={nombre || undefined} />
+        </Inclinable>
         {p.bienvenida > 0 && (
           <p className="-mt-3 text-center text-sm font-medium text-emerald-700">
             {p.bienvenida === 1 ? "Empiezas con 1 sello de regalo" : `Empiezas con ${p.bienvenida} sellos de regalo`}

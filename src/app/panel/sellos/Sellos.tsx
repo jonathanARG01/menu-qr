@@ -7,6 +7,7 @@ import { Icono } from "@/components/Icono";
 import { Interruptor } from "@/components/Interruptor";
 import { useAutorizar } from "@/components/Autorizar";
 import { TarjetaVisual } from "@/components/sellos/TarjetaVisual";
+import { Inclinable } from "@/components/sellos/Inclinable";
 import { avisarTarjeta } from "@/lib/sellos/cliente";
 import {
   DISENOS_SELLO,
@@ -369,7 +370,10 @@ function FichaTarjeta({
 
   async function sumar(n: number) {
     const ok = await autorizar({
-      titulo: n > 0 ? `¿Sumar ${n === 1 ? "un sello" : `${n} sellos`} a ${t.nombre}?` : `¿Quitar ${-n === 1 ? "un sello" : `${-n} sellos`}?`,
+      titulo:
+        n > 0
+          ? `¿Sumar ${n === 1 ? "un sello" : `${n} sellos`} a ${t.nombre}?`
+          : `¿Quitar ${-n === 1 ? "un sello" : `${-n} sellos`}?`,
       pin: pidePin,
       motivo: n > 0 ? "no" : "opcional",
       ejemplos: n > 0 ? undefined : ["Sello por error", "Se equivocó de tarjeta"],
@@ -391,7 +395,12 @@ function FichaTarjeta({
   }
 
   async function canjear() {
-    const ok = await autorizar({ titulo: `¿Canjear ${programa.premio}?`, detalle: `Para ${t.nombre}.`, pin: pidePin, motivo: "no" });
+    const ok = await autorizar({
+      titulo: `¿Canjear ${programa.premio}?`,
+      detalle: `Para ${t.nombre}.`,
+      pin: pidePin,
+      motivo: "no",
+    });
     if (!ok) return;
     setTrabajando(true);
     const { error } = await supabase.rpc("sellos_canjear", { p_tarjeta: t.codigo, p_pin: ok.pin });
@@ -444,18 +453,25 @@ function FichaTarjeta({
         </div>
         <div className="space-y-5 px-5 py-5">
           <div className="flex justify-center">
-            <TarjetaVisual
-              local={restaurante.nombre}
-              logo={restaurante.logo_url}
-              programa={programa}
-              sellos={t.sellos}
-              premios={t.premios}
-              nombre={t.nombre}
-            />
+            <Inclinable>
+              <TarjetaVisual
+                local={restaurante.nombre}
+                logo={restaurante.logo_url}
+                programa={programa}
+                sellos={t.sellos}
+                premios={t.premios}
+                nombre={t.nombre}
+              />
+            </Inclinable>
           </div>
 
           {t.premios > 0 && (
-            <button type="button" className="boton w-full bg-emerald-600 py-3 hover:bg-emerald-700" disabled={trabajando} onClick={canjear}>
+            <button
+              type="button"
+              className="boton w-full bg-emerald-600 py-3 hover:bg-emerald-700"
+              disabled={trabajando}
+              onClick={canjear}
+            >
               <Icono nombre="regalo" className="h-5 w-5" /> Canjear {programa.premio}
             </button>
           )}
@@ -535,9 +551,18 @@ function FichaTarjeta({
                 {movimientos.map((m, i) => (
                   <li key={i} className="flex items-center justify-between gap-3 px-3 py-2">
                     <span>
-                      {m.tipo === "canje" ? "Premio canjeado" : m.cantidad < 0 && m.origen === "manual" ? "Sellos quitados" : TEXTO[m.origen] ?? "Ajuste"}
+                      {m.tipo === "canje"
+                        ? "Premio canjeado"
+                        : m.cantidad < 0 && m.origen === "manual"
+                          ? "Sellos quitados"
+                          : (TEXTO[m.origen] ?? "Ajuste")}
                       <span className="block text-xs text-suave">
-                        {formatoFecha(m.created_at, region, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        {formatoFecha(m.created_at, region, {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </span>
                     </span>
                     {m.tipo !== "canje" && (
@@ -632,8 +657,8 @@ function Escaner({ onLeido, onCerrar }: { onLeido: (texto: string) => void; onCe
           <video ref={video} className="aspect-square w-full rounded-xl bg-black object-cover" muted playsInline />
         ) : (
           <p className="rounded-lg bg-stone-50 px-3 py-2 text-sm text-suave">
-            Este navegador no puede leer QR. Escribe el código que aparece bajo el QR de la tarjeta, o escanéalo con la cámara
-            del celular: si entraste al panel en ese celular, la tarjeta se abre con los botones para sumar y canjear.
+            Este navegador no puede leer QR. Escribe el código que aparece bajo el QR de la tarjeta, o escanéalo con la cámara del
+            celular: si entraste al panel en ese celular, la tarjeta se abre con los botones para sumar y canjear.
           </p>
         )}
         <form
@@ -678,7 +703,9 @@ function Configurar({
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
   const [p, setP] = useState<ProgramaSellos>(
-    nueva ? { ...programa, color: /^#[0-9a-f]{6}$/i.test(restaurante.color_primario) ? restaurante.color_primario : programa.color } : programa,
+    nueva
+      ? { ...programa, color: /^#[0-9a-f]{6}$/i.test(restaurante.color_primario) ? restaurante.color_primario : programa.color }
+      : programa,
   );
   const [guardando, setGuardando] = useState(false);
   const cambiar = (c: Partial<ProgramaSellos>) => setP((x) => ({ ...x, ...c }));
@@ -820,7 +847,10 @@ function Configurar({
                   p.diseno === dis ? "border-marca ring-2 ring-marca/30" : "border-borde hover:border-marca/50"
                 }`}
               >
-                <span className="pointer-events-none flex h-40 items-start justify-center overflow-hidden bg-fondo pt-3" aria-hidden>
+                <span
+                  className="pointer-events-none flex h-40 items-start justify-center overflow-hidden bg-fondo pt-3"
+                  aria-hidden
+                >
                   <span className="w-[384px] shrink-0" style={{ zoom: 0.4 }}>
                     <TarjetaVisual
                       local={restaurante.nombre}
@@ -852,9 +882,7 @@ function Configurar({
             <button
               type="button"
               className="text-marca hover:underline"
-              onClick={() =>
-                /^#[0-9a-f]{6}$/i.test(restaurante.color_primario) && cambiar({ color: restaurante.color_primario })
-              }
+              onClick={() => /^#[0-9a-f]{6}$/i.test(restaurante.color_primario) && cambiar({ color: restaurante.color_primario })}
             >
               Usar el color de mi carta
             </button>
@@ -900,13 +928,15 @@ function Configurar({
       <div className="lg:sticky lg:top-24 lg:self-start">
         <p className="mb-2 text-center text-xs text-suave">Así la ven tus clientes</p>
         <div className="flex justify-center">
-          <TarjetaVisual
-            local={restaurante.nombre}
-            logo={restaurante.logo_url}
-            programa={p}
-            sellos={Math.min(p.meta - 1, Math.max(p.bienvenida, Math.round(p.meta * 0.6)))}
-            nombre="Camila"
-          />
+          <Inclinable>
+            <TarjetaVisual
+              local={restaurante.nombre}
+              logo={restaurante.logo_url}
+              programa={p}
+              sellos={Math.min(p.meta - 1, Math.max(p.bienvenida, Math.round(p.meta * 0.6)))}
+              nombre="Camila"
+            />
+          </Inclinable>
         </div>
       </div>
     </form>
@@ -935,7 +965,10 @@ function Carteles({ restaurante, programa }: { restaurante: Restaurante; program
 
   return (
     <div className="grid gap-6 md:grid-cols-[auto_1fr]">
-      <div className="tarjeta flex w-full max-w-xs flex-col items-center gap-3 p-5 text-center" style={{ borderTop: `6px solid ${programa.color}` }}>
+      <div
+        className="tarjeta flex w-full max-w-xs flex-col items-center gap-3 p-5 text-center"
+        style={{ borderTop: `6px solid ${programa.color}` }}
+      >
         <p className="text-lg font-bold">¡Junta sellos y gana!</p>
         <p className="text-sm text-suave">
           {programa.meta} sellos = {programa.premio}
@@ -949,7 +982,10 @@ function Carteles({ restaurante, programa }: { restaurante: Restaurante; program
           <ul className="mt-2 list-disc space-y-1 pl-5 text-suave">
             <li>En la caja y en un cartel en cada mesa.</li>
             <li>En tu Instagram y en el WhatsApp del local (con el enlace).</li>
-            <li>La precuenta ya trae su propio QR: ese suma el sello de la visita, y si el cliente no tiene tarjeta, lo invita a unirse.</li>
+            <li>
+              La precuenta ya trae su propio QR: ese suma el sello de la visita, y si el cliente no tiene tarjeta, lo invita a
+              unirse.
+            </li>
           </ul>
         </div>
         <div className="flex flex-wrap gap-2">
