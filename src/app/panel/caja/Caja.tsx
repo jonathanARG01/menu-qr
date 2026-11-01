@@ -628,7 +628,7 @@ function Gastos({
         <h2 className="font-semibold">Gastos del turno</h2>
         {total > 0 && <span className="text-sm font-semibold tabular-nums">{formato(total)}</span>}
       </div>
-      <form onSubmit={anotar} className="grid gap-2 sm:grid-cols-[1fr_140px_150px_auto]">
+      <form onSubmit={anotar} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px_150px_auto]">
         <input
           value={detalle}
           onChange={(e) => setDetalle(e.target.value)}

@@ -207,7 +207,7 @@ export function FormMarca({
   };
 
   return (
-    <form onSubmit={guardar} className="grid gap-6 md:grid-cols-[1fr_320px]">
+    <form onSubmit={guardar} className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_320px]">
       <div className="space-y-5">
         <div className="tarjeta space-y-4 p-5">
           <div>

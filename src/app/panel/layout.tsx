@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerContexto } from "@/lib/panel";
 import { ToastProvider } from "@/components/Toast";
@@ -20,6 +21,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const { user, restaurante, restaurantes, esSuperadmin, rol, secciones, bloqueadas, admin } = await obtenerContexto();
 
   if (!restaurante) {
+    // El superadmin no es dueño de ningún restaurante: sin uno elegido va a /admin (no a crear un restaurante).
+    // Desde ahí entra a cualquiera como Soporte.
+    if (esSuperadmin) redirect("/admin");
     const meta = user.user_metadata as { restaurante_nombre?: string; restaurante_slug?: string; restaurante_pais?: string };
     return (
       <Onboarding

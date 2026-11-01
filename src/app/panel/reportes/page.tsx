@@ -148,49 +148,73 @@ export default async function Reportes({ searchParams }: { searchParams: Promise
         </div>
       ) : (
         <>
-          <section className="tarjeta overflow-x-auto p-5">
+          <section className="tarjeta p-4 sm:p-5">
             <h2 className="mb-3 font-semibold">Por persona</h2>
-            <table className="w-full min-w-[640px] text-sm">
-              <thead className="text-left text-xs text-suave">
-                <tr>
-                  <th className="pb-2 font-medium">Persona</th>
-                  <th className="pb-2 text-right font-medium">Mesas</th>
-                  <th className="pb-2 text-right font-medium">Comensales</th>
-                  <th className="pb-2 text-right font-medium">Ventas</th>
-                  <th className="pb-2 text-right font-medium">Por mesa</th>
-                  <th className="pb-2 text-right font-medium">Propinas</th>
-                  <th className="pb-2 text-right font-medium">Tiempo por mesa</th>
-                  <th className="pb-2 text-right font-medium">Comandas</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-borde">
-                {personas.map((p) => (
-                  <tr key={p.id}>
-                    <td className="py-2.5 pr-3">
-                      <span className="font-medium">{p.nombre}</span>
-                      <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-stone-100">
-                        <span
-                          className="block h-full rounded-full bg-marca"
-                          style={{ width: `${(p.ventas / maxVentas) * 100}%` }}
-                        />
-                      </span>
-                    </td>
-                    <td className="py-2.5 text-right tabular-nums">
-                      {p.mesas}
-                      {p.llevar > 0 && <span className="block text-xs text-suave">+{p.llevar} para llevar</span>}
-                    </td>
-                    <td className="py-2.5 text-right tabular-nums">{p.comensales}</td>
-                    <td className="py-2.5 text-right font-semibold tabular-nums">{formato(p.ventas)}</td>
-                    <td className="py-2.5 text-right tabular-nums">
-                      {p.mesas + p.llevar ? formato(p.ventas / (p.mesas + p.llevar)) : "—"}
-                    </td>
-                    <td className="py-2.5 text-right tabular-nums">{formato(p.propinas)}</td>
-                    <td className="py-2.5 text-right tabular-nums">{minutos(p) === null ? "—" : `${minutos(p)} min`}</td>
-                    <td className="py-2.5 text-right tabular-nums">{p.comandas}</td>
+            {/* Celular: una tarjeta por persona, sin tabla que se salga de la pantalla. */}
+            <ul className="divide-y divide-borde md:hidden">
+              {personas.map((p) => (
+                <li key={p.id} className="py-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 truncate font-medium">{p.nombre}</span>
+                    <span className="shrink-0 font-semibold tabular-nums">{formato(p.ventas)}</span>
+                  </div>
+                  <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-stone-100">
+                    <span className="block h-full rounded-full bg-marca" style={{ width: `${(p.ventas / maxVentas) * 100}%` }} />
+                  </span>
+                  <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2 text-xs">
+                    <Celda titulo="Mesas" valor={`${p.mesas}${p.llevar > 0 ? ` + ${p.llevar} llevar` : ""}`} />
+                    <Celda titulo="Comensales" valor={String(p.comensales)} />
+                    <Celda titulo="Por mesa" valor={p.mesas + p.llevar ? formato(p.ventas / (p.mesas + p.llevar)) : "—"} />
+                    <Celda titulo="Propinas" valor={formato(p.propinas)} />
+                    <Celda titulo="Tiempo por mesa" valor={duracion(minutos(p))} />
+                    <Celda titulo="Comandas" valor={String(p.comandas)} />
+                  </dl>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm [&_td]:px-2 [&_th]:px-2 [&_th]:whitespace-nowrap [&_td]:whitespace-nowrap">
+                <thead className="text-left text-xs text-suave">
+                  <tr>
+                    <th className="pb-2 font-medium">Persona</th>
+                    <th className="pb-2 text-right font-medium">Mesas</th>
+                    <th className="pb-2 text-right font-medium">Comensales</th>
+                    <th className="pb-2 text-right font-medium">Ventas</th>
+                    <th className="pb-2 text-right font-medium">Por mesa</th>
+                    <th className="pb-2 text-right font-medium">Propinas</th>
+                    <th className="pb-2 text-right font-medium">Tiempo por mesa</th>
+                    <th className="pb-2 text-right font-medium">Comandas</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-borde">
+                  {personas.map((p) => (
+                    <tr key={p.id}>
+                      <td className="py-2.5 pr-3">
+                        <span className="font-medium">{p.nombre}</span>
+                        <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-stone-100">
+                          <span
+                            className="block h-full rounded-full bg-marca"
+                            style={{ width: `${(p.ventas / maxVentas) * 100}%` }}
+                          />
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-right tabular-nums">
+                        {p.mesas}
+                        {p.llevar > 0 && <span className="block text-xs text-suave">+{p.llevar} para llevar</span>}
+                      </td>
+                      <td className="py-2.5 text-right tabular-nums">{p.comensales}</td>
+                      <td className="py-2.5 text-right font-semibold tabular-nums">{formato(p.ventas)}</td>
+                      <td className="py-2.5 text-right tabular-nums">
+                        {p.mesas + p.llevar ? formato(p.ventas / (p.mesas + p.llevar)) : "—"}
+                      </td>
+                      <td className="py-2.5 text-right tabular-nums">{formato(p.propinas)}</td>
+                      <td className="py-2.5 text-right tabular-nums">{duracion(minutos(p))}</td>
+                      <td className="py-2.5 text-right tabular-nums">{p.comandas}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <p className="mt-3 text-xs text-suave">
               Las ventas no incluyen propinas. “Tiempo por mesa” va de que se abre hasta que se cierra. “Comandas” son las que
               cargó esa persona (no las que pidió el cliente desde el QR).
@@ -228,6 +252,21 @@ export default async function Reportes({ searchParams }: { searchParams: Promise
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// 724 min se lee mejor como "12 h 4 min".
+function duracion(min: number | null) {
+  if (min === null) return "—";
+  return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
+}
+
+function Celda({ titulo, valor }: { titulo: string; valor: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-suave">{titulo}</dt>
+      <dd className="truncate font-medium tabular-nums">{valor}</dd>
     </div>
   );
 }

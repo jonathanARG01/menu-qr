@@ -4,7 +4,7 @@ import { EditorEquipo, type Miembro } from "./EditorEquipo";
 export const dynamic = "force-dynamic";
 
 export default async function PanelEquipo() {
-  const { supabase, restaurante } = await requerirSeccion("equipo");
+  const { supabase, restaurante, ajustesGuardados } = await requerirSeccion("equipo");
   const [{ data, error }, { data: mesas }, { data: pisos }] = await Promise.all([
     supabase.rpc("equipo", { p_restaurante: restaurante.id }),
     // Para asignar mesas a cada mesero.
@@ -29,5 +29,12 @@ export default async function PanelEquipo() {
       </p>
     );
   }
-  return <EditorEquipo restauranteId={restaurante.id} iniciales={(data ?? []) as Miembro[]} mesas={elegibles} />;
+  return (
+    <EditorEquipo
+      restauranteId={restaurante.id}
+      iniciales={(data ?? []) as Miembro[]}
+      mesas={elegibles}
+      ordenInicial={ajustesGuardados.orden_equipo}
+    />
+  );
 }

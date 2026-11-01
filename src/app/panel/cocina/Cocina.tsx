@@ -548,8 +548,8 @@ export function Cocina({
         </p>
       )}
 
-      <div className="grid flex-1 gap-3 lg:grid-cols-[1fr_260px]">
-        <div className="grid content-start gap-3 [grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
+      <div className="grid flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="grid content-start gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr))]">
           {activos.length === 0 && (
             <p className="col-span-full py-16 text-center text-stone-400">
               No hay comandas pendientes. Las nuevas aparecen solas aquí.
