@@ -61,8 +61,13 @@ export async function datosRestaurante(id: string): Promise<Resultado<DatosResta
   ]);
   const idsAdmin = new Set((admins ?? []).map((a: { user_id: string }) => a.user_id));
 
+  // Tú (y cualquier cuenta de soporte o superadmin) no apareces: no tiene sentido cambiar tu propio correo o contraseña
+  // desde la ficha de un cliente. Si entraste con "Editar carta", sales con "Dejar de editar" en la tarjeta.
+  const clientes = (filas ?? []).filter(
+    (u: { user_id: string; rol: Miembro["rol"] }) => u.rol !== "staff" && !idsAdmin.has(u.user_id),
+  );
   const miembros = await Promise.all(
-    (filas ?? []).map(async (u: { user_id: string; rol: Miembro["rol"] }) => {
+    clientes.map(async (u: { user_id: string; rol: Miembro["rol"] }) => {
       const [{ data }, { count }] = await Promise.all([
         db.auth.admin.getUserById(u.user_id),
         db.from("usuarios").select("*", { count: "exact", head: true }).eq("user_id", u.user_id).neq("restaurante_id", id),
@@ -79,7 +84,7 @@ export async function datosRestaurante(id: string): Promise<Resultado<DatosResta
       } satisfies Miembro;
     }),
   );
-  // Dueños primero; tú (soporte) al final.
+  // Dueños primero.
   const orden = { dueno: 0, mesero: 1, cocina: 2, staff: 3 };
   miembros.sort((a, b) => orden[a.rol] - orden[b.rol] || a.email.localeCompare(b.email));
 
@@ -116,14 +121,13 @@ export async function guardarDatos(
 }
 
 // La cuenta tiene que ser de este restaurante (no se puede tocar cualquier usuario pasando su id).
+// Tampoco una cuenta de soporte o superadmin: esas se manejan aparte, no desde la ficha de un cliente.
 async function miembroDe(db: SupabaseClient, restauranteId: string, userId: string) {
-  const { data } = await db
-    .from("usuarios")
-    .select("user_id")
-    .eq("restaurante_id", restauranteId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  return !!data;
+  const [{ data }, { data: admin }] = await Promise.all([
+    db.from("usuarios").select("rol").eq("restaurante_id", restauranteId).eq("user_id", userId).maybeSingle(),
+    db.from("superadmins").select("user_id").eq("user_id", userId).maybeSingle(),
+  ]);
+  return !!data && data.rol !== "staff" && !admin;
 }
 
 export async function cambiarCorreo(restauranteId: string, userId: string, email: string): Promise<Resultado> {
