@@ -81,7 +81,8 @@ export function ListaAdmin({ filas: iniciales }: { filas: FilaAdmin[] }) {
   const avisar = useToast();
   const [filas, setFilas] = useState(iniciales);
   const [busqueda, setBusqueda] = useState("");
-  const [filtro, setFiltro] = useState<Filtro>("todos");
+  // Por defecto, los clientes que pagan (lo que más se revisa).
+  const [filtro, setFiltro] = useState<Filtro>("pago");
   const [creando, setCreando] = useState(false);
   const [editando, setEditando] = useState<FilaAdmin | null>(null);
   const [pendiente, empezar] = useTransition();
@@ -530,8 +531,8 @@ function BloquePlan({ f, ahora, acciones: a }: { f: FilaAdmin; ahora: number | n
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-suave">
             <span>
-              {f.ciclo === "anual" ? "Año" : cicloDe(f.ciclo).meses > 1 ? "Período" : "Mes"} {p.periodos + 1} · próximo cobro el {fecha(p.proximo, false)} (
-              {p.quedan === 0 ? "hoy" : `en ${plural(p.quedan, "día", "días")}`})
+              {f.ciclo === "anual" ? "Año" : cicloDe(f.ciclo).meses > 1 ? "Período" : "Mes"} {p.periodos + 1} · próximo cobro el{" "}
+              {fecha(p.proximo, false)} ({p.quedan === 0 ? "hoy" : `en ${plural(p.quedan, "día", "días")}`})
             </span>
             <div className="flex-1" />
             <label className="inline-flex items-center gap-1">Desde {campoFecha}</label>
@@ -642,8 +643,8 @@ function CrearParaCliente({ onCerrar }: { onCerrar: () => void }) {
         </h2>
         <form action={accion} className="space-y-4">
           <p className="text-sm text-suave">
-            Quedas como dueño para armarle la carta. Empieza con {DIAS_PRUEBA} días de prueba, el diseño Vitrina y las imágenes
-            por defecto.
+            Entras como Soporte para armarle la carta (tú nunca quedas como dueño). Después suma al cliente como Administrador en
+            Equipo. Empieza con {DIAS_PRUEBA} días de prueba, el diseño Vitrina y las imágenes por defecto.
           </p>
           <CamposRestaurante />
           <label className="flex items-center gap-2 text-sm">
