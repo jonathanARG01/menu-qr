@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icono } from "@/components/Icono";
 import { TarjetaVisual } from "@/components/sellos/TarjetaVisual";
+import { Inclinable } from "@/components/sellos/Inclinable";
 import { WHATSAPP_VENTAS } from "@/lib/planes";
 import { NOMBRE_SELLOS, PRECIO_SELLOS, PROGRAMA_BASE } from "@/lib/sellos/tipos";
 import { formatoPrecio } from "@/lib/utils";
@@ -20,7 +21,13 @@ const VENTAJAS = [
 ];
 
 // Para quien todavía no tiene Platovi Sellos: qué es, cuánto cuesta y cómo pedirlo.
-export function OfertaSellos({ restaurante, grupo }: { restaurante: { nombre: string; logo_url: string | null }; grupo: boolean }) {
+export function OfertaSellos({
+  restaurante,
+  grupo,
+}: {
+  restaurante: { nombre: string; logo_url: string | null };
+  grupo: boolean;
+}) {
   const contratar = enlaceContratarSellos(restaurante.nombre);
   return (
     <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
@@ -29,8 +36,8 @@ export function OfertaSellos({ restaurante, grupo }: { restaurante: { nombre: st
           <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">Complemento</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight">{NOMBRE_SELLOS}: tarjeta de sellos en el celular</h1>
           <p className="mt-2 max-w-xl text-suave">
-            Premia a los clientes que vuelven con una tarjeta digital: juntan sellos en cada visita y ganan el premio que
-            tú elijas.
+            Premia a los clientes que vuelven con una tarjeta digital: juntan sellos en cada visita y ganan el premio que tú
+            elijas.
           </p>
         </div>
         <ul className="space-y-2 text-sm">
@@ -63,13 +70,15 @@ export function OfertaSellos({ restaurante, grupo }: { restaurante: { nombre: st
         </p>
       </div>
       <div className="flex justify-center">
-        <TarjetaVisual
-          local={restaurante.nombre}
-          logo={restaurante.logo_url}
-          programa={PROGRAMA_BASE}
-          sellos={7}
-          nombre="Camila"
-        />
+        <Inclinable>
+          <TarjetaVisual
+            local={restaurante.nombre}
+            logo={restaurante.logo_url}
+            programa={PROGRAMA_BASE}
+            sellos={7}
+            nombre="Camila"
+          />
+        </Inclinable>
       </div>
     </div>
   );

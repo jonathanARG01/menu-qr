@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAutorizar } from "@/components/Autorizar";
 import { TarjetaVisual } from "@/components/sellos/TarjetaVisual";
+import { Inclinable } from "@/components/sellos/Inclinable";
 import { avisarTarjeta, guardarTarjeta, suscribirTarjeta } from "@/lib/sellos/cliente";
 import { PROGRAMA_BASE, faltan, type TarjetaPublica } from "@/lib/sellos/tipos";
 import { iphoneSinInstalar, soportaPush } from "@/lib/push";
@@ -97,7 +98,10 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
   async function sumar(cantidad: number) {
     if (!equipo) return;
     const ok = await autorizar({
-      titulo: cantidad > 0 ? `¿Sumar ${cantidad === 1 ? "un sello" : `${cantidad} sellos`} a ${t.nombre}?` : `¿Quitar un sello a ${t.nombre}?`,
+      titulo:
+        cantidad > 0
+          ? `¿Sumar ${cantidad === 1 ? "un sello" : `${cantidad} sellos`} a ${t.nombre}?`
+          : `¿Quitar un sello a ${t.nombre}?`,
       pin: equipo.pidePin,
       motivo: cantidad > 0 ? "no" : "opcional",
     });
@@ -119,7 +123,12 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
 
   async function canjear() {
     if (!equipo) return;
-    const ok = await autorizar({ titulo: `¿Canjear ${p.premio}?`, detalle: `Para ${t.nombre}.`, pin: equipo.pidePin, motivo: "no" });
+    const ok = await autorizar({
+      titulo: `¿Canjear ${p.premio}?`,
+      detalle: `Para ${t.nombre}.`,
+      pin: equipo.pidePin,
+      motivo: "no",
+    });
     if (!ok) return;
     setTrabajando(true);
     const { error } = await supabase.rpc("sellos_canjear", { p_tarjeta: t.codigo, p_pin: ok.pin });
@@ -151,29 +160,30 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
           </p>
         )}
 
-        <TarjetaVisual
-          local={t.restaurante.nombre}
-          logo={t.restaurante.logo_url}
-          programa={p}
-          sellos={t.sellos}
-          premios={t.premios}
-          nombre={t.nombre}
-          animarUltimos={nuevos}
-          pie={
-            <div className="mt-4 flex flex-col items-center gap-1">
-              <div className="w-36 overflow-hidden rounded-xl bg-white p-1.5" dangerouslySetInnerHTML={{ __html: qr }} />
-              <p className="font-mono text-xs tracking-widest opacity-80">{t.codigo}</p>
-            </div>
-          }
-        />
+        <Inclinable giroscopio>
+          <TarjetaVisual
+            local={t.restaurante.nombre}
+            logo={t.restaurante.logo_url}
+            programa={p}
+            sellos={t.sellos}
+            premios={t.premios}
+            nombre={t.nombre}
+            animarUltimos={nuevos}
+            pie={
+              <div className="mt-4 flex flex-col items-center gap-1">
+                <div className="w-36 overflow-hidden rounded-xl bg-white p-1.5" dangerouslySetInnerHTML={{ __html: qr }} />
+                <p className="font-mono text-xs tracking-widest opacity-80">{t.codigo}</p>
+              </div>
+            }
+          />
+        </Inclinable>
 
         <p className="text-center text-sm text-suave">
           {t.premios > 0
             ? "Muéstrale esta tarjeta al mesero para canjear tu premio."
             : restan === 1
               ? `¡Te falta 1 sello para ${p.premio}!`
-              : `Te faltan ${restan} sellos para ${p.premio}.`}
-          {" "}
+              : `Te faltan ${restan} sellos para ${p.premio}.`}{" "}
           {p.regla === "monto" ? "Sumas sellos según tu consumo." : "Sumas un sello en cada visita."} Escanea el QR de tu cuenta
           para sumarlo.
         </p>
@@ -185,12 +195,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
               <button type="button" className="boton" disabled={trabajando} onClick={() => sumar(1)}>
                 + 1 sello
               </button>
-              <button
-                type="button"
-                className="boton-secundario"
-                disabled={trabajando || t.premios < 1}
-                onClick={canjear}
-              >
+              <button type="button" className="boton-secundario" disabled={trabajando || t.premios < 1} onClick={canjear}>
                 Canjear premio
               </button>
             </div>
@@ -237,7 +242,11 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
               {t.movimientos.map((m, i) => (
                 <li key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
                   <span>
-                    {m.tipo === "canje" ? `Canjeaste ${p.premio}` : m.cantidad < 0 ? TEXTO_ORIGEN.anulada : TEXTO_ORIGEN[m.origen]}
+                    {m.tipo === "canje"
+                      ? `Canjeaste ${p.premio}`
+                      : m.cantidad < 0
+                        ? TEXTO_ORIGEN.anulada
+                        : TEXTO_ORIGEN[m.origen]}
                     <span className="block text-xs text-suave">
                       {new Date(m.created_at).toLocaleDateString("es-CL", { day: "numeric", month: "short" })}
                     </span>
