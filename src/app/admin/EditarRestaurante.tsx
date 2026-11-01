@@ -91,7 +91,7 @@ export function EditarRestaurante({ id, nombre, onCerrar }: { id: string; nombre
                   Cambia el correo con el que entran o su contraseña. El cambio de correo vale al momento, sin confirmar.
                 </p>
                 {datos.miembros.length === 0 ? (
-                  <p className="rounded-2xl bg-stone-50 px-4 py-3 text-sm text-suave">Sin cuentas: es una demo.</p>
+                  <p className="rounded-2xl bg-stone-50 px-4 py-3 text-sm text-suave">Sin cuentas del cliente todavía.</p>
                 ) : (
                   <ul className="space-y-3">
                     {datos.miembros.map((m) => (
