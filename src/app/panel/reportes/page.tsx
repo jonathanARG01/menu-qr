@@ -4,6 +4,7 @@ import { NOMBRE_TIPO, regionDe, type TipoCuenta } from "@/lib/salon";
 import { formatoFecha, formatoNumero } from "@/lib/region";
 import { formatoPrecio } from "@/lib/utils";
 import { Icono } from "@/components/Icono";
+import { NavReportes } from "./NavReportes";
 
 export const dynamic = "force-dynamic";
 
@@ -102,6 +103,7 @@ export default async function Reportes({ searchParams }: { searchParams: Promise
 
   return (
     <div className="space-y-5">
+      <NavReportes actual="/panel/reportes" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">Reportes por mesero</h1>

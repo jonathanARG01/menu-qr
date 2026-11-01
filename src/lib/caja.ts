@@ -17,6 +17,8 @@ export type TotalesCaja = {
   // Gastos del turno (migración 0018): total y lo que salió en efectivo.
   gastos?: number;
   gastos_efectivo?: number;
+  // Retiros de efectivo a la caja fuerte (migración 0023): no son gastos, pero bajan el efectivo esperado.
+  retiros?: number;
   // Efectivo: fondo inicial + lo cobrado en efectivo (ventas y propinas) − los gastos pagados en efectivo.
   efectivo_esperado: number;
 };
@@ -28,7 +30,22 @@ export type Gasto = {
   medio: string;
   registrado_por: string | null;
   created_at: string;
+  // Migración 0023.
+  categoria?: string;
+  proveedor?: string | null;
+  tipo?: "gasto" | "retiro";
 };
+
+export const CATEGORIAS_GASTO = [
+  "Insumos",
+  "Sueldos y adelantos",
+  "Servicios (luz, agua, gas)",
+  "Mantención",
+  "Comisiones de delivery",
+  "Otros",
+];
+
+export const esRetiro = (g: Pick<Gasto, "tipo">) => g.tipo === "retiro";
 
 export const esEfectivo = (medio: string) => /efectivo|cash/i.test(medio);
 
@@ -42,7 +59,7 @@ export function resumirCaja({
   gastos = [],
 }: {
   pagos: Pago[];
-  gastos?: Pick<Gasto, "monto" | "medio">[];
+  gastos?: Pick<Gasto, "monto" | "medio" | "tipo">[];
   cuentasCerradas: { comensales: number }[];
   nombres: Map<string, string>;
   fondoInicial: number;
@@ -79,8 +96,10 @@ export function resumirCaja({
   }
   const lista = [...medios.values()].map((m) => ({ ...m, ventas: redondear(m.ventas), propinas: redondear(m.propinas) }));
   const efectivo = lista.filter((m) => esEfectivo(m.medio)).reduce((s, m) => s + m.ventas + m.propinas, 0);
-  const totalGastos = gastos.reduce((s, g) => s + Number(g.monto), 0);
-  const gastosEfectivo = gastos.filter((g) => esEfectivo(g.medio)).reduce((s, g) => s + Number(g.monto), 0);
+  const soloGastos = gastos.filter((g) => !esRetiro(g));
+  const totalGastos = soloGastos.reduce((s, g) => s + Number(g.monto), 0);
+  const gastosEfectivo = soloGastos.filter((g) => esEfectivo(g.medio)).reduce((s, g) => s + Number(g.monto), 0);
+  const retiros = gastos.filter(esRetiro).reduce((s, g) => s + Number(g.monto), 0);
   return {
     ventas: redondear(ventas),
     propinas: redondear(propinas),
@@ -92,6 +111,7 @@ export function resumirCaja({
     personas: [...personas.values()].sort((a, b) => b.ventas - a.ventas),
     gastos: redondear(totalGastos),
     gastos_efectivo: redondear(gastosEfectivo),
-    efectivo_esperado: redondear(fondoInicial + efectivo - gastosEfectivo),
+    retiros: redondear(retiros),
+    efectivo_esperado: redondear(fondoInicial + efectivo - gastosEfectivo - retiros),
   };
 }

@@ -1,5 +1,6 @@
 import { requerirSeccion } from "@/lib/panel";
 import { EditorEquipo, type Miembro } from "./EditorEquipo";
+import { PinesEquipo } from "./PinesEquipo";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +31,18 @@ export default async function PanelEquipo() {
     );
   }
   return (
-    <EditorEquipo
-      restauranteId={restaurante.id}
-      iniciales={(data ?? []) as Miembro[]}
-      mesas={elegibles}
-      ordenInicial={ajustesGuardados.orden_equipo}
-    />
+    <div className="space-y-5">
+      <EditorEquipo
+        restauranteId={restaurante.id}
+        iniciales={(data ?? []) as Miembro[]}
+        mesas={elegibles}
+        ordenInicial={ajustesGuardados.orden_equipo}
+      />
+      <PinesEquipo
+        restauranteId={restaurante.id}
+        miembros={(data ?? []) as Miembro[]}
+        activo={ajustesGuardados.pin_autorizacion}
+      />
+    </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icono } from "@/components/Icono";
 import { useToast } from "@/components/Toast";
-import { esEfectivo, resumirCaja, type Gasto, type TotalesCaja } from "@/lib/caja";
+import { CATEGORIAS_GASTO, esEfectivo, esRetiro, resumirCaja, type Gasto, type TotalesCaja } from "@/lib/caja";
 import { fechaCorta, imprimirTicket, type LineaTicket } from "@/lib/imprimir";
 import { leerAjustes, regionDe, type Pago } from "@/lib/salon";
 import { createClient } from "@/lib/supabase/client";
@@ -19,7 +19,11 @@ type Cierre = {
   efectivo_contado: number | null;
   nota: string | null;
   created_at: string;
+  // Corte parcial (corte X, migración 0023): foto del turno sin cerrarlo.
+  tipo?: "total" | "parcial";
 };
+
+const esParcial = (c: Pick<Cierre, "tipo">) => c.tipo === "parcial";
 
 type Abiertas = { cantidad: number; falta: number };
 
@@ -64,8 +68,10 @@ export function Caja({
   // Gastos del turno (null: falta la migración 0018).
   const [gastos, setGastos] = useState<Gasto[] | null>([]);
 
-  const ultimo = cierres[0];
+  // El turno empieza en el último cierre completo; los cortes parciales no lo cortan.
+  const ultimo = cierres.find((c) => !esParcial(c));
   const desde = ultimo?.hasta ?? inicioDeHoy();
+  const [cortando, setCortando] = useState(false);
 
   const cargar = useCallback(async () => {
     const ahora = new Date().toISOString();
@@ -81,7 +87,7 @@ export function Caja({
       return;
     }
     const lista = (historial.data ?? []) as Cierre[];
-    const inicio = lista[0]?.hasta ?? inicioDeHoy();
+    const inicio = lista.find((c) => !esParcial(c))?.hasta ?? inicioDeHoy();
     const [p, c, a, g] = await Promise.all([
       supabase.from("pagos").select("*").eq("restaurante_id", restaurante.id).gte("created_at", inicio).lte("created_at", ahora),
       supabase
@@ -169,6 +175,25 @@ export function Caja({
     await cargar();
   }
 
+  // Corte parcial (corte X): guarda e imprime cómo va el turno, sin cerrarlo. Útil al cambiar de cajero.
+  async function cortarParcial() {
+    const foto = {
+      desde,
+      hasta: new Date().toISOString(),
+      totales: { ...totales, pendiente: abiertas.falta },
+      efectivo_inicial: numero(fondo),
+      efectivo_contado: contado.trim() ? numero(contado) : null,
+      nota: nota.trim() || null,
+    };
+    setCortando(true);
+    const { error } = await supabase.from("cierres_caja").insert({ restaurante_id: restaurante.id, ...foto, tipo: "parcial" });
+    setCortando(false);
+    if (error && !/tipo/.test(error.message)) return avisar(mensajeError(error), "error");
+    avisar(error ? "Corte impreso (para guardarlo falta el SQL 0023)" : "Corte parcial guardado");
+    imprimir({ ...foto, tipo: "parcial" });
+    if (!error) await cargar();
+  }
+
   async function borrarCierre(c: Cierre) {
     if (!confirm("¿Borrar este cierre? Sus cobros vuelven a sumarse al turno siguiente.")) return;
     const { error } = await supabase.from("cierres_caja").delete().eq("id", c.id);
@@ -178,10 +203,10 @@ export function Caja({
     await cargar();
   }
 
-  function imprimir(c: Pick<Cierre, "desde" | "hasta" | "totales" | "efectivo_inicial" | "efectivo_contado" | "nota">) {
+  function imprimir(c: Pick<Cierre, "desde" | "hasta" | "totales" | "efectivo_inicial" | "efectivo_contado" | "nota" | "tipo">) {
     const t = c.totales;
     const lineas: LineaTicket[] = [
-      { tipo: "titulo", texto: "Cierre de caja" },
+      { tipo: "titulo", texto: esParcial(c) ? "Corte parcial (X)" : "Cierre de caja" },
       { tipo: "texto", texto: restaurante.nombre, fuerte: true },
       { tipo: "texto", texto: `${fechaCorta(c.desde, region)} → ${fechaCorta(c.hasta, region)}`, chico: true },
       { tipo: "separador" },
@@ -212,6 +237,7 @@ export function Caja({
             },
           ]
         : []),
+      ...(t.retiros ? [{ tipo: "fila" as const, izq: "Retiros a caja fuerte", der: formato(t.retiros) }] : []),
       { tipo: "fila", izq: "Efectivo esperado", der: formato(t.efectivo_esperado) },
     ];
     if (c.efectivo_contado !== null) {
@@ -230,11 +256,13 @@ export function Caja({
   // Comprobante del gasto para guardar con la boleta o el vale.
   function imprimirGasto(g: Gasto) {
     imprimirTicket([
-      { tipo: "titulo", texto: "Comprobante de gasto" },
+      { tipo: "titulo", texto: esRetiro(g) ? "Retiro de efectivo" : "Comprobante de gasto" },
       { tipo: "texto", texto: restaurante.nombre, fuerte: true },
       { tipo: "texto", texto: fechaCorta(g.created_at, region), chico: true },
       { tipo: "separador" },
       { tipo: "texto", texto: g.detalle, fuerte: true },
+      ...(g.categoria && !esRetiro(g) ? [{ tipo: "texto" as const, texto: g.categoria, chico: true }] : []),
+      ...(g.proveedor ? [{ tipo: "texto" as const, texto: `Proveedor: ${g.proveedor}`, chico: true }] : []),
       { tipo: "fila", izq: `Pagado con ${g.medio.toLowerCase()}`, der: formato(Number(g.monto)), fuerte: true },
       { tipo: "texto", texto: `Registró: ${(g.registrado_por && nombres.get(g.registrado_por)) || "Equipo"}`, chico: true },
       { tipo: "separador" },
@@ -275,19 +303,12 @@ export function Caja({
         </button>
         <button
           type="button"
-          onClick={() =>
-            imprimir({
-              desde,
-              hasta,
-              totales: { ...totales, pendiente: abiertas.falta },
-              efectivo_inicial: numero(fondo),
-              efectivo_contado: contado.trim() ? numero(contado) : null,
-              nota,
-            })
-          }
+          onClick={cortarParcial}
+          disabled={cortando}
           className="boton-secundario"
+          title="Guarda e imprime cómo va el turno sin cerrarlo (corte X)"
         >
-          Imprimir parcial
+          {cortando ? "Guardando…" : "Corte parcial"}
         </button>
       </header>
 
@@ -421,8 +442,16 @@ export function Caja({
               <div className="text-sm">
                 <span className="mb-1 block text-suave">Efectivo esperado</span>
                 <p className="py-2 text-lg font-semibold tabular-nums">{formato(totales.efectivo_esperado)}</p>
-                {!!totales.gastos_efectivo && (
-                  <p className="-mt-1 text-xs text-suave">ya descontados {formato(totales.gastos_efectivo)} de gastos</p>
+                {(!!totales.gastos_efectivo || !!totales.retiros) && (
+                  <p className="-mt-1 text-xs text-suave">
+                    ya descontados{" "}
+                    {[
+                      totales.gastos_efectivo ? `${formato(totales.gastos_efectivo)} de gastos` : "",
+                      totales.retiros ? `${formato(totales.retiros)} de retiros` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" y ")}
+                  </p>
                 )}
               </div>
               <label className="block text-sm">
@@ -497,6 +526,7 @@ export function Caja({
                             {fechaCorta(c.desde, region)} → {fechaCorta(c.hasta, region)}
                           </span>
                           <span className="block text-xs text-suave">
+                            {esParcial(c) && <span className="mr-1 rounded bg-sky-100 px-1 text-sky-800">Corte parcial</span>}
                             {c.totales.mesas} mesas · {c.totales.cobros} cobros
                             {dif !== null && Math.abs(dif) >= 0.01
                               ? ` · ${dif < 0 ? "faltó" : "sobró"} ${formato(Math.abs(dif))}`
@@ -524,7 +554,7 @@ export function Caja({
           >
             <div className="mb-3 flex items-start gap-3">
               <div className="flex-1">
-                <h2 className="text-lg font-semibold">Cierre de caja</h2>
+                <h2 className="text-lg font-semibold">{esParcial(viendo) ? "Corte parcial" : "Cierre de caja"}</h2>
                 <p className="text-sm text-suave" suppressHydrationWarning>
                   {fechaCorta(viendo.desde, region)} → {fechaCorta(viendo.hasta, region)}
                 </p>
@@ -599,26 +629,50 @@ function Gastos({
   admin: boolean;
   formato: (n: number) => string;
   hora: (iso: string) => string;
-  onNuevo: (g: { monto: number; detalle: string; medio: string }) => Promise<boolean>;
+  onNuevo: (g: {
+    monto: number;
+    detalle: string;
+    medio: string;
+    categoria?: string;
+    proveedor?: string | null;
+    tipo?: "gasto" | "retiro";
+  }) => Promise<boolean>;
   onImprimir: (g: Gasto) => void;
   onBorrar: (g: Gasto) => void;
 }) {
   const [monto, setMonto] = useState("");
   const [detalle, setDetalle] = useState("");
   const [medio, setMedio] = useState("Efectivo");
+  const [categoria, setCategoria] = useState("Insumos");
+  const [proveedor, setProveedor] = useState("");
+  const [tipo, setTipo] = useState<"gasto" | "retiro">("gasto");
   const [guardando, setGuardando] = useState(false);
-  const total = gastos.reduce((s, g) => s + Number(g.monto), 0);
+  // Con la migración 0023 los gastos tienen categoría (si falta, se anotan como antes).
+  const conCategorias = gastos.length === 0 || gastos.some((g) => "categoria" in g);
+  const total = gastos.filter((g) => !esRetiro(g)).reduce((s, g) => s + Number(g.monto), 0);
 
   async function anotar(e: React.FormEvent) {
     e.preventDefault();
     const valor = numero(monto);
     if (!valor || !detalle.trim()) return;
     setGuardando(true);
-    const ok = await onNuevo({ monto: valor, detalle: detalle.trim().slice(0, 120), medio });
+    const ok = await onNuevo({
+      monto: valor,
+      detalle: detalle.trim().slice(0, 120),
+      medio: tipo === "retiro" ? "Efectivo" : medio,
+      ...(conCategorias
+        ? {
+            categoria: tipo === "retiro" ? "Retiro a caja fuerte" : categoria.trim().slice(0, 40) || "Otros",
+            proveedor: proveedor.trim().slice(0, 80) || null,
+            tipo,
+          }
+        : {}),
+    });
     setGuardando(false);
     if (ok) {
       setMonto("");
       setDetalle("");
+      setProveedor("");
     }
   }
 
@@ -628,12 +682,34 @@ function Gastos({
         <h2 className="font-semibold">Gastos del turno</h2>
         {total > 0 && <span className="text-sm font-semibold tabular-nums">{formato(total)}</span>}
       </div>
+      {conCategorias && (
+        <div className="mb-2 flex rounded-xl bg-stone-100 p-1 text-sm sm:w-fit" role="group" aria-label="Tipo de movimiento">
+          {(
+            [
+              ["gasto", "Gasto"],
+              ["retiro", "Retiro a caja fuerte"],
+            ] as const
+          ).map(([id, texto]) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={tipo === id}
+              onClick={() => setTipo(id)}
+              className={`flex-1 rounded-lg px-3 py-1.5 font-medium ${tipo === id ? "bg-superficie shadow-sm" : "text-suave"}`}
+            >
+              {texto}
+            </button>
+          ))}
+        </div>
+      )}
       <form onSubmit={anotar} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px_150px_auto]">
         <input
           value={detalle}
           onChange={(e) => setDetalle(e.target.value)}
           maxLength={120}
-          placeholder="¿En qué? Ej.: hielo, gas, propina al repartidor"
+          placeholder={
+            tipo === "retiro" ? "Ej.: billetes grandes a la caja fuerte" : "¿En qué? Ej.: hielo, gas, propina al repartidor"
+          }
           className="campo"
           aria-label="Detalle del gasto"
           required
@@ -647,14 +723,44 @@ function Gastos({
           aria-label="Monto"
           required
         />
-        <select value={medio} onChange={(e) => setMedio(e.target.value)} className="campo" aria-label="Pagado con">
-          {["Efectivo", "Transferencia", "Tarjeta"].map((m) => (
-            <option key={m}>{m}</option>
-          ))}
-        </select>
+        {tipo === "retiro" ? (
+          <span className="campo flex items-center text-suave">Efectivo</span>
+        ) : (
+          <select value={medio} onChange={(e) => setMedio(e.target.value)} className="campo" aria-label="Pagado con">
+            {["Efectivo", "Transferencia", "Tarjeta"].map((m) => (
+              <option key={m}>{m}</option>
+            ))}
+          </select>
+        )}
         <button type="submit" className="boton" disabled={guardando}>
           {guardando ? "Guardando…" : "Anotar"}
         </button>
+        {conCategorias && tipo === "gasto" && (
+          <div className="grid grid-cols-1 gap-2 sm:col-span-4 sm:grid-cols-2">
+            <input
+              list="categorias-gasto"
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+              maxLength={40}
+              className="campo"
+              aria-label="Categoría"
+              placeholder="Categoría"
+            />
+            <datalist id="categorias-gasto">
+              {CATEGORIAS_GASTO.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+            <input
+              value={proveedor}
+              onChange={(e) => setProveedor(e.target.value)}
+              maxLength={80}
+              className="campo"
+              aria-label="Proveedor (opcional)"
+              placeholder="Proveedor (opcional)"
+            />
+          </div>
+        )}
       </form>
       {gastos.length > 0 && (
         <ul className="mt-3 divide-y divide-borde text-sm">
@@ -663,7 +769,8 @@ function Gastos({
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium">{g.detalle}</span>
                 <span className="block text-xs text-suave" suppressHydrationWarning>
-                  {hora(g.created_at)} · {g.medio}
+                  {hora(g.created_at)} ·{" "}
+                  {esRetiro(g) ? "Retiro a caja fuerte" : [g.categoria, g.proveedor, g.medio].filter(Boolean).join(" · ")}
                 </span>
               </span>
               <span className="font-semibold tabular-nums">{formato(Number(g.monto))}</span>
@@ -685,7 +792,10 @@ function Gastos({
           ))}
         </ul>
       )}
-      <p className="mt-2 text-xs text-suave">Los gastos pagados en efectivo se restan del efectivo esperado del arqueo.</p>
+      <p className="mt-2 text-xs text-suave">
+        Los gastos en efectivo y los retiros a la caja fuerte se restan del efectivo esperado. El reporte mensual por categoría
+        está en Reportes → Gastos.
+      </p>
     </section>
   );
 }

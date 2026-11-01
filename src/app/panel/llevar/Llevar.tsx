@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
 import { Icono } from "@/components/Icono";
-import { NOMBRE_TIPO, regionDe, type Ajustes, type Cuenta, type Pedido, type TipoCuenta } from "@/lib/salon";
+import { NOMBRE_TIPO, regionDe, type Ajustes, type Cuenta, type OpcionElegida, type Pedido, type TipoCuenta } from "@/lib/salon";
+import { fechaCorta } from "@/lib/imprimir";
+import { nuevoId } from "@/lib/reintentos";
 import type { Categoria, Plato, Restaurante, Sucursal } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { totalLineas } from "@/lib/cuenta";
@@ -296,6 +298,7 @@ export function Llevar({ restaurante, admin, ajustes, categorias, platos, sucurs
           sucursales={sucursales}
           supabase={supabase}
           formato={formato}
+          platos={platos}
           onCerrar={() => setNuevo(false)}
           onCreado={async (id) => {
             setNuevo(false);
@@ -380,7 +383,11 @@ function Tarjeta({
               </span>
               <span
                 className={`rounded-full px-2 py-0.5 font-semibold ${
-                  pagado ? "bg-emerald-100 text-emerald-800" : esperandoPago ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-900"
+                  pagado
+                    ? "bg-emerald-100 text-emerald-800"
+                    : esperandoPago
+                      ? "bg-red-100 text-red-700"
+                      : "bg-amber-100 text-amber-900"
                 }`}
               >
                 {pagado
@@ -456,12 +463,29 @@ function Tarjeta({
 }
 
 // El personal anota un pedido (por teléfono o en el mostrador). Con el teléfono se completa el cliente si ya vino.
+type LineaAnterior = {
+  plato_id: string | null;
+  nombre: string;
+  cantidad: number;
+  nota: string | null;
+  opciones: OpcionElegida[] | null;
+  precio: number;
+};
+type CuentaAnterior = {
+  id: string;
+  cerrada_at: string | null;
+  abierta_at: string;
+  pedidos: { estado: string; pedido_items: LineaAnterior[] }[];
+};
+type PedidoAnterior = { id: string; fecha: string; lineas: LineaAnterior[] };
+
 function NuevoPedido({
   restaurante,
   ajustes,
   sucursales,
   supabase,
   formato,
+  platos,
   onCerrar,
   onCreado,
 }: {
@@ -470,6 +494,7 @@ function NuevoPedido({
   sucursales: Sucursal[];
   supabase: ReturnType<typeof useServicio>["supabase"];
   formato: (n: number) => string;
+  platos: Plato[];
   onCerrar: () => void;
   onCreado: (id: string) => void;
 }) {
@@ -488,6 +513,50 @@ function NuevoPedido({
   const [sucursal, setSucursal] = useState(sucursales.length > 1 ? sucursales[0].id : (sucursales[0]?.id ?? null));
   const [conocido, setConocido] = useState<ClienteResumen | null>(null);
   const [guardando, setGuardando] = useState(false);
+  // Últimos pedidos de este cliente, para repetir uno con un toque.
+  const [anteriores, setAnteriores] = useState<PedidoAnterior[]>([]);
+  const [repetir, setRepetir] = useState<PedidoAnterior | null>(null);
+
+  useEffect(() => {
+    setRepetir(null);
+    const tel = telefono.trim();
+    if (!conocido && tel.replace(/\D/g, "").length < 8) return setAnteriores([]);
+    let vivo = true;
+    const espera = setTimeout(
+      () =>
+        supabase
+          .from("cuentas")
+          .select(
+            "id, tipo, cerrada_at, abierta_at, pedidos(estado, pedido_items(plato_id, nombre, cantidad, nota, opciones, precio))",
+          )
+          .eq("restaurante_id", restaurante.id)
+          .eq("estado", "cerrada")
+          .or(
+            conocido
+              ? `cliente_id.eq.${conocido.id},cliente_telefono.eq.${JSON.stringify(tel)}`
+              : `cliente_telefono.eq.${JSON.stringify(tel)}`,
+          )
+          .order("abierta_at", { ascending: false })
+          .limit(3)
+          .then(({ data }) => {
+            if (!vivo) return;
+            const lista = ((data ?? []) as unknown as CuentaAnterior[]).map((c) => ({
+              id: c.id,
+              fecha: c.cerrada_at ?? c.abierta_at,
+              lineas: c.pedidos
+                .filter((p) => p.estado !== "cancelado")
+                .flatMap((p) => p.pedido_items)
+                .filter((i) => i.plato_id && platos.some((x) => x.id === i.plato_id)),
+            }));
+            setAnteriores(lista.filter((c) => c.lineas.length));
+          }),
+      350,
+    );
+    return () => {
+      vivo = false;
+      clearTimeout(espera);
+    };
+  }, [conocido, telefono, supabase, restaurante.id, platos]);
 
   // Cliente que ya pidió o reservó con ese teléfono: se completan su nombre y su dirección.
   useEffect(() => {
@@ -540,6 +609,26 @@ function NuevoPedido({
       .single();
     setGuardando(false);
     if (error) return avisar(mensajeError(error), "error");
+    // Repetir: el pedido anterior queda como borrador de la comanda, para revisarlo y enviarlo.
+    if (repetir) {
+      try {
+        localStorage.setItem(
+          `comanda:${data.id}`,
+          JSON.stringify(
+            repetir.lineas.map((l, k) => ({
+              clave: `${l.plato_id}-${Date.now()}-${k}`,
+              id: nuevoId(),
+              plato: l.plato_id,
+              cantidad: l.cantidad,
+              nota: l.nota ?? "",
+              comensal: null,
+              opciones: l.opciones ?? [],
+              despues: false,
+            })),
+          ),
+        );
+      } catch {}
+    }
     onCreado(data.id);
   }
 
@@ -585,6 +674,39 @@ function NuevoPedido({
             </span>
           )}
         </label>
+        {anteriores.length > 0 && (
+          <div className="rounded-xl bg-stone-50 p-3 text-sm">
+            <p className="mb-2 font-medium">Pidió antes</p>
+            <ul className="space-y-1.5">
+              {anteriores.map((a) => (
+                <li key={a.id} className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{a.lineas.map((l) => `${l.cantidad}× ${l.nombre}`).join(", ")}</span>
+                    <span className="block text-xs text-suave" suppressHydrationWarning>
+                      {fechaCorta(a.fecha, regionDe(ajustes))} ·{" "}
+                      {formato(a.lineas.reduce((s, l) => s + Number(l.precio) * l.cantidad, 0))}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    aria-pressed={repetir?.id === a.id}
+                    onClick={() => setRepetir(repetir?.id === a.id ? null : a)}
+                    className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold ${
+                      repetir?.id === a.id ? "bg-marca text-white" : "bg-superficie ring-1 ring-borde"
+                    }`}
+                  >
+                    {repetir?.id === a.id ? "✓ Repetir" : "Repetir"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {repetir && (
+              <p className="mt-2 text-xs text-suave">
+                Al seguir, la comanda se arma con ese pedido (con los precios de hoy). Puedes cambiarla antes de enviar.
+              </p>
+            )}
+          </div>
+        )}
         <label className="block text-sm">
           Nombre
           <input required maxLength={60} value={nombre} onChange={(e) => setNombre(e.target.value)} className="campo mt-1" />
@@ -654,7 +776,7 @@ function NuevoPedido({
             Cancelar
           </button>
           <button type="submit" className="boton" disabled={guardando || !nombre.trim()}>
-            {guardando ? "Creando…" : "Elegir platos"}
+            {guardando ? "Creando…" : repetir ? "Revisar pedido" : "Elegir platos"}
           </button>
         </div>
       </form>
