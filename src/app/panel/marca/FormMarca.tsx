@@ -464,10 +464,11 @@ export function FormMarca({
         {tieneAjustes && (
           <div className="tarjeta space-y-4 p-5">
             <div>
-              <h2 className="font-semibold">Redes sociales</h2>
+              <h2 className="font-semibold">Redes sociales y tienda online</h2>
               <p className="text-sm text-suave">
                 Aparecen al final de la carta para que tus clientes te sigan. Escribe tu usuario (@turestaurante) o pega el
-                enlace. Las que dejes vacías no se muestran.
+                enlace. Las que dejes vacías no se muestran. Si vendes en Shopify, Jumpseller u otra tienda, pon su enlace en
+                “Tienda online” y sale como botón.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">

@@ -7,6 +7,57 @@ type Novedad = { titulo: string; texto: string; donde?: { href: string; texto: s
 // Lo nuevo en Platovi, lo más reciente primero. Cada entrada dice qué cambió y dónde encontrarlo.
 const NOVEDADES: { fecha: string; titulo: string; items: Novedad[] }[] = [
   {
+    fecha: "Noviembre 2026",
+    titulo: "Control y orden para el dueño",
+    items: [
+      {
+        titulo: "PIN de encargado",
+        texto:
+          "Cada persona del equipo puede tener un PIN. Si lo activas, un mesero necesita el PIN de un encargado para anular una mesa o quitar algo que ya está en cocina. Todo queda registrado: quién lo pidió, quién autorizó y por qué.",
+        donde: { href: "/panel/equipo#pin", texto: "Equipo" },
+      },
+      {
+        titulo: "Descuentos y cortesías con motivo",
+        texto:
+          "En la mesa, el botón % aplica un porcentaje, un monto o una cortesía a toda la cuenta o a platos elegidos. Siempre con motivo, y un mesero necesita el PIN de un encargado.",
+        donde: { href: "/panel/reportes/autorizaciones", texto: "Reportes → Autorizaciones" },
+      },
+      {
+        titulo: "Ranking de productos",
+        texto:
+          "Lo más vendido por monto o unidades, por canal y categoría, comparado con el período anterior, las horas de más venta y los platos que casi no salen.",
+        donde: { href: "/panel/reportes/productos", texto: "Reportes → Productos" },
+      },
+      {
+        titulo: "Gastos por categoría, retiros y corte parcial",
+        texto:
+          "Los gastos llevan categoría y proveedor, y puedes anotar retiros de efectivo a la caja fuerte. “Corte parcial” guarda e imprime cómo va el turno sin cerrarlo. El reporte mensual se exporta a Excel para el contador.",
+        donde: { href: "/panel/caja", texto: "Caja" },
+      },
+      {
+        titulo: "Precuenta con tu marca",
+        texto: "Tu logo, un mensaje de agradecimiento, un QR para dejar la reseña en Google y tus datos al pie.",
+        donde: { href: "/panel/personalizar", texto: "Personalizar" },
+      },
+      {
+        titulo: "Importar la carta desde Excel",
+        texto:
+          "Pega lo que copiaste de Excel o Google Sheets, o sube un CSV (también el que exportan otros sistemas). Ves la vista previa antes de guardar.",
+        donde: { href: "/panel", texto: "Carta" },
+      },
+      {
+        titulo: "Repetir el último pedido",
+        texto: "En Para llevar, al escribir el teléfono de un cliente ves sus últimos pedidos y los repites con un toque.",
+        donde: { href: "/panel/llevar", texto: "Para llevar" },
+      },
+      {
+        titulo: "Botón a tu tienda online",
+        texto: "Si vendes en Shopify, Jumpseller u otra tienda, pon el enlace y sale como botón al final de la carta.",
+        donde: { href: "/panel/marca", texto: "Marca" },
+      },
+    ],
+  },
+  {
     fecha: "Octubre 2026",
     titulo: "Mejoras pedidas por restaurantes",
     items: [

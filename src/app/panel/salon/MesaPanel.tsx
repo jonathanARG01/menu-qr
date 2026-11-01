@@ -380,7 +380,10 @@ export function MesaPanel({
     for (const i of lineas) {
       const nombre = i.opciones?.length ? `${i.nombre} (${textoOpciones(i.opciones)})` : i.nombre;
       const a = agrupado.get(nombre) ?? { cantidad: 0, importe: 0 };
-      agrupado.set(nombre, { cantidad: a.cantidad + i.cantidad, importe: a.importe + Number(i.precio) * i.cantidad });
+      agrupado.set(nombre, {
+        cantidad: a.cantidad + i.cantidad,
+        importe: a.importe + Number(i.precio_original ?? i.precio) * i.cantidad,
+      });
     }
     const sugerida = ajustes.propinas.activas && ajustes.propinas.sugerida ? ajustes.propinas.sugerida : null;
     imprimirTicket([
@@ -397,7 +400,7 @@ export function MesaPanel({
         izq: `${a.cantidad} × ${nombre}`,
         der: formato(a.importe),
       })),
-      ...(descontado > 0 ? [{ tipo: "fila" as const, izq: "Descuento incluido", der: `−${formato(descontado)}` }] : []),
+      ...(descontado > 0 ? [{ tipo: "fila" as const, izq: "Descuento", der: `−${formato(descontado)}` }] : []),
       ...(envio > 0 ? [{ tipo: "fila" as const, izq: "Envío", der: formato(envio) }] : []),
       ...(llevar && cuenta?.direccion ? [{ tipo: "texto" as const, texto: cuenta.direccion, chico: true }] : []),
       { tipo: "separador" },
