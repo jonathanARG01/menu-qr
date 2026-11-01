@@ -354,45 +354,67 @@ function Tarjeta({
   const minutos = minutosDesde(c.abierta_at, ahora);
   // Atrasado: ya pasó la hora pedida y todavía no se entregó.
   const tarde = !!c.para_hora && Date.parse(c.para_hora) < ahora && x.etapa !== "camino" && x.etapa !== "entregado";
+  const enCocina = x.pedidos.filter((p) => p.estado === "nuevo" || p.estado === "preparando").length;
   const esperandoPago = x.etapa === "aceptar" && pagoObligatorio && c.origen === "cliente" && !pagado && !c.paga_al_retirar;
   return (
     <article className={`tarjeta space-y-2 p-3 ${tarde ? "ring-2 ring-red-400" : ""}`}>
       <button type="button" onClick={onAbrir} className="block w-full text-left">
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2.5">
           <span
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${c.tipo === "delivery" ? "bg-sky-100 text-sky-800" : "bg-amber-100 text-amber-900"}`}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${c.tipo === "delivery" ? "bg-sky-100 text-sky-800" : "bg-amber-100 text-amber-900"}`}
             title={NOMBRE_TIPO[c.tipo as TipoCuenta]}
           >
             <Icono nombre={c.tipo === "delivery" ? "delivery" : "llevar"} className="h-4 w-4" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate font-semibold">{c.cliente_nombre || NOMBRE_TIPO[c.tipo as TipoCuenta]}</span>
-            <span className="block text-xs text-suave" suppressHydrationWarning>
-              {c.para_hora ? `Para las ${hora(c.para_hora)}` : "Lo antes posible"} · hace {minutos} min
-              {x.pedidos[0] ? ` · #${x.pedidos.map((p) => p.numero).join(", #")}` : ""}
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="truncate font-semibold">{c.cliente_nombre || NOMBRE_TIPO[c.tipo as TipoCuenta]}</span>
+              <span className="shrink-0 font-bold tabular-nums">{formato(x.total)}</span>
             </span>
-          </span>
-          <span className="text-right">
-            <span className="block font-bold tabular-nums">{formato(x.total)}</span>
-            <span
-              className={`block text-xs font-semibold ${pagado ? "text-emerald-700" : esperandoPago ? "text-red-600" : "text-suave"}`}
-            >
-              {pagado
-                ? c.aviso?.tipo === "pago"
-                  ? "Pagó online"
-                  : "Pagado"
-                : esperandoPago
-                  ? "Esperando pago"
-                  : c.paga_al_retirar
-                    ? `Paga al ${c.tipo === "delivery" ? "recibir" : "retirar"}`
-                    : "Por cobrar"}
+            <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+              <span
+                className={`rounded-full px-2 py-0.5 font-medium ${tarde ? "bg-red-100 text-red-700" : "bg-stone-100 text-stone-700"}`}
+                suppressHydrationWarning
+              >
+                {c.para_hora ? `Para las ${hora(c.para_hora)}` : "Lo antes posible"}
+              </span>
+              <span
+                className={`rounded-full px-2 py-0.5 font-semibold ${
+                  pagado ? "bg-emerald-100 text-emerald-800" : esperandoPago ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-900"
+                }`}
+              >
+                {pagado
+                  ? c.aviso?.tipo === "pago"
+                    ? "Pagó online"
+                    : "Pagado"
+                  : esperandoPago
+                    ? "Esperando pago"
+                    : c.paga_al_retirar
+                      ? `Paga al ${c.tipo === "delivery" ? "recibir" : "retirar"}`
+                      : "Por cobrar"}
+              </span>
+            </span>
+            <span className="mt-1 block text-xs text-suave" suppressHydrationWarning>
+              Hace {minutos} min
+              {x.pedidos[0] ? ` · Comanda #${x.pedidos.map((p) => p.numero).join(", #")}` : ""}
+              {enCocina > 0 && x.pedidos.length > 1 ? ` · ${x.pedidos.length - enCocina} de ${x.pedidos.length} listas` : ""}
             </span>
           </span>
         </div>
-        <p className="mt-1.5 line-clamp-2 text-sm text-suave">
-          {items.length ? items.map((i) => `${i.cantidad} ${i.nombre}`).join(", ") : "Sin platos todavía: toca para agregarlos"}
-        </p>
-        {c.direccion && <p className="mt-1 truncate text-xs text-suave">📍 {c.direccion}</p>}
+        {items.length ? (
+          <ul className="mt-2 space-y-0.5 rounded-xl bg-stone-100/70 px-3 py-2 text-sm">
+            {items.slice(0, 5).map((i) => (
+              <li key={i.id} className="flex gap-2">
+                <span className="w-6 shrink-0 font-semibold tabular-nums">{i.cantidad}×</span>
+                <span className="min-w-0 flex-1 truncate">{i.nombre}</span>
+              </li>
+            ))}
+            {items.length > 5 && <li className="text-xs text-suave">y {items.length - 5} más… (toca para ver todo)</li>}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-suave">Sin platos todavía: toca para agregarlos</p>
+        )}
+        {c.direccion && <p className="mt-1.5 truncate text-xs text-suave">📍 {c.direccion}</p>}
         {x.pedidos.some((p) => p.nota) && (
           <p className="mt-1 truncate text-xs text-amber-700">{x.pedidos.find((p) => p.nota)?.nota}</p>
         )}

@@ -7,7 +7,7 @@ import type { Cuenta, Pago, Pedido } from "@/lib/salon";
 export type DatosServicio = { cuentas: Cuenta[]; pedidos: Pedido[]; pagos: Pago[] };
 
 // Mesas abiertas, comandas y pagos del restaurante, siempre al día:
-// escucha los cambios en tiempo real y, por si la conexión falla, vuelve a consultar cada 15 segundos.
+// escucha los cambios en tiempo real y, por si la conexión falla, vuelve a consultar cada 8 segundos.
 export function useServicio(restauranteId: string, iniciales: DatosServicio) {
   const supabase = useMemo(() => createClient(), []);
   const [datos, setDatos] = useState(iniciales);
@@ -50,20 +50,37 @@ export function useServicio(restauranteId: string, iniciales: DatosServicio) {
 
   useEffect(() => {
     const filtro = `restaurante_id=eq.${restauranteId}`;
-    const canal = supabase
-      .channel(`servicio-${restauranteId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "pedidos", filter: filtro }, programar)
-      .on("postgres_changes", { event: "*", schema: "public", table: "pedido_items", filter: filtro }, programar)
-      .on("postgres_changes", { event: "*", schema: "public", table: "cuentas", filter: filtro }, programar)
-      .subscribe((estado) => setEnVivo(estado === "SUBSCRIBED"));
+    let canal: ReturnType<typeof supabase.channel> | null = null;
+    let cerrado = false;
+    // El canal se abre con la sesión del usuario: si se conecta como anónimo, Supabase igual dice "conectado"
+    // pero no manda ningún cambio (las reglas de acceso esconden las filas) y había que recargar la página.
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.access_token) await supabase.realtime.setAuth(data.session.access_token);
+      if (cerrado) return;
+      canal = supabase
+        .channel(`servicio-${restauranteId}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "pedidos", filter: filtro }, programar)
+        .on("postgres_changes", { event: "*", schema: "public", table: "pedido_items", filter: filtro }, programar)
+        .on("postgres_changes", { event: "*", schema: "public", table: "cuentas", filter: filtro }, programar)
+        .subscribe((estado) => {
+          setEnVivo(estado === "SUBSCRIBED");
+          // Al (re)conectar se vuelve a consultar: lo que cambió mientras estaba desconectado aparece al tiro.
+          if (estado === "SUBSCRIBED") programar();
+        });
+    })();
 
-    const intervalo = setInterval(recargar, 15000);
+    // Respaldo por si el tiempo real falla: vuelve a consultar cada 8 segundos mientras la pantalla está a la vista.
+    const intervalo = setInterval(() => document.visibilityState === "visible" && recargar(), 8000);
     const alVolver = () => document.visibilityState === "visible" && recargar();
     document.addEventListener("visibilitychange", alVolver);
+    window.addEventListener("focus", alVolver);
     return () => {
-      supabase.removeChannel(canal);
+      cerrado = true;
+      if (canal) supabase.removeChannel(canal);
       clearInterval(intervalo);
       document.removeEventListener("visibilitychange", alVolver);
+      window.removeEventListener("focus", alVolver);
     };
   }, [supabase, restauranteId, programar, recargar]);
 

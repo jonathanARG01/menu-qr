@@ -77,9 +77,32 @@ export function Salon({
 
   const [pisos, setPisos] = useState(pisosIniciales);
   const [mesas, setMesas] = useState(mesasIniciales);
-  const [sucursalId, setSucursalId] = useState<string | null>(sucursales.length > 1 ? sucursales[0].id : null);
+  // Con sucursales (Plan Grupo) cada local tiene su propio salón: el principal (lo que no tiene sucursal)
+  // y uno por sucursal. La carta es la misma, pero pisos, mesas y avisos son de cada local.
+  const conLocales = sucursales.length > 0;
+  const [sucursalId, setSucursalId] = useState<string | null>(() =>
+    !conLocales || pisosIniciales.some((p) => !p.sucursal_id) || mesasIniciales.some((m) => !m.sucursal_id)
+      ? null
+      : sucursales[0].id,
+  );
   const delLocal = <T extends { sucursal_id?: string | null }>(x: T) =>
-    !sucursalId || !x.sucursal_id || x.sucursal_id === sucursalId;
+    !conLocales || (x.sucursal_id ?? null) === sucursalId;
+  // Se recuerda el último local elegido en este equipo.
+  useEffect(() => {
+    if (!conLocales) return;
+    try {
+      const guardado = localStorage.getItem(`salon:local:${restaurante.id}`);
+      if (guardado === "principal") setSucursalId(null);
+      else if (guardado && sucursales.some((s) => s.id === guardado)) setSucursalId(guardado);
+    } catch {}
+  }, [conLocales, sucursales, restaurante.id]);
+  function elegirLocal(id: string | null) {
+    setSucursalId(id);
+    setPisoId(null);
+    try {
+      localStorage.setItem(`salon:local:${restaurante.id}`, id ?? "principal");
+    } catch {}
+  }
   const pisosVisibles = pisos.filter(delLocal);
   const [pisoId, setPisoId] = useState<string | null>(pisosVisibles[0]?.id ?? null);
   const piso = pisosVisibles.find((p) => p.id === pisoId) ?? pisosVisibles[0] ?? null;
@@ -230,6 +253,9 @@ export function Salon({
     : 0;
 
   const ocupadas = mesasLocal.filter((m) => estados.get(m.id)?.ocupada).length;
+  // Personas sentadas: los comensales de cada cuenta (las mesas unidas no suman de nuevo).
+  const personasEn = (lista: Mesa[]) => lista.reduce((t, m) => t + (estados.get(m.id)?.comensales ?? 0), 0);
+  const personas = personasEn(mesasLocal);
   const avisos = mesasLocal.filter((m) => estados.get(m.id)?.aviso || estados.get(m.id)?.pendiente);
 
   // ── Edición del plano (solo administrador) ─────────────
@@ -439,19 +465,18 @@ export function Salon({
           <h1 className="text-xl font-semibold">Salón</h1>
           <p className="flex items-center gap-2 text-sm text-suave">
             <span className={`inline-block h-2 w-2 rounded-full ${servicioVivo.enVivo ? "bg-emerald-500" : "bg-stone-300"}`} />
-            {ocupadas} de {mesasLocal.length} mesas ocupadas
+            {ocupadas} de {mesasLocal.length} mesas ocupadas · {personas} {personas === 1 ? "persona" : "personas"}
           </p>
         </div>
-        {sucursales.length > 1 && (
+        {conLocales && (
           <select
             value={sucursalId ?? ""}
-            onChange={(e) => {
-              setSucursalId(e.target.value);
-              setPisoId(null);
-            }}
-            className="campo w-auto py-2 text-sm"
-            aria-label="Sucursal"
+            onChange={(e) => elegirLocal(e.target.value || null)}
+            className="campo w-auto max-w-full py-2 text-sm"
+            aria-label="Local"
+            title="Elige el local para ver y editar su salón"
           >
+            <option value="">{restaurante.nombre} (principal)</option>
             {sucursales.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.nombre}
@@ -583,6 +608,9 @@ export function Salon({
                   <span className="ml-1.5 text-xs opacity-60">
                     {mesas.filter((m) => m.piso_id === p.id && estados.get(m.id)?.ocupada).length}/
                     {mesas.filter((m) => m.piso_id === p.id).length}
+                    {" · "}
+                    {personasEn(mesas.filter((m) => m.piso_id === p.id))}
+                    <Icono nombre="personas" className="ml-0.5 inline h-3 w-3 align-[-1px]" />
                   </span>
                 </button>
               ))}
