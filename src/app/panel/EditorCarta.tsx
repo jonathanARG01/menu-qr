@@ -29,6 +29,7 @@ import { PlatoModal } from "./PlatoModal";
 import { IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
 import { imagenDefecto } from "@/components/carta/comun";
 import Link from "next/link";
+import { ImportarCarta } from "./ImportarCarta";
 
 type Props = {
   restaurante: Restaurante;
@@ -49,6 +50,7 @@ export function EditorCarta({ restaurante, estaciones, categoriasIniciales, plat
   const [nuevaCategoria, setNuevaCategoria] = useState("");
   const [cerradas, setCerradas] = useState<Set<string>>(new Set());
   const [traduciendo, setTraduciendo] = useState<Categoria | null>(null);
+  const [importando, setImportando] = useState(false);
   const idiomas = IDIOMAS_EXTRA.filter((i) => restaurante.idiomas?.includes(i));
 
   const sensores = useSensors(
@@ -303,6 +305,23 @@ export function EditorCarta({ restaurante, estaciones, categoriasIniciales, plat
             Añadir
           </button>
         </form>
+        <button
+          type="button"
+          onClick={() => setImportando(true)}
+          className="text-sm font-medium text-marca hover:underline"
+        >
+          Importar carta desde Excel
+        </button>
+        {importando && (
+          <ImportarCarta
+            supabase={supabase}
+            restauranteId={restaurante.id}
+            moneda={restaurante.moneda}
+            categorias={categorias}
+            platos={platos}
+            onCerrar={() => setImportando(false)}
+          />
+        )}
 
         {traduciendo && (
           <TraducirCategoria
