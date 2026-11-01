@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { esAdmin, leerAjustes, SECCIONES, seccionesVisibles, type Rol, type Seccion } from "@/lib/salon";
 import { limitarAjustes, pedidosWhatsappIncluido, seccionIncluida } from "@/lib/planes";
 import type { Restaurante } from "@/lib/types";
+import { sellosContratado } from "@/lib/sellos/tipos";
 
 // Restaurante elegido en el panel cuando el usuario administra varios.
 export const COOKIE_RESTAURANTE = "restaurante_activo";
@@ -53,7 +54,7 @@ export const obtenerContexto = cache(async () => {
     admin,
     ajustes,
     ajustesGuardados,
-    secciones: seccionesVisibles(actual?.rol, ajustes),
+    secciones: seccionesVisibles(actual?.rol, ajustes, sellosContratado(guardado)),
     // Secciones que el plan no incluye: el administrador las ve con candado y el plan que las trae.
     bloqueadas: admin && guardado ? SECCIONES.filter((s) => !seccionIncluida(guardado.plan, s.id)) : [],
     restaurantes: lista.map((m) => ({ id: m.restaurantes!.id, nombre: m.restaurantes!.nombre, rol: m.rol })),

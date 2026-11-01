@@ -9,14 +9,13 @@ import { NOMBRE_TIPO, regionDe, type Ajustes, type TipoCuenta } from "@/lib/salo
 import { formatoFecha, numeroWhatsapp, paisDe } from "@/lib/region";
 import type { Restaurante } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
-import { premioDe, type ClienteResumen } from "../salon/ClienteCuenta";
+import { SellosDelCliente, type ClienteResumen } from "../salon/ClienteCuenta";
 
-type Filtro = "todos" | "frecuentes" | "premio" | "vuelvan";
+type Filtro = "todos" | "frecuentes" | "vuelvan";
 
 const FILTROS: { id: Filtro; texto: string }[] = [
   { id: "todos", texto: "Todos" },
   { id: "frecuentes", texto: "Frecuentes" },
-  { id: "premio", texto: "Les toca premio" },
   { id: "vuelvan", texto: "Hace tiempo que no vienen" },
 ];
 
@@ -67,14 +66,12 @@ export function Clientes({
       )
         return false;
       if (filtro === "frecuentes") return c.visitas >= 3;
-      if (filtro === "premio") return !!premioDe(c, ajustes)?.toca;
       if (filtro === "vuelvan") return c.visitas >= 2 && !!c.ultima_visita && ahora - Date.parse(c.ultima_visita) > 30 * DIA;
       return true;
     });
-  }, [lista, q, filtro, ajustes, ahora]);
+  }, [lista, q, filtro, ahora]);
 
   const frecuentes = lista.filter((c) => c.visitas >= 3).length;
-  const conPremio = ajustes.clientes.premio_cada >= 2;
 
   function exportar() {
     const filas = [
@@ -118,13 +115,14 @@ export function Clientes({
         </button>
       </div>
 
-      {!conPremio && admin && (
+      {admin && (
         <Link
-          href="/panel/personalizar#clientes"
+          href="/panel/sellos"
           className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 hover:border-emerald-400"
         >
-          <Icono nombre="regalo" className="h-5 w-5 shrink-0" />
-          Premia a los que vuelven: elige en Personalizar cada cuántas visitas les toca un regalo y el mesero lo ve al atenderlos.
+          <Icono nombre="sellos" className="h-5 w-5 shrink-0" />
+          Premia a los que vuelven con la tarjeta de sellos en el celular: juntan sellos en cada visita y ganan el premio que
+          elijas.
         </Link>
       )}
 
@@ -137,7 +135,7 @@ export function Clientes({
           className="campo w-full max-w-xs py-2 text-sm"
         />
         <div className="flex flex-wrap gap-1.5">
-          {FILTROS.filter((f) => f.id !== "premio" || conPremio).map((f) => (
+          {FILTROS.map((f) => (
             <button
               key={f.id}
               type="button"
@@ -163,7 +161,6 @@ export function Clientes({
       ) : (
         <ul className="tarjeta divide-y divide-borde">
           {visibles.slice(0, 300).map((c) => {
-            const premio = premioDe(c, ajustes);
             const dias = c.ultima_visita ? Math.floor((ahora - Date.parse(c.ultima_visita)) / DIA) : null;
             return (
               <li key={c.id}>
@@ -177,11 +174,6 @@ export function Clientes({
                       <span className="truncate">{c.nombre}</span>
                       {c.visitas >= 3 && (
                         <span className="rounded-full bg-amber-100 px-2 text-xs font-semibold text-amber-900">Frecuente</span>
-                      )}
-                      {premio?.toca && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 text-xs font-semibold text-emerald-800">
-                          <Icono nombre="regalo" className="h-3 w-3" /> Premio
-                        </span>
                       )}
                     </span>
                     <span className="block truncate text-sm text-suave">
@@ -306,7 +298,6 @@ function FichaCliente({
     onGuardado("Cliente borrado");
   }
 
-  const premio = cliente && premioDe(cliente, ajustes);
   const wa = (mensaje: string) =>
     cliente?.telefono &&
     `https://wa.me/${numeroWhatsapp(cliente.telefono, paisDe(ajustes.pais))}?text=${encodeURIComponent(mensaje)}`;
@@ -339,15 +330,10 @@ function FichaCliente({
         )}
 
         <div className="space-y-4 px-5 py-4">
-          {premio && (
-            <p
-              className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${premio.toca ? "bg-emerald-50 font-semibold text-emerald-800" : "bg-stone-50 text-suave"}`}
-            >
-              <Icono nombre="regalo" className="h-4 w-4" />
-              {premio.toca
-                ? `En su próxima visita le toca ${premio.premio}.`
-                : `Le faltan ${premio.faltan} ${premio.faltan === 1 ? "visita" : "visitas"} para ${premio.premio}.`}
-            </p>
+          {cliente && (
+            <div className="text-sm">
+              <SellosDelCliente supabase={supabase} clienteId={cliente.id} />
+            </div>
           )}
 
           {cliente?.telefono && (
@@ -360,20 +346,6 @@ function FichaCliente({
               >
                 <Icono nombre="whatsapp" className="h-4 w-4" /> Invitar a volver
               </a>
-              {premio?.toca && (
-                <a
-                  href={
-                    wa(
-                      `Hola ${nombreCorto}, gracias por elegirnos tantas veces. En tu próxima visita a ${restaurante.nombre} te regalamos ${premio.premio}.`,
-                    ) || undefined
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-borde px-3 py-1.5 text-sm font-semibold hover:border-emerald-500"
-                >
-                  <Icono nombre="regalo" className="h-4 w-4" /> Avisar del premio
-                </a>
-              )}
             </div>
           )}
 

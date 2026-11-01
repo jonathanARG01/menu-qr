@@ -176,6 +176,16 @@ const TRAZOS: Record<string, React.ReactNode> = {
       <path d="M7 16v-3M12 16V8M17 16v-5" />
     </>
   ),
+  // Tarjeta con sellos (Platovi Sellos).
+  sellos: (
+    <>
+      <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
+      <circle cx="7.5" cy="10.5" r="1.6" />
+      <circle cx="12" cy="10.5" r="1.6" />
+      <circle cx="16.5" cy="10.5" r="1.6" />
+      <path d="M6 15.5h7" />
+    </>
+  ),
   regalo: (
     <>
       <rect x="3" y="8" width="18" height="5" rx="1" />

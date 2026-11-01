@@ -25,7 +25,7 @@ import { nombrePersona, useEquipo } from "@/lib/equipo";
 import { Avatar } from "@/components/Avatar";
 import { EnOtrasMonedas } from "@/components/carta/EnOtrasMonedas";
 import type { Categoria, Mesa, Plato, Restaurante } from "@/lib/types";
-import { formatoOtraMoneda, formatoPrecio, mensajeError } from "@/lib/utils";
+import { formatoOtraMoneda, formatoPrecio, mensajeError, urlSitio } from "@/lib/utils";
 import { minutosDesde, tiempo, useAhora, type useServicio } from "@/lib/useServicio";
 import { formatoHora, numeroWhatsapp, paisDe } from "@/lib/region";
 import { ClienteCuenta, Atiende } from "./ClienteCuenta";
@@ -34,6 +34,7 @@ import { TomarPedido, type LineaNueva } from "./TomarPedido";
 import { Descuento, type PedidoDescuento } from "./Descuento";
 import { faltaFuncion, useAutorizar } from "@/components/Autorizar";
 import { encabezadoMarca, pieMarca } from "@/lib/ticketMarca";
+import { rutaUnirse, sellosContratado } from "@/lib/sellos/tipos";
 
 export const COLOR_ESTADO: Record<EstadoPedido, string> = {
   pendiente: "bg-red-100 text-red-800",
@@ -375,7 +376,13 @@ export function MesaPanel({
   }
 
   // Precuenta para llevar a la mesa: lo consumido agrupado, lo pagado y lo que falta.
-  function imprimirCuenta() {
+  // Con Platovi Sellos trae un QR de un solo uso para que el cliente sume el sello de esta visita.
+  async function imprimirCuenta() {
+    let sello: string | null = null;
+    if (cuenta && sellosContratado(restaurante)) {
+      const { data } = await supabase.rpc("sellos_codigo_cuenta", { p_cuenta: cuenta.id });
+      sello = typeof data === "string" ? data : null;
+    }
     const agrupado = new Map<string, { cantidad: number; importe: number }>();
     for (const i of lineas) {
       const nombre = i.opciones?.length ? `${i.nombre} (${textoOpciones(i.opciones)})` : i.nombre;
@@ -422,6 +429,16 @@ export function MesaPanel({
               tipo: "texto" as const,
               texto: `Propina sugerida ${sugerida}%: ${formato(Math.round((total * sugerida) / 100))}`,
               chico: true,
+            },
+          ]
+        : []),
+      ...(sello
+        ? [
+            { tipo: "separador" as const },
+            {
+              tipo: "qr" as const,
+              url: `${urlSitio()}${rutaUnirse(restaurante.slug, sello)}`,
+              texto: "Escanea y suma un sello a tu tarjeta",
             },
           ]
         : []),

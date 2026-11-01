@@ -23,6 +23,15 @@ export async function actualizarRestaurante(id: string, slug: string, cambios: {
   return null;
 }
 
+// Activa o pausa un complemento pagado aparte (por ahora, Platovi Sellos).
+export async function cambiarComplemento(id: string, clave: "sellos", activo: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_complemento", { p_id: id, p_clave: clave, p_activo: activo });
+  if (error) return /admin_complemento/.test(error.message) ? "Falta ejecutar el SQL 0024_sellos.sql en Supabase." : mensajeError(error);
+  revalidatePath("/admin");
+  return null;
+}
+
 // Fin de la prueba: una fecha (ISO) o null para que no venza. Si la prueba lo había pausado, vuelve a verse.
 export async function cambiarPrueba(id: string, slug: string, fin: string | null) {
   const supabase = await createClient();

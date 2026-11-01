@@ -31,6 +31,7 @@ export type Seccion =
   | "estadisticas"
   | "reportes"
   | "clientes"
+  | "sellos"
   | "sucursales"
   | "equipo"
   | "personalizar"
@@ -50,7 +51,8 @@ export const SECCIONES: InfoSeccion[] = [
   { id: "qr", href: "/panel/qr", texto: "QR", grupo: "Carta", ayuda: "Códigos para imprimir" },
   { id: "estadisticas", href: "/panel/estadisticas", texto: "Estadísticas", grupo: "Negocio", ayuda: "Visitas y lo más pedido" },
   { id: "reportes", href: "/panel/reportes", texto: "Reportes", grupo: "Negocio", ayuda: "Ventas y propinas por mesero" },
-  { id: "clientes", href: "/panel/clientes", texto: "Clientes", grupo: "Negocio", ayuda: "Clientes frecuentes y premios" },
+  { id: "clientes", href: "/panel/clientes", texto: "Clientes", grupo: "Negocio", ayuda: "Clientes frecuentes" },
+  { id: "sellos", href: "/panel/sellos", texto: "Tarjeta de sellos", grupo: "Negocio", ayuda: "Sellos y premios en el celular" },
   { id: "sucursales", href: "/panel/sucursales", texto: "Sucursales", grupo: "Negocio", ayuda: "Locales del mismo negocio" },
   { id: "equipo", href: "/panel/equipo", texto: "Equipo", grupo: "Negocio", ayuda: "Meseros, cocina y administradores" },
   {
@@ -66,7 +68,7 @@ export const SECCIONES: InfoSeccion[] = [
 // Lo que cada rol puede llegar a ver. El administrador elige, dentro de esto, qué le aparece a cada uno.
 // La base de datos aplica los permisos de verdad: un mesero no puede cambiar precios aunque llegue a la pantalla.
 export const PERMITIDAS: Record<"mesero" | "cocina", Seccion[]> = {
-  mesero: ["salon", "llevar", "cocina", "reservas", "caja", "clientes", "estadisticas"],
+  mesero: ["salon", "llevar", "cocina", "reservas", "caja", "clientes", "sellos", "estadisticas"],
   cocina: ["cocina", "salon", "llevar"],
 };
 
@@ -124,8 +126,6 @@ export type Ajustes = {
     // Desde la carta se paga con Mercado Pago antes de que el pedido pase a cocina.
     pago_obligatorio: boolean;
   };
-  // Premio a los clientes frecuentes: cada tantas visitas (0: sin premio), el equipo ve el aviso al atenderlo.
-  clientes: { premio_cada: number; premio: string };
   resenas: {
     // Al cerrar la mesa se le pregunta al cliente cómo estuvo todo.
     pedir: boolean;
@@ -194,7 +194,6 @@ export const AJUSTES_BASE: Ajustes = {
   zona_horaria: PAIS_BASE.zona,
   reservas: { online: false, tolerancia: 15, recordatorio: true, horas_antes: 3 },
   llevar: { online: false, delivery: false, envio: 0, minutos: 30, confirmar: true, pago_obligatorio: false },
-  clientes: { premio_cada: 0, premio: "" },
   resenas: { pedir: true, google_url: "" },
   cobro_online: { activo: false },
   imagenes_defecto: false,
@@ -257,7 +256,6 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
     zona_horaria: typeof g.zona_horaria === "string" && g.zona_horaria ? g.zona_horaria : paisDe(g.pais).zona,
     reservas: { ...AJUSTES_BASE.reservas, ...(g.reservas ?? {}) },
     llevar: { ...AJUSTES_BASE.llevar, ...(g.llevar ?? {}) },
-    clientes: { ...AJUSTES_BASE.clientes, ...(g.clientes ?? {}) },
     resenas: { ...AJUSTES_BASE.resenas, ...(g.resenas ?? {}) },
     cobro_online: { ...AJUSTES_BASE.cobro_online, ...(g.cobro_online ?? {}) },
   };
@@ -283,9 +281,11 @@ const MODULO_DE: Partial<Record<Seccion, Modulo>> = {
   equipo: "equipo",
 };
 
-// Secciones que ve esta persona, en el orden del menú.
-export function seccionesVisibles(rol: string | undefined, ajustes: Ajustes): InfoSeccion[] {
+// Secciones que ve esta persona, en el orden del menú. sellos: si el local contrató Platovi Sellos (el administrador
+// ve la sección igual, con la oferta para contratarlo).
+export function seccionesVisibles(rol: string | undefined, ajustes: Ajustes, sellos = false): InfoSeccion[] {
   const encendida = (s: Seccion) => {
+    if (s === "sellos") return sellos || esAdmin(rol);
     const m = MODULO_DE[s];
     return !m || ajustes.modulos[m];
   };

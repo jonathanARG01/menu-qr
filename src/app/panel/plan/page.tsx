@@ -14,6 +14,7 @@ import {
   type PlanPago,
 } from "@/lib/planes";
 import { formatoPrecio } from "@/lib/utils";
+import { NOMBRE_SELLOS, PRECIO_SELLOS, sellosContratado } from "@/lib/sellos/tipos";
 
 export const metadata = { title: "Tu plan · Platovi" };
 export const dynamic = "force-dynamic";
@@ -133,6 +134,27 @@ export default async function PaginaPlan({ searchParams }: { searchParams: Promi
             </div>
           );
         })}
+      </section>
+
+      <section className="tarjeta flex flex-wrap items-center gap-4 p-5">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-800">
+          <Icono nombre="sellos" className="h-6 w-6" />
+        </span>
+        <div className="min-w-0 flex-1 basis-60">
+          <p className="text-xs uppercase tracking-wide text-suave">Complemento</p>
+          <p className="text-lg font-semibold">{NOMBRE_SELLOS}</p>
+          <p className="text-sm text-suave">
+            {sellosContratado(restaurante)
+              ? `Activo${restaurante.complementos?.sellos?.desde ? ` desde el ${fecha(`${restaurante.complementos.sellos.desde}T12:00:00`)}` : ""}. Tus clientes juntan sellos en el celular.`
+              : `Tarjeta de sellos en el celular de tus clientes. ${formatoPrecio(
+                  restaurante.plan === "grupo" ? PRECIO_SELLOS.grupo : PRECIO_SELLOS.local,
+                  "CLP",
+                )} al mes${restaurante.plan === "grupo" ? " para todas tus sucursales" : " por local"}, aparte de tu plan.`}
+          </p>
+        </div>
+        <Link href="/panel/sellos" className={sellosContratado(restaurante) ? "boton-secundario" : "boton"}>
+          {sellosContratado(restaurante) ? "Ir a la tarjeta" : "Conocer más"}
+        </Link>
       </section>
 
       <p className="text-center text-sm text-suave">

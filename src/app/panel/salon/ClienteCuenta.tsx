@@ -8,6 +8,7 @@ import { regionDe, type Ajustes, type Cuenta } from "@/lib/salon";
 import { formatoFecha } from "@/lib/region";
 import { mensajeError } from "@/lib/utils";
 import { nombrePersona, useEquipo } from "@/lib/equipo";
+import { rutaTarjeta } from "@/lib/sellos/tipos";
 
 export type ClienteResumen = {
   id: string;
@@ -24,18 +25,9 @@ export type ClienteResumen = {
   created_at: string;
 };
 
-// Premio por visitas: la visita que se está atendiendo es la número visitas + 1.
-export function premioDe(c: Pick<ClienteResumen, "visitas">, ajustes: Ajustes, contandoEsta = true) {
-  const cada = ajustes.clientes.premio_cada;
-  if (!cada || cada < 2) return null;
-  const numero = c.visitas + (contandoEsta ? 1 : 0);
-  const faltan = (cada - (numero % cada)) % cada;
-  return { toca: faltan === 0, faltan, numero, premio: ajustes.clientes.premio.trim() || "un premio" };
-}
-
 const soloDigitos = (t: string) => t.replace(/\D/g, "");
 
-// En la ficha de la mesa: quién es el cliente (para contar sus visitas y avisar cuando le toca premio).
+// En la ficha de la mesa: quién es el cliente (para contar sus visitas y ver su tarjeta de sellos).
 export function ClienteCuenta({
   supabase,
   cuenta,
@@ -100,7 +92,6 @@ export function ClienteCuenta({
     );
   }
 
-  const premio = premioDe(cliente, ajustes);
   const region = regionDe(ajustes);
   return (
     <div className="space-y-1.5 rounded-xl border border-borde p-3 text-sm">
@@ -126,17 +117,7 @@ export function ClienteCuenta({
           : ""}
       </p>
       {cliente.nota && <p className="rounded-lg bg-amber-50 px-2 py-1 text-amber-900">{cliente.nota}</p>}
-      {premio?.toca ? (
-        <p className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2 py-1 font-semibold text-emerald-800">
-          <Icono nombre="regalo" className="h-4 w-4" /> Es su visita {premio.numero}: le toca {premio.premio}
-        </p>
-      ) : (
-        premio && (
-          <p className="text-xs text-suave">
-            Le faltan {premio.faltan} {premio.faltan === 1 ? "visita" : "visitas"} para {premio.premio}.
-          </p>
-        )
-      )}
+      <SellosDelCliente supabase={supabase} clienteId={cliente.id} />
     </div>
   );
 }
@@ -276,5 +257,46 @@ export function Atiende({ supabase, cuenta, onCambio }: { supabase: SupabaseClie
         ))}
       </select>
     </label>
+  );
+}
+
+// Su tarjeta de sellos (Platovi Sellos), si tiene: cuántos lleva y si tiene un premio para canjear.
+// "Ver tarjeta" la abre con los botones del equipo para sumar o canjear.
+export function SellosDelCliente({ supabase, clienteId }: { supabase: SupabaseClient; clienteId: string }) {
+  const [t, setT] = useState<{ codigo: string; sellos: number; premios: number; meta: number; premio: string } | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    supabase
+      .from("sellos_tarjetas")
+      .select("codigo, sellos, premios, restaurante_id")
+      .eq("cliente_id", clienteId)
+      .limit(1)
+      .maybeSingle()
+      .then(async ({ data }) => {
+        if (!data || !vivo) return setT(null);
+        const { data: p } = await supabase
+          .from("sellos_programas")
+          .select("meta, premio")
+          .eq("restaurante_id", data.restaurante_id)
+          .maybeSingle();
+        if (vivo) setT({ ...data, meta: p?.meta ?? 10, premio: p?.premio ?? "el premio" });
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [supabase, clienteId]);
+  if (!t) return null;
+  return (
+    <p
+      className={`flex flex-wrap items-center gap-1.5 rounded-lg px-2 py-1 ${t.premios > 0 ? "bg-emerald-50 font-semibold text-emerald-800" : "bg-stone-50 text-suave"}`}
+    >
+      <Icono nombre={t.premios > 0 ? "regalo" : "sellos"} className="h-4 w-4" />
+      <span className="flex-1">
+        {t.premios > 0 ? `Tiene ${t.premio} para canjear` : `Tarjeta de sellos: ${t.sellos}/${t.meta}`}
+      </span>
+      <a href={rutaTarjeta(t.codigo)} target="_blank" className="text-xs font-semibold text-marca hover:underline">
+        Ver tarjeta
+      </a>
+    </p>
   );
 }
