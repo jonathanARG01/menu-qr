@@ -566,6 +566,7 @@ export function MesaPanel({
               onPagar={registrarPago}
               onCerrarMesa={cerrarMesa}
               onSalir={() => setPantalla("mesa")}
+              llevar={llevar}
             />
           ) : (
             <div className="space-y-4">

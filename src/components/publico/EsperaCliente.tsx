@@ -13,6 +13,8 @@ type Estado = {
   avisada_at: string | null;
   desde: string;
   delante: number;
+  // Número de la mesa asignada (migración 0021; antes no viene).
+  mesa?: string | null;
 };
 
 // Lista de espera desde el QR de la entrada: el cliente se anota, ve cuántos grupos tiene delante
@@ -26,7 +28,8 @@ export function EsperaCliente({ restaurante, sucursales }: { restaurante: Restau
   const [estado, setEstado] = useState<Estado | null>(null);
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [personas, setPersonas] = useState(2);
+  // Texto libre para poder borrar y escribir otro número sin pelear con el "1".
+  const [personas, setPersonas] = useState("2");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ahora, setAhora] = useState(() => Date.now());
@@ -84,7 +87,7 @@ export function EsperaCliente({ restaurante, sucursales }: { restaurante: Restau
       p_sucursal: sucursal?.id ?? null,
       p_nombre: nombre,
       p_telefono: telefono || null,
-      p_personas: personas,
+      p_personas: Math.max(1, Math.min(99, Number(personas) || 1)),
     });
     setEnviando(false);
     if (error || !data) return setError(error?.message ?? t("errorEnvio"));
@@ -112,7 +115,15 @@ export function EsperaCliente({ restaurante, sucursales }: { restaurante: Restau
     return (
       <Marco restaurante={restaurante} titulo={t("esperaTitulo")}>
         {final ? (
-          <p className="text-lg">{final}</p>
+          <>
+            <p className="text-lg">{final}</p>
+            {estado.estado === "sentada" && estado.mesa && (
+              <div className="mt-4 rounded-2xl p-5 text-center" style={ESTILO_BOTON}>
+                <p className="text-sm font-semibold uppercase tracking-wide opacity-80">{t("esperaTuMesa")}</p>
+                <p className="text-5xl font-black tabular-nums">{estado.mesa}</p>
+              </div>
+            )}
+          </>
         ) : estado.estado === "avisada" ? (
           <div className="aviso-entrada rounded-2xl bg-emerald-600 p-6 text-center text-white">
             <p className="text-5xl">🔔</p>
@@ -134,7 +145,7 @@ export function EsperaCliente({ restaurante, sucursales }: { restaurante: Restau
             {t("esperaSalir")}
           </button>
         )}
-        {final && (
+        {final && estado.estado !== "sentada" && (
           <button
             type="button"
             onClick={() => {
@@ -186,9 +197,10 @@ export function EsperaCliente({ restaurante, sucursales }: { restaurante: Restau
             className={CAMPO}
           />
         </label>
-        <div className="grid grid-cols-[1fr_6rem] gap-3">
+        {/* items-end: si "(opcional)" baja de línea, los dos campos igual quedan alineados. */}
+        <div className="grid grid-cols-[1fr_6rem] items-end gap-3">
           <label className="block text-sm font-medium">
-            {t("telefono")} <span className="font-normal text-stone-400">({t("opcional")})</span>
+            {t("telefono")} <span className="font-normal whitespace-nowrap text-stone-400">({t("opcional")})</span>
             <input
               type="tel"
               maxLength={30}
@@ -202,10 +214,14 @@ export function EsperaCliente({ restaurante, sucursales }: { restaurante: Restau
             {t("personas")}
             <input
               type="number"
+              inputMode="numeric"
+              required
               min={1}
               max={99}
               value={personas}
-              onChange={(e) => setPersonas(Math.max(1, Math.min(99, Number(e.target.value) || 1)))}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setPersonas(e.target.value.replace(/\D/g, "").slice(0, 2))}
+              onBlur={() => setPersonas(String(Math.max(1, Math.min(99, Number(personas) || 1))))}
               className={CAMPO}
             />
           </label>

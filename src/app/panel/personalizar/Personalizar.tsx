@@ -14,7 +14,7 @@ import { eliminarMiRestaurante } from "../cuenta";
 import type { OtraMoneda } from "@/lib/salon";
 import { MONEDAS_MP } from "@/lib/mercadopago";
 import Link from "next/link";
-import { NOMBRE_PLAN, conservarBloqueado, moduloIncluido, planDeModulo, type Plan } from "@/lib/planes";
+import { NOMBRE_PLAN, conservarBloqueado, moduloIncluido, planDeModulo, type Plan, type PlanPago } from "@/lib/planes";
 
 const MODULOS: { id: Modulo; titulo: string; ayuda: string }[] = [
   { id: "salon", titulo: "Salón y mesas", ayuda: "Plano por pisos, abrir mesas y tomar pedidos" },
@@ -124,8 +124,17 @@ export function Personalizar({
   // El atajo que coincide con los módulos encendidos queda marcado.
   const incluidos = (modulos: Partial<Record<Modulo, boolean>>) =>
     Object.fromEntries(Object.entries(modulos).filter(([m]) => moduloIncluido(plan, m as Modulo)));
+  // Un atajo que necesita módulos fuera del plan (p. ej. "Restaurante completo" pide Sucursales) queda bloqueado:
+  // así dos atajos nunca se ven iguales y no aparecen todos marcados a la vez.
+  const planDePerfil = (p: (typeof PERFILES)[number]) =>
+    (Object.entries(p.modulos) as [Modulo, boolean][])
+      .filter(([m, v]) => v && !moduloIncluido(plan, m))
+      .map(([m]) => planDeModulo(m))
+      .reduce<PlanPago | undefined>((max, x) => (max === "grupo" ? max : x), undefined);
   const coincide = (p: (typeof PERFILES)[number]) =>
     (Object.keys(incluidos(p.modulos)) as Modulo[]).every((m) => !!a.modulos[m] === p.modulos[m]);
+  // Solo uno queda marcado: el primero disponible que coincide con lo encendido.
+  const marcado = PERFILES.find((p) => !planDePerfil(p) && coincide(p));
   const modulo = (id: Modulo, v: boolean) => set({ modulos: { ...a.modulos, [id]: v } });
 
   async function guardar() {
@@ -158,11 +167,29 @@ export function Personalizar({
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="font-semibold">Empezar rápido</h2>
-          {!PERFILES.some(coincide) && <span className="text-sm text-suave">Ahora: a tu medida</span>}
+          {!marcado && <span className="text-sm text-suave">Ahora: a tu medida</span>}
         </div>
         <div className="grid gap-2 sm:grid-cols-3">
           {PERFILES.map((p) => {
-            const elegido = coincide(p);
+            const elegido = p === marcado;
+            const falta = planDePerfil(p);
+            if (falta) {
+              return (
+                <Link
+                  key={p.titulo}
+                  href={`/panel/plan?m=${falta === "grupo" ? "sucursales" : "salon"}`}
+                  title={`Disponible en el plan ${NOMBRE_PLAN[falta]}`}
+                  className="relative rounded-2xl border-2 border-dashed border-borde bg-superficie p-4 text-left opacity-70 transition hover:opacity-100"
+                >
+                  <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                    <Icono nombre="candado" className="h-3 w-3" />
+                    Plan {NOMBRE_PLAN[falta]}
+                  </span>
+                  <span className="block pr-24 font-semibold">{p.titulo}</span>
+                  <span className="block text-sm text-suave">{p.ayuda}</span>
+                </Link>
+              );
+            }
             return (
               <button
                 key={p.titulo}

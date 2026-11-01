@@ -30,6 +30,7 @@ export function Cobro({
   onPagar,
   onCerrarMesa,
   onSalir,
+  llevar = false,
 }: {
   total: number;
   pagos: Pago[];
@@ -41,6 +42,8 @@ export function Cobro({
   onPagar: (p: NuevoPago) => Promise<boolean>;
   onCerrarMesa: () => void;
   onSalir: () => void;
+  // Para llevar o delivery: no hay mesa, se habla del pedido.
+  llevar?: boolean;
 }) {
   const pagado = pagos.reduce((t, p) => t + Number(p.monto), 0);
   const falta = Math.max(0, Math.round((total - pagado) * 100) / 100);
@@ -199,7 +202,10 @@ export function Cobro({
       ) : (
         <div className="rounded-xl bg-emerald-50 p-4 text-center">
           <p className="font-semibold text-emerald-900">La cuenta está paga</p>
-          <p className="text-sm text-emerald-800">Puedes sumar una propina que dejen al final o cerrar la mesa.</p>
+          <p className="text-sm text-emerald-800">{llevar
+              ? "Puedes sumar una propina que dejen al final o cerrar el pedido."
+              : "Puedes sumar una propina que dejen al final o cerrar la mesa."}
+          </p>
         </div>
       )}
 
@@ -229,7 +235,7 @@ export function Cobro({
 
       <div className="flex flex-wrap gap-2 border-t border-borde pt-4">
         <button type="button" className="boton-secundario" onClick={onSalir}>
-          Volver a la mesa
+          {llevar ? "Volver al pedido" : "Volver a la mesa"}
         </button>
         {ajustes.propinas.activas && (
           <button type="button" className="boton-secundario" onClick={() => setPropinaFinal(true)}>
@@ -238,7 +244,7 @@ export function Cobro({
         )}
         {falta <= 0 && (
           <button type="button" className="boton ml-auto" onClick={onCerrarMesa}>
-            Cerrar mesa
+            {llevar ? "Cerrar pedido" : "Cerrar mesa"}
           </button>
         )}
       </div>

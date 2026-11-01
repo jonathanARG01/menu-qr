@@ -45,7 +45,7 @@ export function Referidos({ slug, nombre, ciclo, activo, niveles, descuentos, re
       <div>
         <h1 className="text-xl font-semibold">Invitar y ahorrar</h1>
         <p className="text-sm text-suave">
-          Recomienda el sistema a otros restaurantes. Cada uno que contrate un plan con tu link te acerca a un descuento en tu
+          Recomienda Platovi a otros restaurantes. Cada uno que contrate un plan con tu link te acerca a un descuento en tu
           suscripción.
         </p>
       </div>

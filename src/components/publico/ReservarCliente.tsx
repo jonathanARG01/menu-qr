@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Restaurante, Sucursal } from "@/lib/types";
+import { leerAjustes } from "@/lib/salon";
+import { numeroWhatsapp, paisDe } from "@/lib/region";
 import { BOTON, CAMPO, ESTILO_BOTON, Marco, useSucursal, useTextos } from "./Marco";
 
 const manana = () => {
@@ -10,13 +12,18 @@ const manana = () => {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
 
+// Horas cada 15 minutos en formato 24 h (igual que el reloj del celular). Un select en vez de <input type="time">:
+// en Android el campo nativo se cortaba ("07:3…") y mostraba AM/PM distinto al selector.
+const HORAS = Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`);
+
 // Pedir una reserva desde internet. Queda "por confirmar" y el restaurante la confirma por WhatsApp.
 export function ReservarCliente({ restaurante, sucursales }: { restaurante: Restaurante; sucursales: Sucursal[] }) {
   const t = useTextos(restaurante);
   const [sucursal, setSucursal] = useSucursal(sucursales);
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [personas, setPersonas] = useState(2);
+  // Texto libre para poder borrar y escribir otro número sin pelear con el valor anterior.
+  const [personas, setPersonas] = useState("2");
   const [dia, setDia] = useState(manana);
   const [hora, setHora] = useState("21:00");
   const [nota, setNota] = useState("");
@@ -24,6 +31,16 @@ export function ReservarCliente({ restaurante, sucursales }: { restaurante: Rest
   const [listo, setListo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const falta = sucursales.length > 1 && !sucursal;
+  const cantidad = Math.max(1, Math.min(99, Number(personas) || 1));
+  const whatsapp = sucursal?.whatsapp || restaurante.whatsapp;
+  const enlaceWhatsapp = whatsapp
+    ? `https://wa.me/${numeroWhatsapp(whatsapp, paisDe(leerAjustes(restaurante.ajustes).pais))}?text=${encodeURIComponent(
+        `Hola ${restaurante.nombre}, quiero reservar una mesa para ${cantidad} ${cantidad === 1 ? "persona" : "personas"} el ${dia
+          .split("-")
+          .reverse()
+          .join("/")} a las ${hora}.${nombre.trim() ? ` A nombre de ${nombre.trim()}.` : ""}${nota.trim() ? ` ${nota.trim()}` : ""}`,
+      )}`
+    : null;
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -34,7 +51,7 @@ export function ReservarCliente({ restaurante, sucursales }: { restaurante: Rest
       p_sucursal: sucursal?.id ?? null,
       p_nombre: nombre,
       p_telefono: telefono,
-      p_personas: personas,
+      p_personas: cantidad,
       p_fecha: new Date(`${dia}T${hora}`).toISOString(),
       p_nota: nota || null,
     });
@@ -105,32 +122,63 @@ export function ReservarCliente({ restaurante, sucursales }: { restaurante: Rest
             className={CAMPO}
           />
         </label>
-        <div className="grid grid-cols-3 gap-3">
-          <label className="block text-sm font-medium">
+        {/* En celular: Personas arriba y Día + Hora lado a lado con espacio, para que la fecha no se corte. */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-[5.5rem_1fr_1fr]">
+          <label className="col-span-2 block text-sm font-medium sm:col-span-1">
             {t("personas")}
             <input
               type="number"
+              inputMode="numeric"
+              required
               min={1}
               max={99}
               value={personas}
-              onChange={(e) => setPersonas(Math.max(1, Math.min(99, Number(e.target.value) || 1)))}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setPersonas(e.target.value.replace(/\D/g, "").slice(0, 2))}
+              onBlur={() => setPersonas(String(cantidad))}
               className={CAMPO}
             />
           </label>
-          <label className="block text-sm font-medium">
+          <label className="block min-w-0 text-sm font-medium">
             {t("dia")}
-            <input type="date" required value={dia} onChange={(e) => setDia(e.target.value)} className={CAMPO} />
+            <input
+              type="date"
+              required
+              value={dia}
+              onChange={(e) => setDia(e.target.value)}
+              className={`${CAMPO} min-w-0 appearance-none px-2.5`}
+            />
           </label>
-          <label className="block text-sm font-medium">
+          <label className="block min-w-0 text-sm font-medium">
             {t("hora")}
-            <input type="time" required step={900} value={hora} onChange={(e) => setHora(e.target.value)} className={CAMPO} />
+            <select required value={hora} onChange={(e) => setHora(e.target.value)} className={`${CAMPO} min-w-0 px-2.5`}>
+              {HORAS.map((h) => (
+                <option key={h} value={h}>
+                  {h}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
         <label className="block text-sm font-medium">
           {t("comentario")}
           <input maxLength={200} value={nota} onChange={(e) => setNota(e.target.value)} className={CAMPO} />
         </label>
-        {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        {error && (
+          <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p>{error}</p>
+            {enlaceWhatsapp && (
+              <a
+                href={enlaceWhatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 block w-full rounded-xl bg-[#25d366] px-4 py-2.5 text-center font-semibold text-white"
+              >
+                {t("escribir")}
+              </a>
+            )}
+          </div>
+        )}
         <button type="submit" disabled={enviando || falta} className={BOTON} style={ESTILO_BOTON}>
           {enviando ? t("cargando") : t("reservar")}
         </button>

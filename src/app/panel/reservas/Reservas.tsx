@@ -85,7 +85,7 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
         .order("fecha")
         .limit(300),
       supabase.from("mesas").select("*").eq("restaurante_id", restaurante.id),
-      supabase.from("cuentas").select("mesa_id").eq("restaurante_id", restaurante.id).eq("estado", "abierta"),
+      supabase.from("cuentas").select("*").eq("restaurante_id", restaurante.id).eq("estado", "abierta"),
     ]);
     if (espera.error) return setFalta(true);
     const todas = [...(espera.data ?? []), ...(reservas.data ?? [])] as Reserva[];
@@ -97,7 +97,12 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
       setHistorial(new Map((data ?? []).map((c) => [c.id as string, c as Historial])));
     }
     setMesas((m.data ?? []) as Mesa[]);
-    setOcupadas(new Set((cuentas.data ?? []).map((c) => c.mesa_id as string)));
+    // Una mesa unida a otra (migración 0019) también está ocupada.
+    setOcupadas(
+      new Set(
+        (cuentas.data ?? []).flatMap((c) => [c.mesa_id as string, ...((c.mesas_unidas as string[] | undefined) ?? [])]),
+      ),
+    );
   }, [supabase, restaurante.id, ajustes.modulos.clientes]);
 
   useEffect(() => {
@@ -164,22 +169,34 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
     );
   }
 
-  async function sentar(r: Reserva, mesa: Mesa) {
-    const { error } = await supabase.from("cuentas").insert({
-      restaurante_id: restaurante.id,
-      sucursal_id: mesa.sucursal_id ?? null,
-      mesa_id: mesa.id,
-      mesa_numero: mesa.numero,
-      comensales: Math.min(99, r.personas),
-    });
+  // Sienta al grupo en una mesa o en varias juntas: la primera abre la cuenta y las demás quedan unidas a ella.
+  async function sentar(r: Reserva, elegidas: Mesa[]) {
+    const [mesa, ...resto] = elegidas;
+    if (!mesa) return;
+    const { data, error } = await supabase
+      .from("cuentas")
+      .insert({
+        restaurante_id: restaurante.id,
+        sucursal_id: mesa.sucursal_id ?? null,
+        mesa_id: mesa.id,
+        mesa_numero: mesa.numero,
+        comensales: Math.min(99, r.personas),
+      })
+      .select("id")
+      .single();
     if (error) {
       return avisar(
         /cuentas_mesa_abierta|duplicate/.test(error.message) ? "Esa mesa ya está ocupada." : mensajeError(error),
         "error",
       );
     }
+    for (const otra of resto) {
+      const { error: e } = await supabase.rpc("unir_mesa", { p_cuenta: data.id, p_mesa: otra.id });
+      if (e) avisar(`No se pudo unir ${nombreMesa(otra.numero)}: ${mensajeError(e)}`, "error");
+    }
     setSentando(null);
-    await cambiar(r, { estado: "sentada", mesa_id: mesa.id }, `${r.nombre} en ${nombreMesa(mesa.numero)}`);
+    const nombres = elegidas.map((m) => m.numero).join("+");
+    await cambiar(r, { estado: "sentada", mesa_id: mesa.id }, `${r.nombre} en ${resto.length ? `mesas ${nombres}` : nombreMesa(mesa.numero)}`);
     cargar();
   }
 
@@ -634,16 +651,29 @@ function ElegirMesa({
 }: {
   reserva: Reserva;
   mesas: Mesa[];
-  onElegir: (m: Mesa) => Promise<unknown>;
+  onElegir: (m: Mesa[]) => Promise<unknown>;
   onCerrar: () => void;
 }) {
   const [ocupado, setOcupado] = useState<string | null>(null);
-  // Primero las que tienen lugar justo para el grupo.
-  const ordenadas = [...mesas].sort((a, b) => {
-    const da = (a.capacidad ?? 4) - reserva.personas;
-    const db = (b.capacidad ?? 4) - reserva.personas;
-    return (da < 0 ? 100 - da : da) - (db < 0 ? 100 - db : db) || a.numero.localeCompare(b.numero, "es", { numeric: true });
-  });
+  const [verChicas, setVerChicas] = useState(false);
+  const [juntando, setJuntando] = useState(false);
+  const [elegidas, setElegidas] = useState<string[]>([]);
+  const lugares = (m: Mesa) => m.capacidad ?? 4;
+  const orden = (a: Mesa, b: Mesa) => a.numero.localeCompare(b.numero, "es", { numeric: true });
+  // Primero las que alcanzan para el grupo, de la más justa a la más grande. Las chicas quedan escondidas.
+  const alcanzan = mesas
+    .filter((m) => lugares(m) >= reserva.personas)
+    .sort((a, b) => lugares(a) - lugares(b) || orden(a, b));
+  const chicas = mesas.filter((m) => lugares(m) < reserva.personas).sort((a, b) => lugares(b) - lugares(a) || orden(a, b));
+  const visibles = juntando ? [...alcanzan, ...chicas].sort(orden) : verChicas ? [...alcanzan, ...chicas] : alcanzan;
+  const suma = elegidas.reduce((t, id) => t + lugares(mesas.find((m) => m.id === id)!), 0);
+
+  async function elegir(lista: Mesa[], id: string) {
+    setOcupado(id);
+    await onElegir(lista);
+    setOcupado(null);
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onCerrar}>
       <div
@@ -654,33 +684,85 @@ function ElegirMesa({
         className="flex max-h-[85vh] w-full max-w-md flex-col rounded-2xl bg-superficie shadow-2xl"
       >
         <div className="border-b border-borde p-5 pb-3">
-          <h2 className="text-lg font-semibold">¿En qué mesa se sientan?</h2>
+          <h2 className="text-lg font-semibold">{juntando ? "Juntar mesas" : "¿En qué mesa se sientan?"}</h2>
           <p className="text-sm text-suave">
-            {reserva.nombre} · {reserva.personas} {reserva.personas === 1 ? "persona" : "personas"}. Se abre la mesa en el salón.
+            {reserva.nombre} · {reserva.personas} {reserva.personas === 1 ? "persona" : "personas"}.{" "}
+            {juntando ? "Toca las mesas que vas a juntar." : "Se abre la mesa en el salón."}
           </p>
         </div>
         <div className="grid min-h-0 grid-cols-3 gap-2 overflow-y-auto p-5 sm:grid-cols-4">
-          {ordenadas.map((m) => {
-            const chica = (m.capacidad ?? 4) < reserva.personas;
+          {visibles.map((m) => {
+            const chica = lugares(m) < reserva.personas;
+            const marcada = elegidas.includes(m.id);
             return (
               <button
                 key={m.id}
                 type="button"
                 disabled={!!ocupado}
-                onClick={async () => {
-                  setOcupado(m.id);
-                  await onElegir(m);
-                  setOcupado(null);
-                }}
-                className={`rounded-xl border-2 p-3 text-center transition hover:border-marca ${chica ? "border-dashed border-borde opacity-70" : "border-borde"}`}
+                aria-pressed={juntando ? marcada : undefined}
+                onClick={() =>
+                  juntando
+                    ? setElegidas((e) => (marcada ? e.filter((x) => x !== m.id) : [...e, m.id]))
+                    : elegir([m], m.id)
+                }
+                className={`rounded-xl border-2 p-3 text-center transition hover:border-marca ${
+                  marcada ? "border-marca bg-marca/10" : chica && !juntando ? "border-dashed border-borde opacity-70" : "border-borde"
+                }`}
               >
                 <span className="block font-semibold">{ocupado === m.id ? "…" : nombreMesa(m.numero)}</span>
                 <span className="block text-xs text-suave">{m.capacidad ?? "?"} lugares</span>
               </button>
             );
           })}
-          {ordenadas.length === 0 && (
-            <p className="col-span-full py-6 text-center text-sm text-suave">No hay mesas libres ahora.</p>
+          {visibles.length === 0 && (
+            <p className="col-span-full py-6 text-center text-sm text-suave">
+              {chicas.length ? `Ninguna mesa libre tiene ${reserva.personas} lugares.` : "No hay mesas libres ahora."}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 border-t border-borde p-4">
+          {juntando ? (
+            <>
+              <span className={`mr-auto text-sm ${suma >= reserva.personas ? "text-emerald-600" : "text-suave"}`}>
+                {elegidas.length} {elegidas.length === 1 ? "mesa" : "mesas"} · {suma} de {reserva.personas} lugares
+              </span>
+              <button
+                type="button"
+                className="boton-secundario"
+                onClick={() => {
+                  setJuntando(false);
+                  setElegidas([]);
+                }}
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                className="boton"
+                disabled={elegidas.length < 2 || !!ocupado}
+                onClick={() =>
+                  elegir(
+                    elegidas.map((id) => mesas.find((m) => m.id === id)!),
+                    elegidas[0],
+                  )
+                }
+              >
+                Sentar en {elegidas.length || ""} mesas
+              </button>
+            </>
+          ) : (
+            <>
+              {chicas.length > 0 && (
+                <button type="button" className="boton-secundario" onClick={() => setVerChicas((v) => !v)}>
+                  {verChicas ? "Ocultar mesas más chicas" : `Ver mesas más chicas (${chicas.length})`}
+                </button>
+              )}
+              {mesas.length > 1 && (
+                <button type="button" className="boton-secundario" onClick={() => setJuntando(true)}>
+                  Juntar mesas
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

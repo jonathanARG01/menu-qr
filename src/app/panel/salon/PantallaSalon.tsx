@@ -165,6 +165,11 @@ export function PantallaSalon({
   avisos.sort((a, b) => PRIORIDAD.indexOf(a.tipo) - PRIORIDAD.indexOf(b.tipo) || a.desde.localeCompare(b.desde));
 
   const ocupadas = mesas.filter((m) => estados.get(m.id)?.ocupada).length;
+  const personasEn = (lista: Mesa[]) => lista.reduce((t, m) => t + (estados.get(m.id)?.comensales ?? 0), 0);
+  const plural = (n: number) => `${n} ${n === 1 ? "persona" : "personas"}`;
+  // Con varios pisos: el contador del piso que se ve y, al lado, el total del restaurante.
+  const mesasPiso = piso ? mesas.filter((m) => m.piso_id === piso.id) : [];
+  const ocupadasPiso = mesasPiso.filter((m) => estados.get(m.id)?.ocupada).length;
   const hora = formatoHora(ahora, region);
 
   return (
@@ -178,8 +183,14 @@ export function PantallaSalon({
           <span className={`h-2 w-2 rounded-full ${enVivo ? "bg-emerald-400" : "bg-stone-400"}`} />
           {enVivo ? "En vivo" : "Actualiza cada 15 s"}
         </span>
+        {pisos.length > 1 && piso && (
+          <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold">
+            {piso.nombre}: {ocupadasPiso} de {mesasPiso.length} mesas · {plural(personasEn(mesasPiso))}
+          </span>
+        )}
         <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs">
-          {ocupadas} de {mesas.length} mesas ocupadas
+          {pisos.length > 1 ? "Total: " : ""}
+          {ocupadas} de {mesas.length} mesas ocupadas · {plural(personasEn(mesas))}
         </span>
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
           {pisos.length > 1 &&
