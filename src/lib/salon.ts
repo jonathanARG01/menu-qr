@@ -148,7 +148,22 @@ export type Ajustes = {
   orden_equipo: string[];
   // Total de referencia en otras monedas (para turistas): cuánto vale 1 unidad de cada una en la moneda del local.
   otras_monedas: OtraMoneda[];
+  // Migración 0023: un mesero necesita el PIN de un encargado para anular, quitar algo ya marchado o descontar.
+  pin_autorizacion: boolean;
+  // Precuenta con la marca del local: logo, mensaje de agradecimiento, QR para reseñar y datos al pie.
+  ticket: AjustesTicket;
 };
+
+export type AjustesTicket = {
+  logo: boolean;
+  mensaje: string;
+  // QR a la reseña de Google (usa resenas.google_url).
+  qr_resena: boolean;
+  // RUT, dirección, wifi, Instagram… (una línea por renglón).
+  pie: string;
+};
+
+export const TICKET_BASE: AjustesTicket = { logo: true, mensaje: "¡Gracias por tu visita!", qr_resena: true, pie: "" };
 
 export type OtraMoneda = { codigo: string; tasa: number };
 
@@ -188,6 +203,8 @@ export const AJUSTES_BASE: Ajustes = {
   avatares: true,
   orden_equipo: [],
   otras_monedas: [],
+  pin_autorizacion: false,
+  ticket: TICKET_BASE,
 };
 
 // Une lo guardado con los valores por defecto (lo que falte o venga mal se completa).
@@ -228,6 +245,13 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
           .filter((m) => /^[A-Z]{3}$/.test(m.codigo) && Number.isFinite(m.tasa) && m.tasa > 0)
           .slice(0, 3)
       : [],
+    pin_autorizacion: g.pin_autorizacion === true,
+    ticket: {
+      logo: g.ticket?.logo !== false,
+      mensaje: typeof g.ticket?.mensaje === "string" ? g.ticket.mensaje.slice(0, 120) : TICKET_BASE.mensaje,
+      qr_resena: g.ticket?.qr_resena !== false,
+      pie: typeof g.ticket?.pie === "string" ? g.ticket.pie.slice(0, 300) : "",
+    },
     sonido_hoja: SONIDOS_HOJA.includes(g.sonido_hoja as SonidoHoja) ? (g.sonido_hoja as SonidoHoja) : AJUSTES_BASE.sonido_hoja,
     pais: paisDe(g.pais).codigo,
     zona_horaria: typeof g.zona_horaria === "string" && g.zona_horaria ? g.zona_horaria : paisDe(g.pais).zona,
@@ -375,6 +399,8 @@ export type PedidoItem = {
   listo: boolean;
   // Opciones elegidas (migración 0018), con el extra ya sumado al precio.
   opciones?: OpcionElegida[];
+  // Precio de carta antes de un descuento (migración 0023); vacío si no tiene descuento.
+  precio_original?: number | null;
   created_at: string;
 };
 

@@ -10,9 +10,13 @@ export type AnchoTicket = "58" | "80";
 
 export type LineaTicket =
   | { tipo: "titulo"; texto: string }
-  | { tipo: "texto"; texto: string; fuerte?: boolean; chico?: boolean }
+  | { tipo: "texto"; texto: string; fuerte?: boolean; chico?: boolean; centro?: boolean }
   | { tipo: "fila"; izq: string; der?: string; fuerte?: boolean; nota?: string }
-  | { tipo: "separador" };
+  | { tipo: "separador" }
+  // Logo u otra imagen, centrada y en blanco y negro.
+  | { tipo: "imagen"; src: string; alto?: number }
+  // Código QR de un enlace (se dibuja al imprimir), con un texto debajo.
+  | { tipo: "qr"; url: string; texto?: string };
 
 const CLAVE_ANCHO = "impresora:ancho";
 
@@ -38,7 +42,10 @@ export function htmlTicket(lineas: LineaTicket[], ancho: AnchoTicket = anchoGuar
     .map((l) => {
       if (l.tipo === "titulo") return `<h1>${escapar(l.texto)}</h1>`;
       if (l.tipo === "separador") return "<hr>";
-      if (l.tipo === "texto") return `<p class="${l.fuerte ? "b" : ""} ${l.chico ? "s" : ""}">${escapar(l.texto)}</p>`;
+      if (l.tipo === "imagen") return `<img class="img" src="${escapar(l.src)}" style="max-height:${l.alto ?? 18}mm" alt="">`;
+      if (l.tipo === "qr")
+        return `<div class="qr"><img src="${escapar(l.url)}" alt="">${l.texto ? `<p class="s">${escapar(l.texto)}</p>` : ""}</div>`;
+      if (l.tipo === "texto") return `<p class="${l.fuerte ? "b" : ""} ${l.chico ? "s" : ""} ${l.centro ? "c" : ""}">${escapar(l.texto)}</p>`;
       return `<div class="f ${l.fuerte ? "b" : ""}"><span>${escapar(l.izq)}</span>${l.der ? `<span>${escapar(l.der)}</span>` : ""}</div>${
         l.nota ? `<p class="s n">${escapar(l.nota)}</p>` : ""
       }`;
@@ -54,11 +61,26 @@ p { margin: 0 0 1mm; } .b { font-weight: 700; } .s { font-size: .85em; } .n { pa
 .f { display: flex; justify-content: space-between; gap: 2mm; margin-bottom: .6mm; }
 .f span:last-child { white-space: nowrap; }
 hr { border: 0; border-top: 1px dashed #000; margin: 2mm 0; }
+.img { display: block; margin: 0 auto 2mm; max-width: 70%; filter: grayscale(1) contrast(1.4); }
+.qr { text-align: center; margin: 2mm 0; } .qr img { width: 28mm; height: 28mm; image-rendering: pixelated; }
+.c { text-align: center; }
 </style></head><body>${cuerpo}</body></html>`;
 }
 
 // Imprime sin salir de la pantalla. Devuelve una promesa que se cumple al cerrar el diálogo de impresión.
-export function imprimirTicket(lineas: LineaTicket[], ancho: AnchoTicket = anchoGuardado()) {
+export async function imprimirTicket(lineas: LineaTicket[], ancho: AnchoTicket = anchoGuardado()) {
+  // Los QR se convierten en imagen antes de armar el ticket.
+  if (lineas.some((l) => l.tipo === "qr")) {
+    const QR = (await import("qrcode")).default;
+    lineas = await Promise.all(
+      lineas.map(async (l) =>
+        l.tipo === "qr"
+          ? { ...l, url: await QR.toDataURL(l.url, { margin: 0, width: 240, errorCorrectionLevel: "M" }).catch(() => "") }
+          : l,
+      ),
+    );
+    lineas = lineas.filter((l) => l.tipo !== "qr" || l.url);
+  }
   return new Promise<void>((resolver) => {
     const marco = document.createElement("iframe");
     marco.setAttribute("aria-hidden", "true");
@@ -72,7 +94,16 @@ export function imprimirTicket(lineas: LineaTicket[], ancho: AnchoTicket = ancho
       setTimeout(() => marco.remove(), 500);
       resolver();
     };
-    setTimeout(() => {
+    // Espera a que carguen el logo y los QR (máximo 3 segundos) antes de imprimir.
+    const imagenes = [...doc.images].map(
+      (img) =>
+        new Promise<void>((listo) => {
+          if (img.complete) return listo();
+          img.onload = img.onerror = () => listo();
+        }),
+    );
+    const cargadas = Promise.race([Promise.all(imagenes), new Promise((r) => setTimeout(r, 3000))]);
+    cargadas.then(() => setTimeout(() => {
       try {
         marco.contentWindow!.addEventListener("afterprint", terminar, { once: true });
         marco.contentWindow!.focus();
@@ -82,7 +113,7 @@ export function imprimirTicket(lineas: LineaTicket[], ancho: AnchoTicket = ancho
       }
       // Por si el navegador no avisa al terminar.
       setTimeout(terminar, 60000);
-    }, 50);
+    }, 50));
   });
 }
 

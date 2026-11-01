@@ -601,6 +601,80 @@ export function Personalizar({
           </div>
           <Interruptor activo={a.avatares} onChange={(avatares) => set({ avatares })} etiqueta="Fotos del equipo" />
         </div>
+        <div className="flex items-center gap-4 px-5 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">Pedir PIN de encargado</p>
+            <p className="text-sm text-suave">
+              Un mesero necesita el PIN de un encargado para anular una mesa con pedidos o quitar un plato que ya está en
+              cocina. Los descuentos siempre lo piden. Queda registrado en Reportes → Autorizaciones. Los PIN se ponen en{" "}
+              <Link href="/panel/equipo#pin" className="underline">
+                Equipo
+              </Link>
+              .
+            </p>
+          </div>
+          <Interruptor
+            activo={a.pin_autorizacion}
+            onChange={(pin_autorizacion) => set({ pin_autorizacion })}
+            etiqueta="PIN de encargado"
+          />
+        </div>
+      </section>
+
+      <section className="tarjeta space-y-4 p-5">
+        <div>
+          <h2 className="font-semibold">Precuenta con tu marca</h2>
+          <p className="text-sm text-suave">
+            Lo que sale impreso al final de la precuenta: tu logo, un mensaje y un QR para dejar la reseña en Google.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={a.ticket.logo}
+              onChange={(e) => set({ ticket: { ...a.ticket, logo: e.target.checked } })}
+            />
+            Logo arriba (en blanco y negro)
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={a.ticket.qr_resena}
+              onChange={(e) => set({ ticket: { ...a.ticket, qr_resena: e.target.checked } })}
+            />
+            QR para dejar reseña en Google
+          </label>
+        </div>
+        {a.ticket.qr_resena && !a.resenas.google_url && (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Para el QR falta el link de reseñas de Google (en “Reseñas en Google”, más arriba).
+          </p>
+        )}
+        <label className="block text-sm">
+          Mensaje de agradecimiento
+          <input
+            value={a.ticket.mensaje}
+            maxLength={120}
+            onChange={(e) => set({ ticket: { ...a.ticket, mensaje: e.target.value } })}
+            placeholder="¡Gracias por tu visita! Te esperamos pronto."
+            className="campo mt-1"
+          />
+        </label>
+        <label className="block text-sm">
+          Datos al pie (opcional)
+          <textarea
+            value={a.ticket.pie}
+            maxLength={300}
+            rows={3}
+            onChange={(e) => set({ ticket: { ...a.ticket, pie: e.target.value } })}
+            placeholder={"RUT 76.123.456-7 · Av. Italia 1234, Providencia\nWifi: MiLocal / clave1234\n@milocal"}
+            className="campo mt-1"
+          />
+          <span className="mt-1 block text-xs text-suave">
+            La precuenta siempre dice “No válido como boleta”: la boleta la emite tu sistema de boletas o el SII.
+          </span>
+        </label>
       </section>
 
       <OtrasMonedas moneda={moneda} valor={a.otras_monedas} onChange={(otras_monedas) => set({ otras_monedas })} />

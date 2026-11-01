@@ -31,6 +31,9 @@ import { formatoHora, numeroWhatsapp, paisDe } from "@/lib/region";
 import { ClienteCuenta, Atiende } from "./ClienteCuenta";
 import { Cobro, type NuevoPago } from "./Cobro";
 import { TomarPedido, type LineaNueva } from "./TomarPedido";
+import { Descuento, type PedidoDescuento } from "./Descuento";
+import { faltaFuncion, useAutorizar } from "@/components/Autorizar";
+import { encabezadoMarca, pieMarca } from "@/lib/ticketMarca";
 
 export const COLOR_ESTADO: Record<EstadoPedido, string> = {
   pendiente: "bg-red-100 text-red-800",
@@ -100,6 +103,15 @@ export function MesaPanel({
   const pagado = pagos.reduce((t, p) => t + Number(p.monto), 0);
   const propinas = pagos.reduce((t, p) => t + Number(p.propina), 0);
   const [pantalla, setPantalla] = useState<"mesa" | "pedido" | "cobro">(inicio);
+  // PIN de encargado (Personalizar): un mesero lo necesita para anular o quitar algo ya marchado.
+  const pidePin = ajustes.pin_autorizacion && !admin;
+  const { pedir: autorizar, dialogo: dialogoPin } = useAutorizar();
+  const [descontando, setDescontando] = useState(false);
+  // Cuánto se descontó en total sobre el precio de carta.
+  const descontado = lineas.reduce(
+    (s, i) => s + (i.precio_original != null ? (Number(i.precio_original) - Number(i.precio)) * i.cantidad : 0),
+    0,
+  );
   const [comensalesNuevos, setComensalesNuevos] = useState(mesa?.capacidad ?? 2);
   // Mover la cuenta a otra mesa, juntarla con otra o pasar un plato (el item elegido) a otra mesa.
   const [moviendo, setMoviendo] = useState<null | "mover" | "juntar" | PedidoItem>(null);
@@ -331,12 +343,32 @@ export function MesaPanel({
     return hacer(supabase.from("pedido_items").update(cambios).eq("id", item.id));
   }
 
-  async function quitarItem(item: PedidoItem, pedido: Pedido) {
-    if (
-      (pedido.estado === "preparando" || pedido.estado === "listo") &&
-      !confirm(`"${item.nombre}" ya está en cocina. ¿Quitarlo igual?`)
-    )
-      return;
+  // cantidad: cuántas unidades se quitan (vacío: todas).
+  async function quitarItem(item: PedidoItem, pedido: Pedido, cantidad?: number) {
+    if (pedido.estado === "preparando" || pedido.estado === "listo" || pedido.estado === "entregado") {
+      const ok = await autorizar({
+        titulo: `¿Quitar ${cantidad && cantidad < item.cantidad ? `1 ${item.nombre}` : item.nombre}?`,
+        detalle: "Ya está en cocina. Queda registrado quién lo quitó y quién autorizó.",
+        pin: pidePin,
+        motivo: "opcional",
+        ejemplos: ["Se equivocó el pedido", "El cliente se arrepintió", "Salió mal"],
+      });
+      if (!ok) return;
+      const { error } = await supabase.rpc("accion_autorizada", {
+        p_accion: "quitar_item",
+        p_ref: item.id,
+        p_pin: ok.pin,
+        p_motivo: ok.motivo || null,
+        p_cantidad: cantidad ?? null,
+      });
+      if (!faltaFuncion(error)) {
+        if (error) return avisar(mensajeError(error), "error");
+        avisar("Quitado del pedido");
+        await recargar();
+        return;
+      }
+      if (cantidad && cantidad < item.cantidad) return cambiarItem(item, { cantidad: item.cantidad - cantidad });
+    }
     const quedan = (pedido.pedido_items ?? []).length - 1;
     await hacer(supabase.from("pedido_items").delete().eq("id", item.id), "Quitado del pedido");
     if (quedan === 0) await estadoPedido(pedido, "cancelado");
@@ -352,6 +384,7 @@ export function MesaPanel({
     }
     const sugerida = ajustes.propinas.activas && ajustes.propinas.sugerida ? ajustes.propinas.sugerida : null;
     imprimirTicket([
+      ...encabezadoMarca(ajustes, restaurante.logo_url),
       { tipo: "titulo", texto: restaurante.nombre },
       {
         tipo: "texto",
@@ -364,6 +397,7 @@ export function MesaPanel({
         izq: `${a.cantidad} × ${nombre}`,
         der: formato(a.importe),
       })),
+      ...(descontado > 0 ? [{ tipo: "fila" as const, izq: "Descuento incluido", der: `−${formato(descontado)}` }] : []),
       ...(envio > 0 ? [{ tipo: "fila" as const, izq: "Envío", der: formato(envio) }] : []),
       ...(llevar && cuenta?.direccion ? [{ tipo: "texto" as const, texto: cuenta.direccion, chico: true }] : []),
       { tipo: "separador" },
@@ -388,9 +422,28 @@ export function MesaPanel({
             },
           ]
         : []),
-      { tipo: "separador" },
-      { tipo: "texto", texto: "No válido como factura. ¡Gracias!", chico: true },
+      ...pieMarca(ajustes),
     ]);
+  }
+
+  async function aplicarDescuento(d: PedidoDescuento) {
+    if (!cuenta) return false;
+    const { data, error } = await supabase.rpc("aplicar_descuento", {
+      p_cuenta: cuenta.id,
+      p_items: d.items,
+      p_porcentaje: d.porcentaje,
+      p_monto: d.monto,
+      p_motivo: d.motivo,
+      p_pin: d.pin,
+    });
+    if (error) {
+      avisar(faltaFuncion(error) ? "Falta ejecutar el SQL 0023 en Supabase" : mensajeError(error), "error");
+      return false;
+    }
+    const n = Number((data as { descontado?: number } | null)?.descontado ?? 0);
+    avisar(n > 0 ? `Descuento de ${formato(n)} aplicado` : "Descuento quitado");
+    await recargar();
+    return true;
   }
 
   async function registrarPago(p: NuevoPago) {
@@ -418,7 +471,28 @@ export function MesaPanel({
   }
 
   async function anular() {
-    if (!cuenta || !confirm(`¿Anular ${llevar ? "este pedido" : "esta mesa"}? Se descarta sin cobrar.`)) return;
+    if (!cuenta) return;
+    const ok = await autorizar({
+      titulo: `¿Anular ${llevar ? "este pedido" : "esta mesa"}?`,
+      detalle: pedidos.length ? `Se descarta sin cobrar (${formato(total)}). Queda registrado.` : "Se descarta sin cobrar.",
+      pin: pidePin && pedidos.length > 0,
+      motivo: pedidos.length ? "opcional" : "no",
+      ejemplos: ["El cliente se fue", "Mesa abierta por error", "Pedido de prueba"],
+    });
+    if (!ok) return;
+    const r = await supabase.rpc("accion_autorizada", {
+      p_accion: "anular_cuenta",
+      p_ref: cuenta.id,
+      p_pin: ok.pin,
+      p_motivo: ok.motivo || null,
+    });
+    if (!faltaFuncion(r.error)) {
+      if (r.error) return avisar(mensajeError(r.error), "error");
+      avisar(llevar ? "Pedido anulado" : "Mesa anulada");
+      await recargar();
+      onCerrar();
+      return;
+    }
     if (
       await hacer(
         supabase
@@ -693,7 +767,13 @@ export function MesaPanel({
                                 type="button"
                                 className="h-7 w-7"
                                 aria-label={`Menos ${i.nombre}`}
-                                onClick={() => (i.cantidad > 1 ? cambiarItem(i, { cantidad: i.cantidad - 1 }) : quitarItem(i, p))}
+                                onClick={() =>
+                                  i.cantidad <= 1
+                                    ? quitarItem(i, p)
+                                    : ["preparando", "listo", "entregado"].includes(p.estado)
+                                      ? quitarItem(i, p, 1)
+                                      : cambiarItem(i, { cantidad: i.cantidad - 1 })
+                                }
                               >
                                 −
                               </button>
@@ -739,7 +819,14 @@ export function MesaPanel({
                                 </option>
                               ))}
                             </select>
-                            <span className="w-20 text-right text-sm tabular-nums">{formato(Number(i.precio) * i.cantidad)}</span>
+                            <span className="w-20 text-right text-sm tabular-nums">
+                              {i.precio_original != null && (
+                                <span className="block text-xs text-suave line-through">
+                                  {formato(Number(i.precio_original) * i.cantidad)}
+                                </span>
+                              )}
+                              {formato(Number(i.precio) * i.cantidad)}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -839,6 +926,17 @@ export function MesaPanel({
           />
         )}
 
+        {dialogoPin}
+        {descontando && (
+          <Descuento
+            lineas={lineas}
+            formato={formato}
+            pin={!admin}
+            onAplicar={aplicarDescuento}
+            onCerrar={() => setDescontando(false)}
+          />
+        )}
+
         {uniendo && mesa && (
           <ElegirUnion
             aqui={nombreMesa(mesa.numero)}
@@ -853,6 +951,7 @@ export function MesaPanel({
           <div className="space-y-3 border-t border-borde px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
             <div className="flex items-baseline justify-between">
               <span className="text-sm text-suave">
+                {descontado > 0 && <span className="block text-emerald-700">Descuento {formato(descontado)}</span>}
                 {pagado > 0 ? `Pagado ${formato(pagado)}` : "Total"}
                 {propinas > 0 ? ` · Propinas ${formato(propinas)}` : ""}
               </span>
@@ -862,9 +961,20 @@ export function MesaPanel({
               </span>
             </div>
             <div className="flex gap-2">
-              {admin && pedidos.length === 0 && pagos.length === 0 && (
+              {pagos.length === 0 && (admin ? true : ajustes.pin_autorizacion || pedidos.length === 0) && (
                 <button type="button" className="boton-secundario" onClick={anular}>
                   Anular
+                </button>
+              )}
+              {lineas.length > 0 && (
+                <button
+                  type="button"
+                  className="boton-secundario px-3"
+                  onClick={() => setDescontando(true)}
+                  aria-label="Descuento o cortesía"
+                  title="Descuento o cortesía"
+                >
+                  %
                 </button>
               )}
               <button
