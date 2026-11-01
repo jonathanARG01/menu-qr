@@ -57,9 +57,13 @@ export function slugify(texto: string) {
 }
 
 // En el navegador manda la dirección desde la que se abrió la app; NEXT_PUBLIC_SITE_URL solo cubre el servidor.
+// Dirección pública del sitio para enlaces y QR que se comparten o imprimen: siempre la oficial (platovi.cl)
+// aunque el panel se abra desde otra dirección. Sin NEXT_PUBLIC_SITE_URL (desarrollo) usa la del navegador.
 export function urlSitio() {
+  const oficial = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  if (oficial) return oficial;
   if (typeof window !== "undefined") return window.location.origin;
-  return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+  return "http://localhost:3000";
 }
 
 // Dirección de la carta; con sucursal y mesa queda así: /cafe?s=centro&mesa=4

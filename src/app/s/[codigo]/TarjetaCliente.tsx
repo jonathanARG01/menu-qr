@@ -9,7 +9,7 @@ import { avisarTarjeta, guardarTarjeta, suscribirTarjeta } from "@/lib/sellos/cl
 import { PROGRAMA_BASE, faltan, type TarjetaPublica } from "@/lib/sellos/tipos";
 import { iphoneSinInstalar, soportaPush } from "@/lib/push";
 import { qrSvg } from "@/lib/qr";
-import { mensajeError } from "@/lib/utils";
+import { mensajeError, urlSitio } from "@/lib/utils";
 
 const TEXTO_ORIGEN: Record<string, string> = {
   qr: "Sello por tu visita",
@@ -130,7 +130,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
     avisarTarjeta(t.codigo);
   }
 
-  const url = typeof window === "undefined" ? `/s/${t.codigo}` : `${window.location.origin}/s/${t.codigo}`;
+  const url = `${urlSitio()}/s/${t.codigo}`;
   const qr = useMemo(() => qrSvg(url), [url]);
   const restan = faltan(t, p);
 

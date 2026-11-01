@@ -8,7 +8,7 @@ import { NOMBRE_TIPO, regionDe, type Ajustes, type Cuenta, type OpcionElegida, t
 import { fechaCorta } from "@/lib/imprimir";
 import { nuevoId } from "@/lib/reintentos";
 import type { Categoria, Plato, Restaurante, Sucursal } from "@/lib/types";
-import { formatoPrecio, mensajeError } from "@/lib/utils";
+import { formatoPrecio, mensajeError, urlSitio } from "@/lib/utils";
 import { totalLineas } from "@/lib/cuenta";
 import { formatoHora, numeroWhatsapp, paisDe } from "@/lib/region";
 import { avisarComensal, avisarEnCamino } from "@/lib/push";
@@ -107,7 +107,7 @@ export function Llevar({ restaurante, admin, ajustes, categorias, platos, sucurs
   // Enlace para el repartidor: dirección, qué lleva, cuánto cobrar y "Entregado". Se manda por WhatsApp o se copia.
   function enviarRepartidor(c: Cuenta) {
     if (!c.reparto_token) return avisar("Para el enlace del repartidor falta ejecutar el SQL 0018 en Supabase.", "error");
-    const enlace = `${window.location.origin}/${restaurante.slug}/reparto/${c.reparto_token}`;
+    const enlace = `${urlSitio()}/${restaurante.slug}/reparto/${c.reparto_token}`;
     const texto = `Delivery de ${restaurante.nombre} para ${c.cliente_nombre ?? "el cliente"}: ${enlace}`;
     if (navigator.share) navigator.share({ text: texto }).catch(() => {});
     else window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
