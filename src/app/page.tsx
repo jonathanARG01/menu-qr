@@ -210,8 +210,8 @@ function Pasos() {
           <div className="grid gap-4">
             <TarjetaPaso
               n={1}
-              src="/ilustraciones/image-upload.svg"
-              alt="Persona subiendo la foto de su carta"
+              src="/ilustraciones/phone-camera.svg"
+              alt="Celular sacándole una foto a la carta"
               fondo="bg-[#eef1f6]"
             />
             <TarjetaPaso
@@ -529,7 +529,7 @@ function Cierre() {
             </div>
           </div>
           <div className="mx-auto w-full max-w-[16rem] rounded-3xl bg-white p-6 sm:max-w-xs lg:max-w-none">
-            <Ilustracion src="/ilustraciones/celebration.svg" alt="Dos personas celebrando" />
+            <Ilustracion src="/ilustraciones/eating-pasta.svg" alt="Dos personas comiendo en un restaurante" />
           </div>
         </div>
       </Contenedor>
