@@ -109,8 +109,8 @@ function Portada() {
             Tu restaurante, <span className="text-marca-claro">en un solo lugar.</span>
           </h1>
           <p className="mt-5 max-w-xl text-lg text-slate-200/80">
-            Tus clientes escanean el QR, ven la carta en su idioma y piden desde la mesa. Tú ves el salón, la cocina y la caja
-            en vivo, desde el celular. Sin reimprimir cartas ni pagar comisiones por pedido.
+            Tus clientes escanean el QR, ven la carta en su idioma y piden desde la mesa. Tú ves el salón, la cocina y la caja en
+            vivo, desde el celular. Sin reimprimir cartas ni pagar comisiones por pedido.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/registro" className="boton-acento px-5 py-3 text-base">
@@ -205,31 +205,58 @@ function Pasos() {
             ))}
           </ol>
         </div>
-        {/* Fotos de QR en mesas reales y el gesto de escanear */}
+        {/* Ilustraciones de unDraw (licencia libre) con los colores de la marca, una por paso */}
         <div className="relative grid grid-cols-2 gap-4">
-          <Image
-            src="/inicio/cartel-qr-mesa.webp"
-            alt="Cartel con código QR sobre la mesa de un restaurante"
-            width={900}
-            height={900}
-            className="aspect-[4/5] h-full w-full rounded-3xl object-cover shadow-xl"
-          />
           <div className="grid gap-4">
-            <Image
-              src="/inicio/servilletero-qr.webp"
-              alt="Servilletero de madera con placa QR y número de mesa"
-              width={765}
-              height={1020}
-              className="aspect-[4/3] h-full w-full rounded-3xl object-cover object-[50%_45%] shadow-xl"
+            <TarjetaPaso
+              n={1}
+              src="/ilustraciones/image-upload.svg"
+              alt="Persona subiendo la foto de su carta"
+              fondo="bg-[#eef1f6]"
             />
-            <div className="flex items-center justify-center rounded-3xl bg-marca-tinta p-6">
-              <Image src="/inicio/escanear-qr.webp" alt="Celular escaneando un código QR" width={1280} height={1103} className="h-auto w-full max-w-56" />
-            </div>
+            <TarjetaPaso
+              n={2}
+              src="/ilustraciones/eating-together.svg"
+              alt="Clientes comiendo en una mesa del restaurante"
+              fondo="bg-white"
+            />
           </div>
+          <TarjetaPaso
+            n={3}
+            src="/ilustraciones/qr-code-scan.svg"
+            alt="Celular escaneando el QR de la mesa"
+            fondo="bg-[#fff4e3]"
+            alta
+          />
         </div>
       </Contenedor>
     </section>
   );
+}
+
+// Tarjeta con una ilustración y el número del paso al que corresponde.
+function TarjetaPaso({ n, src, alt, fondo, alta }: { n: number; src: string; alt: string; fondo: string; alta?: boolean }) {
+  return (
+    <div
+      className={`relative flex items-center justify-center rounded-3xl p-6 shadow-xl ring-1 ring-black/5 ${fondo} ${alta ? "h-full" : "aspect-[4/3]"}`}
+    >
+      <span className="absolute left-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-marca-claro text-sm font-bold text-marca-tinta">
+        {n}
+      </span>
+      <Image
+        src={src}
+        alt={alt}
+        width={800}
+        height={600}
+        className={`h-auto w-full ${alta ? "max-w-[62%]" : "max-h-full"} object-contain`}
+      />
+    </div>
+  );
+}
+
+// Ilustración decorativa de unDraw sobre un fondo claro fijo (se ve igual en tema claro y oscuro).
+function Ilustracion({ src, alt, className = "" }: { src: string; alt: string; className?: string }) {
+  return <Image src={src} alt={alt} width={800} height={600} className={`h-auto w-full object-contain ${className}`} />;
 }
 
 // Recorrido por el sistema con capturas reales, alternando imagen y texto.
@@ -398,12 +425,19 @@ function Precios() {
 function Servicios() {
   return (
     <section className="py-20">
-      <Contenedor className="grid gap-10 lg:grid-cols-[1fr_1.4fr]">
-        <Titulo
-          etiqueta="Servicios"
-          titulo="No te dejamos solo con el sistema"
-          texto="Platovi lo hace Brote Digital. Te acompañamos desde la primera carta hasta que tu equipo lo usa sin pensar."
-        />
+      <Contenedor className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:items-start">
+        <div>
+          <Titulo
+            etiqueta="Servicios"
+            titulo="No te dejamos solo con el sistema"
+            texto="Platovi lo hace Brote Digital. Te acompañamos desde la primera carta hasta que tu equipo lo usa sin pensar."
+          />
+          <Ilustracion
+            src="/ilustraciones/active-support.svg"
+            alt="Persona recibiendo ayuda por videollamada desde el celular"
+            className="mt-8 max-w-sm"
+          />
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           {SERVICIOS.map(([titulo, texto]) => (
             <div key={titulo} className="rounded-2xl border border-borde bg-superficie p-5">
@@ -437,9 +471,7 @@ function Testimonios() {
               <figcaption className="mt-5 text-sm">
                 <span className="block font-semibold">{t.nombre}</span>
                 <span className="text-slate-200/60">{t.local}</span>
-                {t.ejemplo && (
-                  <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-xs text-slate-200/70">Ejemplo</span>
-                )}
+                {t.ejemplo && <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-xs text-slate-200/70">Ejemplo</span>}
               </figcaption>
             </figure>
           ))}
@@ -452,8 +484,15 @@ function Testimonios() {
 function Preguntas() {
   return (
     <section id="preguntas" className="scroll-mt-16 py-20">
-      <Contenedor className="grid gap-10 lg:grid-cols-[1fr_1.6fr]">
-        <Titulo etiqueta="Preguntas" titulo="Lo que nos preguntan antes de partir" />
+      <Contenedor className="grid gap-10 lg:grid-cols-[1fr_1.6fr] lg:items-start">
+        <div>
+          <Titulo etiqueta="Preguntas" titulo="Lo que nos preguntan antes de partir" />
+          <Ilustracion
+            src="/ilustraciones/questions.svg"
+            alt="Dos personas frente a un gran signo de pregunta"
+            className="mt-8 hidden max-w-sm lg:block"
+          />
+        </div>
         <div className="divide-y divide-borde rounded-2xl border border-borde bg-superficie">
           {PREGUNTAS.map(([pregunta, respuesta]) => (
             <details key={pregunta} className="group px-6 py-4">
@@ -474,18 +513,23 @@ function Cierre() {
   return (
     <section className="pb-20">
       <Contenedor>
-        <div className="rounded-3xl bg-marca px-6 py-12 text-center text-white sm:px-12">
-          <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">Prueba Platovi en tu local</h2>
-          <p className="mx-auto mt-3 max-w-xl text-lg text-white/85">
-            Crea tu cuenta, carga tu carta y pega el primer QR hoy. Los primeros {DIAS_PRUEBA} días van por nuestra cuenta.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/registro" className="rounded-lg bg-white px-5 py-3 font-semibold text-marca-oscuro hover:bg-slate-50">
-              Crear cuenta gratis
-            </Link>
-            <Link href="/login" className="rounded-lg border border-white/40 px-5 py-3 font-medium hover:bg-white/10">
-              Ya tengo cuenta
-            </Link>
+        <div className="grid items-center gap-10 rounded-3xl bg-marca px-6 py-12 text-center text-white sm:px-12 lg:grid-cols-[1.4fr_1fr] lg:text-left">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">Prueba Platovi en tu local</h2>
+            <p className="mx-auto mt-3 max-w-xl text-lg text-white/85 lg:mx-0">
+              Crea tu cuenta, carga tu carta y pega el primer QR hoy. Los primeros {DIAS_PRUEBA} días van por nuestra cuenta.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
+              <Link href="/registro" className="rounded-lg bg-white px-5 py-3 font-semibold text-marca-oscuro hover:bg-slate-50">
+                Crear cuenta gratis
+              </Link>
+              <Link href="/login" className="rounded-lg border border-white/40 px-5 py-3 font-medium hover:bg-white/10">
+                Ya tengo cuenta
+              </Link>
+            </div>
+          </div>
+          <div className="mx-auto w-full max-w-[16rem] rounded-3xl bg-white p-6 sm:max-w-xs lg:max-w-none">
+            <Ilustracion src="/ilustraciones/celebration.svg" alt="Dos personas celebrando" />
           </div>
         </div>
       </Contenedor>
