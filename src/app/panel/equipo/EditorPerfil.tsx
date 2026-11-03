@@ -13,7 +13,7 @@ const EMOJIS = ["😀", "😎", "🧑‍🍳", "👩‍🍳", "🍕", "🍔", "�
 const COLORES = ["#e76f51", "#2a9d8f", "#e9c46a", "#8e7dbe", "#f4a261", "#4d908e", "#577590", "#d1495b", "#1f2937"];
 
 export type Perfil = { nombre: string | null; avatar: string | null; color: string | null };
-export type MesaElegible = { id: string; numero: string; piso: string | null };
+export type MesaElegible = { id: string; numero: string; piso: string | null; sucursal_id?: string | null };
 
 // Perfil de alguien del equipo: nombre visible, foto o emoji (o sus iniciales) y color. Para meseros, las mesas a cargo.
 // Todo es opcional. Lo edita el administrador para cualquiera, o cada persona el suyo desde el menú.

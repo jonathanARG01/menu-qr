@@ -8,6 +8,7 @@ import { mensajeError } from "@/lib/utils";
 import { useUrlSitio } from "@/lib/useUrlSitio";
 import { Avatar } from "@/components/Avatar";
 import { EditorPerfil, type MesaElegible } from "./EditorPerfil";
+import { olvidarEquipo } from "@/lib/equipo";
 
 export type Miembro = {
   user_id: string | null;
@@ -217,6 +218,8 @@ export function EditorEquipo({
       ...paramsLocal(clave),
     });
     if (error) return avisar(mensajeError(error), "error");
+    // Salón y la ficha de la mesa vuelven a pedir el equipo con su nuevo local.
+    olvidarEquipo();
     avisar(`${m.nombre || m.email} ahora está en ${locales.find((l) => l.id === clave)?.nombre ?? "otro local"}`);
     recargar();
   }
@@ -450,7 +453,14 @@ export function EditorEquipo({
           usuarioId={perfil.user_id}
           correo={perfil.email}
           inicial={{ nombre: perfil.nombre ?? null, avatar: perfil.avatar ?? null, color: perfil.color ?? null }}
-          mesas={perfil.rol === "mesero" || perfil.rol === "dueno" ? mesas : undefined}
+          mesas={
+            perfil.rol === "mesero" || perfil.rol === "dueno"
+              ? // Con un local asignado, solo las mesas de ese local.
+                conLocales && perfil.todas_sucursales === false
+                ? mesas.filter((x) => (x.sucursal_id ?? null) === (perfil.sucursal_id ?? null))
+                : mesas
+              : undefined
+          }
           mesasIniciales={perfil.mesas ?? []}
           onCerrar={() => setPerfil(null)}
           onGuardado={() => {

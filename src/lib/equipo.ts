@@ -12,7 +12,14 @@ export type Persona = {
   avatar?: string | null;
   color?: string | null;
   mesas?: string[] | null;
+  // Migración 0032: local de la persona (todas = todas las sucursales; si no, sucursal_id vacío = principal).
+  todas_sucursales?: boolean | null;
+  sucursal_id?: string | null;
 };
+
+// ¿Trabaja en este local? (null = principal). Sin la migración 0032 no se sabe: se cuenta que sí.
+export const trabajaEn = (p: Persona, sucursalId: string | null | undefined) =>
+  p.todas_sucursales !== false || (p.sucursal_id ?? null) === (sucursalId ?? null);
 
 // Se pide una vez por restaurante y se comparte entre pantallas (plano, ficha de mesa, cocina).
 let cache: { restaurante: string; lista: Persona[]; yo: string | null } | null = null;

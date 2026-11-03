@@ -11,14 +11,19 @@ export default async function PanelEquipo() {
   const [{ data, error }, { data: mesas }, { data: pisos }, { data: sucursales }] = await Promise.all([
     supabase.rpc("equipo", { p_restaurante: restaurante.id }),
     // Para asignar mesas a cada mesero.
-    supabase.from("mesas").select("id, numero, piso_id").eq("restaurante_id", restaurante.id),
+    supabase.from("mesas").select("id, numero, piso_id, sucursal_id").eq("restaurante_id", restaurante.id),
     supabase.from("pisos").select("id, nombre, orden").eq("restaurante_id", restaurante.id).order("orden"),
     // Para asignar a cada persona su local.
     supabase.from("sucursales").select("id, nombre").eq("restaurante_id", restaurante.id).order("orden").order("created_at"),
   ]);
   const listaPisos = (pisos ?? []) as { id: string; nombre: string }[];
-  const elegibles = ((mesas ?? []) as { id: string; numero: string; piso_id: string | null }[])
-    .map((m) => ({ id: m.id, numero: m.numero, piso: listaPisos.find((p) => p.id === m.piso_id)?.nombre ?? null }))
+  const elegibles = ((mesas ?? []) as { id: string; numero: string; piso_id: string | null; sucursal_id: string | null }[])
+    .map((m) => ({
+      id: m.id,
+      numero: m.numero,
+      piso: listaPisos.find((p) => p.id === m.piso_id)?.nombre ?? null,
+      sucursal_id: m.sucursal_id,
+    }))
     .sort(
       (a, b) =>
         listaPisos.findIndex((p) => p.nombre === a.piso) - listaPisos.findIndex((p) => p.nombre === b.piso) ||
