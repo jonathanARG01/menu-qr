@@ -105,7 +105,7 @@ export function TemaNeon({ restaurante, secciones, vistaPrevia, pie }: PropsTema
               <ul className="space-y-3">
                 {seccion.platos.map((plato) => (
                   <li key={plato.id} className="flex items-center gap-3">
-                    {(plato.foto_url || ajustes.imagenes_defecto) && (
+                    {(plato.foto_url || plato.icono || ajustes.imagenes_defecto) && (
                       <FotoRedonda plato={plato} className="w-14 shrink-0 bg-white/5" style={{ border: `2px solid ${color}` }} />
                     )}
                     <div className="min-w-0 flex-1">

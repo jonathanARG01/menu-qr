@@ -1,10 +1,10 @@
 import { imagenDefecto } from "@/components/carta/comun";
 
-type ConFoto = { id: string; nombre: string; descripcion?: string | null; foto_url?: string | null };
+type ConFoto = { id: string; nombre: string; descripcion?: string | null; foto_url?: string | null; icono?: string | null };
 
 // Foto de cada plato para las comandas y avisos: la suya o, si no tiene, la ilustración que le corresponde.
 export const mapaFotos = (platos: ConFoto[]) =>
-  new Map(platos.map((p) => [p.id, p.foto_url || imagenDefecto(p.nombre, p.descripcion)]));
+  new Map(platos.map((p) => [p.id, p.foto_url || imagenDefecto(p.nombre, p.descripcion, p.icono)]));
 
 // Miniatura del plato con la cantidad encima ("3×"), como en las tarjetas de comanda y de pedido listo.
 export function Miniatura({ src, cantidad, className = "h-11 w-11" }: { src?: string | null; cantidad?: number; className?: string }) {

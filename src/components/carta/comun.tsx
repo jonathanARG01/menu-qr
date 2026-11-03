@@ -1,5 +1,6 @@
 import type { Plato, Restaurante, Seccion, Tema } from "@/lib/types";
 import { formatoPrecio } from "@/lib/utils";
+import { iconoValido, urlIcono } from "@/lib/iconos";
 import { useCarta } from "./contexto";
 
 export type PropsTema = {
@@ -218,7 +219,7 @@ export function Etiquetas({ plato, className = "" }: { plato: Plato; className?:
 export function Foto({ plato, className }: { plato: Plato; className: string }) {
   const { ajustes } = useCarta();
   if (!plato.foto_url) {
-    if (!ajustes.imagenes_defecto) return null;
+    if (!ajustes.imagenes_defecto && !iconoValido(plato.icono)) return null;
     return (
       <span
         aria-hidden
@@ -358,17 +359,64 @@ const ARCHIVO: Record<string, string> = {
   "🥗": "ensalada",
 };
 
-export const imagenDefecto = (nombre: string, descripcion?: string | null) =>
-  `/defecto/${ARCHIVO[emojiPlato(nombre, descripcion)] ?? "plato"}.webp`;
+// Nombres que no tienen emoji propio pero sí ícono en la galería (se miran antes que los emojis, solo en el nombre).
+const ICONOS_POR_NOMBRE: [RegExp, string][] = [
+  [/leche asada|creme brulee/, "leche-asada"],
+  [/jalea|gelatina/, "jalea"],
+  [/mote con huesillo|durazno/, "durazno"],
+  [/kuchen|pie de/, "pie"],
+  [/cupcake|muffin/, "cupcake"],
+  [/granizado|frappe|raspado/, "raspado"],
+  [/costill/, "costilla"],
+  [/cerdo|chancho|pernil/, "cerdo"],
+  [/cordero/, "cordero"],
+  [/tocino|bacon|panceta/, "tocino"],
+  [/lomo|vetado|plateada|filete|punta de ganso|asado/, "carne"],
+  [/completo|vienesa/, "pancho"],
+  [/chorrillana/, "papas"],
+  [/pisco|piscola|whisky/, "vaso"],
+  [/schop|chop|cerveza|michelada/, "cerveza"],
+  [/espumante|champagne|champana/, "brindis"],
+  [/sake/, "sake"],
+  [/ mate /, "mate"],
+  [/jaiba|centolla|cangrejo/, "jaiba"],
+  [/langosta/, "langosta"],
+  [/pulpo/, "pulpo"],
+  [/calamar|rabas/, "calamar"],
+  [/ostion|ostra|macha|almeja|chorito|mariscal/, "ostra"],
+  [/cazuela|caldillo|carbonada/, "sopa"],
+  [/porotos|lentejas|garbanzo/, "porotos"],
+  [/humita|tamal/, "humita"],
+  [/pastel de choclo|choclo/, "choclo"],
+  [/palta/, "palta"],
+  [/paella/, "paella"],
+  [/shawarma|kebab/, "shawarma"],
+  [/burrito/, "burrito"],
+  [/poke|bowl/, "bowl"],
+  [/chaufa|chapsui|wok/, "comida-china"],
+  [/onigiri/, "onigiri"],
+  [/cabritas|palomitas/, "cabritas"],
+  [/frutilla|fresa/, "frutilla"],
+  [/frambuesa|arandano|berries/, "arandanos"],
+];
 
-// Lo que va en el lugar de la foto: la imagen por defecto si el restaurante la activó, si no el emoji.
+// El ícono de la galería que corresponde al plato por su nombre (lo que se sugiere al elegir uno).
+export const iconoSugerido = (nombre: string, descripcion?: string | null) =>
+  ICONOS_POR_NOMBRE.find(([re]) => re.test(normalizar(nombre)))?.[1] ?? ARCHIVO[emojiPlato(nombre, descripcion)] ?? "plato";
+
+// El ícono que eligió el restaurante para el plato; si no eligió, el que corresponde por su nombre.
+export const imagenDefecto = (nombre: string, descripcion?: string | null, icono?: string | null) =>
+  iconoValido(icono) ? urlIcono(icono) : urlIcono(iconoSugerido(nombre, descripcion));
+
+// Lo que va en el lugar de la foto: el ícono elegido para el plato, la imagen por defecto si el restaurante
+// la activó, si no el emoji.
 export function SinFoto({ plato }: { plato: Plato }) {
   const { ajustes } = useCarta();
-  if (!ajustes.imagenes_defecto) return <>{emojiPlato(plato.nombre, plato.descripcion)}</>;
+  if (!ajustes.imagenes_defecto && !iconoValido(plato.icono)) return <>{emojiPlato(plato.nombre, plato.descripcion)}</>;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={imagenDefecto(plato.nombre, plato.descripcion)}
+      src={imagenDefecto(plato.nombre, plato.descripcion, plato.icono)}
       alt=""
       loading="lazy"
       decoding="async"
@@ -424,3 +472,12 @@ export const ingredientes = (descripcion: string | null) =>
     .split(/\s*[,;+·]\s*|\s+y\s+/)
     .map((p) => p.trim())
     .filter(Boolean);
+
+// Ícono chico junto al nombre, para los diseños que muestran sin imagen los platos sin foto.
+export function IconoPlato({ plato, className = "h-7 w-7" }: { plato: Plato; className?: string }) {
+  if (plato.foto_url || !iconoValido(plato.icono)) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={urlIcono(plato.icono)} alt="" aria-hidden loading="lazy" className={`inline-block shrink-0 object-contain ${className}`} />
+  );
+}

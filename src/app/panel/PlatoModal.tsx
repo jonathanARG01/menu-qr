@@ -8,6 +8,9 @@ import { gruposDe } from "@/lib/opciones";
 import { ETIQUETAS, mensajeError } from "@/lib/utils";
 import { Interruptor } from "@/components/Interruptor";
 import { IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
+import { iconoValido, urlIcono } from "@/lib/iconos";
+import { iconoSugerido } from "@/components/carta/comun";
+import { GaleriaIconos } from "./GaleriaIconos";
 
 type Props = {
   restaurante: Restaurante;
@@ -42,6 +45,9 @@ export function PlatoModal({
   // La casilla de destacado aparece cuando ya existe la columna (migración 0007).
   const [tieneDestacado] = useState(() => !plato || "destacado" in plato);
   const [fotoUrl, setFotoUrl] = useState<string | null>(plato?.foto_url ?? null);
+  // Migración 0030: ícono de la galería para cuando no tiene foto.
+  const [icono, setIcono] = useState<string | null>(iconoValido(plato?.icono) ? plato!.icono! : null);
+  const [verGaleria, setVerGaleria] = useState(false);
   // Migración 0018: opciones (tamaño, acompañamiento…) y precio para llevar o delivery.
   const [grupos, setGrupos] = useState<GrupoOpciones[]>(() => (plato ? gruposDe(plato) : []));
   const [precioLlevar, setPrecioLlevar] = useState(plato?.precio_llevar != null ? String(plato.precio_llevar) : "");
@@ -119,6 +125,8 @@ export function PlatoModal({
       disponible,
       ...(tieneDestacado ? { destacado } : {}),
       foto_url: fotoUrl,
+      // Solo si se eligió uno o ya existe la columna (así sin la migración 0030 se sigue pudiendo guardar).
+      ...(icono || (plato && "icono" in plato) ? { icono } : {}),
       // Solo si ya existe la columna (migración 0003).
       ...("idiomas" in restaurante
         ? {
@@ -151,6 +159,14 @@ export function PlatoModal({
             .single()
         : supabase.from("platos").update(fila).eq("id", plato.id).select().single();
     let { data, error } = await enviar(datos);
+    // Sin la migración 0030 todavía no existe la columna "icono": se guarda sin ella y se avisa.
+    let sinIcono = false;
+    if (error && "icono" in datos && error.message.includes("icono")) {
+      const { icono: _sinColumna, ...resto } = datos;
+      void _sinColumna;
+      sinIcono = true;
+      ({ data, error } = await enviar(resto));
+    }
     // Sin la migración 0007 todavía no existe la columna "destacado": se guarda sin ella.
     if (error && "destacado" in datos && error.message.includes("destacado")) {
       const { destacado: _sinColumna, ...resto } = datos;
@@ -163,6 +179,7 @@ export function PlatoModal({
       setGuardando(false);
       return;
     }
+    if (sinIcono) alert("El plato se guardó, pero el ícono no: falta activar los íconos en la base de datos (migración 0030).");
 
     // Limpia las fotos que ya no se usan.
     const enUso = new Set([fotoUrl]);
@@ -224,6 +241,12 @@ export function PlatoModal({
               {fotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={fotoUrl} alt="Foto del plato" className="absolute inset-0 h-full w-full object-cover" />
+              ) : icono ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={urlIcono(icono)} alt="Ícono del plato" className="h-14 w-14 object-contain" />
+                  <span className="absolute inset-x-0 bottom-0 bg-superficie/85 py-0.5">{subiendo ? "Subiendo…" : "+ Foto"}</span>
+                </>
               ) : (
                 <span>{subiendo ? "Subiendo…" : "+ Foto"}</span>
               )}
@@ -247,7 +270,7 @@ export function PlatoModal({
                   autoFocus={esNuevo}
                 />
               </div>
-              {fotoUrl && (
+              {fotoUrl ? (
                 <div className="flex gap-3 text-sm">
                   <button type="button" onClick={() => inputFoto.current?.click()} className="text-marca">
                     Cambiar foto
@@ -256,9 +279,35 @@ export function PlatoModal({
                     Quitar
                   </button>
                 </div>
+              ) : (
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                  <button type="button" onClick={() => setVerGaleria((v) => !v)} className="text-marca" aria-expanded={verGaleria}>
+                    {verGaleria ? "Cerrar íconos" : icono ? "Cambiar ícono" : "Elegir ícono"}
+                  </button>
+                  {icono && (
+                    <button type="button" onClick={() => setIcono(null)} className="text-suave hover:text-red-600">
+                      Quitar ícono
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
+          {!fotoUrl && verGaleria && (
+            <div className="space-y-1.5">
+              <p className="text-xs text-suave">
+                Sin foto, el plato muestra este ícono en la carta. Si después subes una foto, se usa la foto.
+              </p>
+              <GaleriaIconos
+                elegido={icono}
+                sugerido={iconoSugerido(nombre, descripcion)}
+                onElegir={(id) => {
+                  setIcono(id);
+                  setVerGaleria(false);
+                }}
+              />
+            </div>
+          )}
 
           <div>
             <label htmlFor="plato-descripcion" className="etiqueta-campo">

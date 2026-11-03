@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -28,6 +28,7 @@ import { revalidarCarta } from "./actions";
 import { PlatoModal } from "./PlatoModal";
 import { IDIOMAS_EXTRA, IDIOMA_EN_ESPANOL } from "@/lib/i18n";
 import { imagenDefecto } from "@/components/carta/comun";
+import { iconoValido, urlIcono } from "@/lib/iconos";
 import Link from "next/link";
 import { ImportarCarta } from "./ImportarCarta";
 
@@ -50,6 +51,7 @@ export function EditorCarta({ restaurante, estaciones, categoriasIniciales, plat
   const [nuevaCategoria, setNuevaCategoria] = useState("");
   const [cerradas, setCerradas] = useState<Set<string>>(new Set());
   const [traduciendo, setTraduciendo] = useState<Categoria | null>(null);
+  const [borrando, setBorrando] = useState<Categoria | null>(null);
   const [importando, setImportando] = useState(false);
   const idiomas = IDIOMAS_EXTRA.filter((i) => restaurante.idiomas?.includes(i));
 
@@ -115,16 +117,30 @@ export function EditorCarta({ restaurante, estaciones, categoriasIniciales, plat
     return guardar(supabase.from("categorias").update(cambios).eq("id", id), "Guardado", () => setCategorias(antes));
   }
 
-  async function borrarCategoria(cat: Categoria) {
-    const cuantos = platos.filter((p) => p.categoria_id === cat.id).length;
-    const texto = cuantos
-      ? `¿Borrar "${cat.nombre}" y sus ${cuantos} platos? No se puede deshacer.`
-      : `¿Borrar la categoría "${cat.nombre}"?`;
-    if (!confirm(texto)) return;
-    const ok = await guardar(supabase.from("categorias").delete().eq("id", cat.id), "Categoría borrada");
+  // Borra la categoría. Si tiene platos, antes se mueven a "destino"; sin destino se borran con ella.
+  async function borrarCategoria(cat: Categoria, destino: string | null) {
+    const suyos = platos.filter((p) => p.categoria_id === cat.id);
+    if (destino && suyos.length) {
+      const { error } = await supabase.from("platos").update({ categoria_id: destino }).eq("categoria_id", cat.id);
+      if (error) return avisar(mensajeError(error), "error");
+      // Quedan al final de la categoría de destino, en el mismo orden que tenían.
+      const enDestino = platos.filter((p) => p.categoria_id === destino);
+      const movidos = suyos.map((p) => ({ ...p, categoria_id: destino }));
+      const lista = [...enDestino, ...movidos];
+      const orden = new Map(lista.map((p, i) => [p.id, i]));
+      setPlatos((todos) =>
+        todos
+          .map((p) => (orden.has(p.id) ? { ...p, categoria_id: destino, orden: orden.get(p.id)! } : p))
+          .sort((a, b) => a.orden - b.orden),
+      );
+      await guardarOrden("platos", lista);
+    }
+    const texto = destino && suyos.length ? `Categoría borrada; sus platos pasaron a otra` : "Categoría borrada";
+    const ok = await guardar(supabase.from("categorias").delete().eq("id", cat.id), texto);
     if (ok) {
       setCategorias((c) => c.filter((x) => x.id !== cat.id));
-      setPlatos((p) => p.filter((x) => x.categoria_id !== cat.id));
+      if (!destino) setPlatos((p) => p.filter((x) => x.categoria_id !== cat.id));
+      setBorrando(null);
     }
   }
 
@@ -240,7 +256,7 @@ export function EditorCarta({ restaurante, estaciones, categoriasIniciales, plat
                   onVisible={(visible) => actualizarCategoria(cat.id, { visible })}
                   estaciones={cat.estacion !== undefined ? estaciones : undefined}
                   onEstacion={(estacion) => actualizarCategoria(cat.id, { estacion })}
-                  onBorrar={() => borrarCategoria(cat)}
+                  onBorrar={() => setBorrando(cat)}
                 >
                   <DndContext
                     id={`platos-${cat.id}`}
@@ -319,6 +335,16 @@ export function EditorCarta({ restaurante, estaciones, categoriasIniciales, plat
           />
         )}
 
+        {borrando && (
+          <BorrarCategoria
+            categoria={borrando}
+            platos={platos.filter((p) => p.categoria_id === borrando.id)}
+            otras={categorias.filter((c) => c.id !== borrando.id)}
+            onCerrar={() => setBorrando(null)}
+            onBorrar={(destino) => borrarCategoria(borrando, destino)}
+          />
+        )}
+
         {traduciendo && (
           <TraducirCategoria
             categoria={traduciendo}
@@ -365,7 +391,7 @@ function ChipsCategorias({
         const deCategoria = platos.filter((p) => p.categoria_id === cat.id);
         const conFoto = deCategoria.find((p) => p.foto_url);
         const primero = deCategoria[0];
-        const imagen = conFoto?.foto_url ?? (primero ? imagenDefecto(primero.nombre, primero.descripcion) : null);
+        const imagen = conFoto?.foto_url ?? (primero ? imagenDefecto(primero.nombre, primero.descripcion, primero.icono) : null);
         return (
           <button
             key={cat.id}
@@ -625,6 +651,11 @@ function FilaPlato({
         {plato.foto_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={plato.foto_url} alt="" className="h-10 w-10 shrink-0 rounded-xl object-cover sm:h-11 sm:w-11" />
+        ) : iconoValido(plato.icono) ? (
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-stone-100 sm:h-11 sm:w-11">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={urlIcono(plato.icono)} alt="" className="h-7 w-7 object-contain sm:h-8 sm:w-8" />
+          </span>
         ) : (
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-stone-400 sm:h-11 sm:w-11">
             ◌
@@ -668,15 +699,44 @@ function FilaPlato({
   );
 }
 
+// Menú "⋯". Se abre con posición fija (calculada desde el botón) para que la tarjeta de la categoría, que recorta
+// lo que sobresale, no lo corte: antes en la última categoría solo se veía "Cambiar nombre".
 function Menu({ opciones }: { opciones: { texto: string; accion: () => void; peligro?: boolean }[] }) {
   const [abierto, setAbierto] = useState(false);
+  const [pos, setPos] = useState<React.CSSProperties>({});
+  const boton = useRef<HTMLButtonElement>(null);
+
+  function abrir() {
+    if (abierto) return setAbierto(false);
+    const r = boton.current!.getBoundingClientRect();
+    const alto = opciones.length * 41 + 10;
+    const arriba = r.bottom + 4 + alto > window.innerHeight && r.top - 4 - alto > 0;
+    setPos({
+      right: Math.max(8, window.innerWidth - r.right),
+      ...(arriba ? { bottom: window.innerHeight - r.top + 4 } : { top: r.bottom + 4 }),
+    });
+    setAbierto(true);
+  }
+
+  useEffect(() => {
+    if (!abierto) return;
+    const cerrar = () => setAbierto(false);
+    window.addEventListener("scroll", cerrar, true);
+    window.addEventListener("resize", cerrar);
+    return () => {
+      window.removeEventListener("scroll", cerrar, true);
+      window.removeEventListener("resize", cerrar);
+    };
+  }, [abierto]);
+
   return (
     <div className="relative">
       <button
+        ref={boton}
         type="button"
         aria-label="Opciones"
         aria-expanded={abierto}
-        onClick={() => setAbierto((a) => !a)}
+        onClick={abrir}
         className="flex h-9 w-9 items-center justify-center rounded-lg text-xl leading-none text-suave hover:bg-stone-200"
       >
         ⋯
@@ -684,7 +744,10 @@ function Menu({ opciones }: { opciones: { texto: string; accion: () => void; pel
       {abierto && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setAbierto(false)} />
-          <div className="absolute right-0 z-40 mt-1 w-52 overflow-hidden rounded-xl border border-borde bg-superficie py-1 shadow-xl">
+          <div
+            style={pos}
+            className="fixed z-40 w-52 overflow-hidden rounded-xl border border-borde bg-superficie py-1 shadow-xl"
+          >
             {opciones.map((o) => (
               <button
                 key={o.texto}
@@ -775,6 +838,112 @@ function AvisoEjemplos({ onBorrar }: { onBorrar: () => void }) {
       <button type="button" onClick={onBorrar} className="boton-secundario py-1.5 text-xs">
         Borrar ejemplos
       </button>
+    </div>
+  );
+}
+
+// Confirmación para borrar una categoría: si tiene platos, se elige si pasan a otra categoría o se borran con ella.
+function BorrarCategoria({
+  categoria,
+  platos,
+  otras,
+  onCerrar,
+  onBorrar,
+}: {
+  categoria: Categoria;
+  platos: Plato[];
+  otras: Categoria[];
+  onCerrar: () => void;
+  onBorrar: (destino: string | null) => Promise<void>;
+}) {
+  const [accion, setAccion] = useState<"mover" | "borrar">(otras.length ? "mover" : "borrar");
+  const [destino, setDestino] = useState(otras[0]?.id ?? "");
+  const [enviando, setEnviando] = useState(false);
+  const cuantos = platos.length;
+
+  useEffect(() => {
+    const alTeclear = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [onCerrar]);
+
+  async function confirmar(e: React.FormEvent) {
+    e.preventDefault();
+    setEnviando(true);
+    await onBorrar(cuantos && accion === "mover" ? destino : null);
+    setEnviando(false);
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onCerrar}>
+      <form
+        onSubmit={confirmar}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titulo-borrar-categoria"
+        className="w-full max-w-md space-y-4 rounded-t-2xl bg-superficie p-5 shadow-2xl sm:rounded-2xl"
+      >
+        <h2 id="titulo-borrar-categoria" className="text-lg font-semibold">
+          ¿Borrar &quot;{categoria.nombre}&quot;?
+        </h2>
+        {cuantos === 0 ? (
+          <p className="text-sm text-suave">La categoría está vacía. Se quita de la carta.</p>
+        ) : (
+          <div className="space-y-2.5">
+            <p className="text-sm text-suave">
+              Tiene {cuantos} {cuantos === 1 ? "plato" : "platos"}: {platos.slice(0, 3).map((p) => p.nombre).join(", ")}
+              {cuantos > 3 ? "…" : ""}. ¿Qué hacemos con {cuantos === 1 ? "él" : "ellos"}?
+            </p>
+            {otras.length > 0 && (
+              <label
+                className={`flex items-start gap-3 rounded-xl border p-3 text-sm ${accion === "mover" ? "border-marca bg-marca/5" : "border-borde"}`}
+              >
+                <input type="radio" name="accion" checked={accion === "mover"} onChange={() => setAccion("mover")} className="mt-1" />
+                <span className="min-w-0 flex-1 space-y-2">
+                  <span className="block font-medium">Pasarlos a otra categoría</span>
+                  <select
+                    value={destino}
+                    onChange={(e) => {
+                      setDestino(e.target.value);
+                      setAccion("mover");
+                    }}
+                    className="campo py-1.5 text-sm"
+                    aria-label="Categoría a la que pasan los platos"
+                  >
+                    {otras.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </label>
+            )}
+            <label
+              className={`flex items-start gap-3 rounded-xl border p-3 text-sm ${accion === "borrar" ? "border-red-400 bg-red-50/60 dark:bg-red-950/20" : "border-borde"}`}
+            >
+              <input type="radio" name="accion" checked={accion === "borrar"} onChange={() => setAccion("borrar")} className="mt-1" />
+              <span>
+                <span className="block font-medium text-red-600">Borrarlos también</span>
+                <span className="block text-xs text-suave">No se puede deshacer. Los pedidos pasados conservan su nombre y precio.</span>
+              </span>
+            </label>
+          </div>
+        )}
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onCerrar} className="rounded-xl px-4 py-2 text-sm text-suave hover:bg-stone-100">
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={enviando}
+            className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+          >
+            {enviando ? "Borrando…" : cuantos && accion === "mover" ? "Mover y borrar categoría" : "Borrar"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

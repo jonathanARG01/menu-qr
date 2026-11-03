@@ -1,5 +1,5 @@
 import { textoSobre } from "@/lib/utils";
-import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
+import { CartaVacia, Etiquetas, Foto, IconoPlato, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
 import { Destacados } from "./Destacados";
 import { Carrusel } from "./Carrusel";
@@ -88,6 +88,7 @@ export function TemaStreet({ restaurante, secciones, vistaPrevia, pie }: PropsTe
                 {seccion.platos.map((plato) => (
                   <li key={plato.id}>
                     <div className="flex items-baseline gap-2">
+                      <IconoPlato plato={plato} className="h-7 w-7 self-center" />
                       <h3 className="font-semibold">{plato.nombre}</h3>
                       <span className="mb-1 flex-1 border-b-2 border-dotted border-white/25" />
                       <span className="f-oswald text-lg font-semibold tabular-nums" style={{ color }}>

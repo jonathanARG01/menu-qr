@@ -96,6 +96,8 @@ export type Plato = {
   // Migración 0018: opciones para elegir (tamaño, acompañamiento…) y precio distinto para llevar o delivery.
   opciones?: GrupoOpciones[];
   precio_llevar?: number | null;
+  // Migración 0030: ícono elegido de la galería para cuando no tiene foto (id de src/lib/iconos.ts).
+  icono?: string | null;
 };
 
 // Un grupo de opciones del plato. min = cuántas hay que marcar como mínimo (0 = opcional); max = cuántas se pueden marcar.

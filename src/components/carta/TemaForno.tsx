@@ -88,7 +88,7 @@ export function TemaForno({ restaurante, secciones, vistaPrevia, pie }: PropsTem
         />
         {secciones.map((seccion) => {
           // La sección de extras o agregados se muestra como lista compacta, sin fotos.
-          const compacta = seccion.platos.every((p) => !p.descripcion && !p.foto_url);
+          const compacta = seccion.platos.every((p) => !p.descripcion && !p.foto_url && !p.icono);
           return (
             <section key={seccion.id} id={idSeccion(seccion.id)} className="scroll-mt-16 pt-8">
               <h2 className="relative mb-2 inline-block px-4 py-1">
