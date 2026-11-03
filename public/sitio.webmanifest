@@ -1,0 +1,23 @@
+{
+  "name": "Platovi",
+  "short_name": "Platovi",
+  "description": "Carta digital con QR, pedidos desde la mesa y gestión del salón para restaurantes.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0e14",
+  "theme_color": "#0b0e14",
+  "lang": "es",
+  "categories": ["business", "food", "productivity"],
+  "icons": [
+    { "src": "/app-panel/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/app-panel/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/app-panel/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Entrar al panel", "url": "/panel", "icons": [{ "src": "/app-panel/icono-192.png", "sizes": "192x192" }] },
+    { "name": "Crear cuenta", "url": "/registro" }
+  ]
+}

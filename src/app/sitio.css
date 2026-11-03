@@ -1,0 +1,478 @@
+/* ── Sitio de venta (raíz /) ──
+   Estilo oscuro "premium": grafito profundo, acentos dorados a partir del mostaza de la marca, vidrio esmerilado,
+   formas de cápsula y curvas orgánicas. Hay modo claro (marfil cálido) que el visitante elige con el botón de la cabecera;
+   la elección queda en localStorage y un script en línea la aplica antes de pintar (data-tema-sitio en <html>).
+   Todos los colores salen de variables, así los dos temas comparten las mismas clases. */
+@import "@fontsource/cormorant-garamond/latin-600-italic.css";
+
+@theme inline {
+  --font-elegante: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --color-sitio-fondo: var(--sitio-fondo);
+  --color-sitio-fondo-2: var(--sitio-fondo-2);
+  --color-sitio-vidrio: var(--sitio-vidrio);
+  --color-sitio-vidrio-fuerte: var(--sitio-vidrio-fuerte);
+  --color-sitio-borde: var(--sitio-borde);
+  --color-sitio-tinta: var(--sitio-tinta);
+  --color-sitio-suave: var(--sitio-suave);
+  --color-sitio-oro: var(--sitio-oro);
+  --color-sitio-oro-texto: var(--sitio-oro-texto);
+  --color-sitio-crema: var(--sitio-crema);
+  --color-sitio-contraste: var(--sitio-contraste);
+  --color-sitio-contraste-tinta: var(--sitio-contraste-tinta);
+  --color-sitio-contraste-suave: var(--sitio-contraste-suave);
+}
+
+.sitio {
+  color-scheme: dark;
+  --sitio-fondo: #0b0e14;
+  --sitio-fondo-2: #10141c;
+  --sitio-vidrio: rgb(255 255 255 / 0.045);
+  --sitio-vidrio-fuerte: rgb(18 22 31 / 0.72);
+  --sitio-borde: rgb(255 255 255 / 0.09);
+  --sitio-tinta: #f5f1e8;
+  --sitio-suave: #a7a29a;
+  --sitio-oro: #f2a33a;
+  --sitio-oro-texto: #f4b860;
+  --sitio-crema: #efe8da;
+  /* Bloque que contrasta con el fondo (crema en oscuro, tinta en claro) */
+  --sitio-contraste: #ece5d6;
+  --sitio-contraste-tinta: #172033;
+  --sitio-contraste-suave: #5c5a55;
+  --sitio-sombra: rgb(0 0 0 / 0.55);
+  --sitio-brillo: rgb(242 163 58 / 0.16);
+  --sitio-puntos: rgb(255 255 255 / 0.06);
+  --oro-degradado: linear-gradient(135deg, #f9d796 0%, #f2a33a 45%, #c47a1e 100%);
+  background: var(--sitio-fondo);
+  color: var(--sitio-tinta);
+}
+
+:root[data-tema-sitio="claro"] .sitio {
+  color-scheme: light;
+  --sitio-fondo: #f7f3eb;
+  --sitio-fondo-2: #efe9dd;
+  --sitio-vidrio: rgb(255 255 255 / 0.62);
+  --sitio-vidrio-fuerte: rgb(255 252 246 / 0.8);
+  --sitio-borde: rgb(23 32 51 / 0.1);
+  --sitio-tinta: #172033;
+  --sitio-suave: #5f6470;
+  --sitio-oro: #e0912a;
+  --sitio-oro-texto: #a8640f;
+  --sitio-crema: #fffaf1;
+  --sitio-contraste: #172033;
+  --sitio-contraste-tinta: #f5f1e8;
+  --sitio-contraste-suave: #b4b8c2;
+  --sitio-sombra: rgb(23 32 51 / 0.16);
+  --sitio-brillo: rgb(242 163 58 / 0.22);
+  --sitio-puntos: rgb(23 32 51 / 0.07);
+}
+
+/* Que el rebote del scroll (iPhone/Mac) no muestre el fondo claro del resto de la app. */
+body:has(.sitio) {
+  background: var(--sitio-fondo, #0b0e14);
+}
+:root[data-tema-sitio="claro"] body:has(.sitio) {
+  background: #f7f3eb;
+}
+:root:has(.sitio) {
+  scroll-behavior: smooth;
+}
+
+.sitio ::selection {
+  background: rgb(242 163 58 / 0.35);
+}
+
+.sitio :focus-visible {
+  outline: 2px solid var(--sitio-oro);
+  outline-offset: 3px;
+}
+
+/* Clases de componentes en su capa, para que las utilidades de Tailwind (hidden, py-2…) puedan cambiarlas. */
+@layer components {
+  /* Texto con degradado dorado */
+  .texto-oro {
+    background: var(--oro-degradado);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  :root[data-tema-sitio="claro"] .texto-oro {
+    background: linear-gradient(135deg, #d98a1f 0%, #b8700f 60%, #8f540a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  /* Vidrio esmerilado */
+  .vidrio {
+    background: var(--sitio-vidrio);
+    border: 1px solid var(--sitio-borde);
+    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    backdrop-filter: blur(18px) saturate(1.3);
+  }
+
+  /* Botón dorado en forma de cápsula, con un destello que cruza al pasar el mouse */
+  .boton-oro {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    padding: 0.7rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #172033;
+    background: var(--oro-degradado);
+    box-shadow:
+      0 8px 28px -10px rgb(242 163 58 / 0.7),
+      inset 0 1px 0 rgb(255 255 255 / 0.45);
+    transition:
+      transform 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+  .boton-oro::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.55) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.7s ease;
+  }
+  .boton-oro:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 14px 34px -10px rgb(242 163 58 / 0.85),
+      inset 0 1px 0 rgb(255 255 255 / 0.45);
+  }
+  .boton-oro:hover::after {
+    transform: translateX(120%);
+  }
+  .boton-oro .flecha {
+    transition: transform 0.25s ease;
+  }
+  .boton-oro:hover .flecha,
+  .boton-vidrio:hover .flecha {
+    transform: translateX(3px);
+  }
+
+  /* Botón de vidrio en cápsula */
+  .boton-vidrio {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    padding: 0.7rem 1.25rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--sitio-tinta);
+    background: var(--sitio-vidrio);
+    border: 1px solid var(--sitio-borde);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    transition:
+      background-color 0.25s ease,
+      border-color 0.25s ease,
+      transform 0.25s ease;
+  }
+  .boton-vidrio:hover {
+    border-color: rgb(242 163 58 / 0.5);
+    transform: translateY(-2px);
+  }
+  .boton-vidrio .flecha {
+    transition: transform 0.25s ease;
+  }
+
+  /* Tarjeta que se eleva y se ilumina en dorado; la luz sigue al mouse (--mx/--my los pone AnimacionesSitio) */
+  .tarjeta-sitio {
+    position: relative;
+    isolation: isolate;
+    border-radius: 1.75rem;
+    background: var(--sitio-vidrio);
+    border: 1px solid var(--sitio-borde);
+    transition:
+      transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+      border-color 0.35s ease,
+      box-shadow 0.35s ease;
+  }
+  .tarjeta-sitio::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    opacity: 0;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), var(--sitio-brillo), transparent 60%);
+    transition: opacity 0.35s ease;
+  }
+  .tarjeta-sitio:hover {
+    transform: translateY(-4px);
+    border-color: rgb(242 163 58 / 0.35);
+    box-shadow: 0 24px 48px -24px var(--sitio-sombra);
+  }
+  .tarjeta-sitio:hover::before {
+    opacity: 1;
+  }
+
+  /* Borde con degradado dorado (para lo destacado) */
+  .borde-oro {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(var(--sitio-fondo-2), var(--sitio-fondo-2)) padding-box,
+      linear-gradient(140deg, #f9d796, #f2a33a 40%, rgb(242 163 58 / 0.15) 75%, #c47a1e) border-box;
+  }
+  .tarjeta-sitio.borde-oro:hover {
+    border-color: transparent;
+  }
+}
+
+/* Fondo de la portada: luces cálidas y trama de puntos */
+.fondo-portada {
+  background:
+    radial-gradient(ellipse 60% 50% at 12% 0%, rgb(242 163 58 / 0.2), transparent 70%),
+    radial-gradient(ellipse 50% 60% at 95% 85%, rgb(196 122 30 / 0.14), transparent 70%),
+    radial-gradient(var(--sitio-puntos) 1px, transparent 1px) 0 0 / 24px 24px;
+}
+
+/* Esferas doradas decorativas */
+.orbe {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  background: radial-gradient(circle at 32% 28%, #fff1cf 0%, #f6c879 18%, #e0942f 45%, #8a5416 78%, #3a2208 100%);
+  box-shadow:
+    inset -8px -10px 24px rgb(0 0 0 / 0.35),
+    0 20px 40px -12px rgb(0 0 0 / 0.5);
+}
+.orbe-difuso {
+  filter: blur(6px);
+  opacity: 0.7;
+}
+
+/* Halo de cápsula detrás del teléfono */
+.halo-capsula {
+  background:
+    linear-gradient(180deg, rgb(242 163 58 / 0.22), rgb(242 163 58 / 0.02) 60%),
+    var(--sitio-vidrio);
+  border: 1px solid rgb(242 163 58 / 0.25);
+  box-shadow: 0 0 80px -20px rgb(242 163 58 / 0.45);
+}
+
+/* Arco (como una ventana) para las ilustraciones de unDraw sobre crema */
+.arco {
+  border-radius: 999px 999px 2rem 2rem;
+  background: var(--sitio-crema);
+  box-shadow:
+    0 24px 50px -28px var(--sitio-sombra),
+    inset 0 0 0 1px rgb(23 32 51 / 0.06);
+}
+
+/* Nodo brillante de la línea de pasos */
+.nodo {
+  box-shadow:
+    0 0 0 6px rgb(242 163 58 / 0.12),
+    0 0 24px rgb(242 163 58 / 0.55);
+}
+
+/* Cabecera flotante: más sólida al bajar */
+.cabecera-sitio {
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+.cabecera-sitio[data-bajado] {
+  background: var(--sitio-vidrio-fuerte);
+  box-shadow: 0 16px 40px -20px var(--sitio-sombra);
+}
+
+/* Menú del celular (details) */
+.menu-sitio[open] .menu-sitio-panel {
+  animation: sitio-caer 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Preguntas: se abren con transición donde el navegador lo permite */
+.pregunta-sitio {
+  interpolate-size: allow-keywords;
+}
+.pregunta-sitio::details-content {
+  block-size: 0;
+  overflow: hidden;
+  transition:
+    block-size 0.35s ease,
+    content-visibility 0.35s allow-discrete;
+}
+.pregunta-sitio[open]::details-content {
+  block-size: auto;
+}
+
+/* Barra de avance de lectura (solo navegadores con animaciones ligadas al scroll) */
+.barra-avance {
+  display: none;
+}
+@supports (animation-timeline: scroll()) {
+  .barra-avance {
+    display: block;
+    transform-origin: 0 50%;
+    transform: scaleX(0);
+    animation: sitio-avance linear both;
+    animation-timeline: scroll(root);
+  }
+}
+
+/* Cinta de módulos que se desplaza sola */
+.cinta {
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.cinta-pista {
+  animation: sitio-cinta 40s linear infinite;
+}
+.cinta:hover .cinta-pista {
+  animation-play-state: paused;
+}
+
+/* ── Animaciones ── */
+@keyframes sitio-subir {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sitio-flotar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+@keyframes sitio-flotar-lento {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(10px, -20px) scale(1.04);
+  }
+}
+@keyframes sitio-caer {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sitio-avance {
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes sitio-cinta {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes sitio-latido {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 6px rgb(242 163 58 / 0.12),
+      0 0 24px rgb(242 163 58 / 0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 0 10px rgb(242 163 58 / 0.06),
+      0 0 36px rgb(242 163 58 / 0.8);
+  }
+}
+@keyframes sitio-aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Entrada de la portada al cargar, escalonada con --retraso */
+.entrada {
+  animation: sitio-subir 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--retraso, 0ms);
+}
+.flotar {
+  animation: sitio-flotar 6s ease-in-out infinite;
+  animation-delay: var(--retraso, 0ms);
+}
+.flotar-lento {
+  animation: sitio-flotar-lento 11s ease-in-out infinite;
+  animation-delay: var(--retraso, 0ms);
+}
+.nodo-latido {
+  animation: sitio-latido 2.8s ease-in-out infinite;
+  animation-delay: var(--retraso, 0ms);
+}
+.cambio-precio {
+  animation: sitio-aparecer 0.35s ease both;
+}
+
+/* Aparición al hacer scroll: solo se oculta si el script de la página corrió (clase sitio-js en <html>). */
+.sitio-js [data-revelar] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-delay: var(--retraso, 0ms);
+}
+.sitio-js [data-revelar="izquierda"] {
+  transform: translateX(-36px);
+}
+.sitio-js [data-revelar="derecha"] {
+  transform: translateX(36px);
+}
+.sitio-js [data-revelar="zoom"] {
+  transform: scale(0.94);
+}
+.sitio-js [data-revelar][data-visible] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Quien pide menos movimiento ve todo quieto y visible. */
+@media (prefers-reduced-motion: reduce) {
+  :root:has(.sitio) {
+    scroll-behavior: auto;
+  }
+  .sitio *,
+  .sitio *::before,
+  .sitio *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+  .sitio-js [data-revelar] {
+    opacity: 1;
+    transform: none;
+  }
+  .cinta-pista {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .cinta-duplicado {
+    display: none !important;
+  }
+  .barra-avance {
+    display: none !important;
+  }
+}
