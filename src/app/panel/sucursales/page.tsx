@@ -3,7 +3,7 @@ import type { Sucursal } from "@/lib/types";
 import { EditorSucursales } from "./EditorSucursales";
 
 export default async function PanelSucursales() {
-  const { supabase, restaurante } = await requerirSeccion("sucursales");
+  const { supabase, restaurante, ajustes } = await requerirSeccion("sucursales");
   const { data, error } = await supabase
     .from("sucursales")
     .select("*")
@@ -18,5 +18,5 @@ export default async function PanelSucursales() {
       </p>
     );
   }
-  return <EditorSucursales restaurante={restaurante} iniciales={(data ?? []) as Sucursal[]} />;
+  return <EditorSucursales restaurante={restaurante} iniciales={(data ?? []) as Sucursal[]} nombrePrincipalInicial={ajustes.nombre_principal} />;
 }

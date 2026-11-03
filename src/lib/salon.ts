@@ -158,6 +158,8 @@ export type Ajustes = {
   pin_autorizacion: boolean;
   // Precuenta con la marca del local: logo, mensaje de agradecimiento, QR para reseñar y datos al pie.
   ticket: AjustesTicket;
+  // Nombre del local principal (el que no es sucursal) en los selectores del panel. Vacío: el del restaurante.
+  nombre_principal: string;
 };
 
 export type AjustesTicket = {
@@ -210,6 +212,7 @@ export const AJUSTES_BASE: Ajustes = {
   otras_monedas: [],
   pin_autorizacion: false,
   ticket: TICKET_BASE,
+  nombre_principal: "",
 };
 
 // Une lo guardado con los valores por defecto (lo que falte o venga mal se completa).
@@ -251,6 +254,7 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
           .slice(0, 3)
       : [],
     pin_autorizacion: g.pin_autorizacion === true,
+    nombre_principal: typeof g.nombre_principal === "string" ? g.nombre_principal.trim().slice(0, 60) : "",
     ticket: {
       logo: g.ticket?.logo !== false,
       mensaje: typeof g.ticket?.mensaje === "string" ? g.ticket.mensaje.slice(0, 120) : TICKET_BASE.mensaje,

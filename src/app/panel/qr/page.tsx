@@ -1,5 +1,6 @@
 import { requerirSeccion } from "@/lib/panel";
 import type { Mesa, Sucursal } from "@/lib/types";
+import { nombrePrincipal } from "@/lib/locales";
 import { GeneradorQR } from "./GeneradorQR";
 
 export default async function PanelQR({ searchParams }: { searchParams: Promise<{ sucursal?: string }> }) {
@@ -19,6 +20,7 @@ export default async function PanelQR({ searchParams }: { searchParams: Promise<
       sucursalInicial={(await searchParams).sucursal}
       reservas={ajustes.modulos.reservas}
       pisos={(pisos ?? []) as { id: string; nombre: string }[]}
+      nombrePrincipal={nombrePrincipal(restaurante, ajustes)}
     />
   );
 }
