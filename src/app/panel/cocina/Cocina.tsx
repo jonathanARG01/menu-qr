@@ -37,6 +37,9 @@ type Props = {
   platos: PlatoAgotable[];
   categorias: { id: string; nombre: string }[];
   equipo?: { user_id: string; nombre: string; avatar?: string | null; color?: string | null }[];
+  // Local asignado en Equipo: undefined = todos; null = principal; texto = sucursal. nombreLocal se muestra arriba.
+  localFijo?: string | null;
+  nombreLocal?: string;
 };
 
 const SIGUIENTE: Partial<Record<EstadoPedido, { estado: EstadoPedido; texto: string; clase: string }>> = {
@@ -95,13 +98,25 @@ export function Cocina({
   platos,
   categorias,
   equipo = [],
+  localFijo,
+  nombreLocal,
 }: Props) {
   const avisar = useToast();
-  const { pedidos, cuentas, supabase, recargar, enVivo } = useServicio(restaurante.id, {
+  const { pedidos: todosPedidos, cuentas, supabase, recargar, enVivo } = useServicio(restaurante.id, {
     cuentas: cuentasIniciales,
     pedidos: pedidosIniciales,
     pagos: [],
   });
+  // Con un local asignado en Equipo, solo las comandas de ese local (null = principal).
+  const pedidos = useMemo(
+    () =>
+      localFijo === undefined
+        ? todosPedidos
+        : todosPedidos.filter(
+            (p) => (p.sucursal_id ?? cuentas.find((c) => c.id === p.cuenta_id)?.sucursal_id ?? null) === localFijo,
+          ),
+    [todosPedidos, cuentas, localFijo],
+  );
   const ahora = useAhora(15000);
   const tablero = useRef<HTMLDivElement>(null);
   const [estacion, setEstacion] = useState<string>("Todas");
@@ -410,6 +425,11 @@ export function Cocina({
         <h1 className="mr-2 flex items-center gap-2 text-lg font-bold">
           <Icono nombre="cocina" /> {estacion === "Todas" ? "Comandas" : estacion}
         </h1>
+        {nombreLocal && (
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium" title="Tu local asignado en Equipo">
+            {nombreLocal}
+          </span>
+        )}
         <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs">
           <span className={`h-2 w-2 rounded-full ${enVivo ? "bg-emerald-400" : "bg-stone-400"}`} />
           {enVivo ? "En vivo" : "Actualiza cada 15 s"}

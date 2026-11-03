@@ -1,4 +1,5 @@
 import { requerirSeccion } from "@/lib/panel";
+import { nombrePrincipal } from "@/lib/locales";
 import { EditorEquipo, type Miembro } from "./EditorEquipo";
 import { PinesEquipo } from "./PinesEquipo";
 import { TutorialesEquipo } from "./TutorialesEquipo";
@@ -6,12 +7,14 @@ import { TutorialesEquipo } from "./TutorialesEquipo";
 export const dynamic = "force-dynamic";
 
 export default async function PanelEquipo() {
-  const { supabase, restaurante, ajustesGuardados } = await requerirSeccion("equipo");
-  const [{ data, error }, { data: mesas }, { data: pisos }] = await Promise.all([
+  const { supabase, restaurante, ajustes, ajustesGuardados } = await requerirSeccion("equipo");
+  const [{ data, error }, { data: mesas }, { data: pisos }, { data: sucursales }] = await Promise.all([
     supabase.rpc("equipo", { p_restaurante: restaurante.id }),
     // Para asignar mesas a cada mesero.
     supabase.from("mesas").select("id, numero, piso_id").eq("restaurante_id", restaurante.id),
     supabase.from("pisos").select("id, nombre, orden").eq("restaurante_id", restaurante.id).order("orden"),
+    // Para asignar a cada persona su local.
+    supabase.from("sucursales").select("id, nombre").eq("restaurante_id", restaurante.id).order("orden").order("created_at"),
   ]);
   const listaPisos = (pisos ?? []) as { id: string; nombre: string }[];
   const elegibles = ((mesas ?? []) as { id: string; numero: string; piso_id: string | null }[])
@@ -38,6 +41,8 @@ export default async function PanelEquipo() {
         iniciales={(data ?? []) as Miembro[]}
         mesas={elegibles}
         ordenInicial={ajustesGuardados.orden_equipo}
+        sucursales={(sucursales ?? []) as { id: string; nombre: string }[]}
+        nombrePrincipal={nombrePrincipal(restaurante, ajustes)}
       />
       <PinesEquipo
         restauranteId={restaurante.id}

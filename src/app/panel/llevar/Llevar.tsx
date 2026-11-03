@@ -26,6 +26,8 @@ type Props = {
   platos: Plato[];
   sucursales: Sucursal[];
   servicio: DatosServicio;
+  // Local asignado en Equipo: undefined = todos; null = principal; texto = sucursal.
+  localFijo?: string | null;
 };
 
 // En qué va cada pedido, según sus comandas.
@@ -48,7 +50,9 @@ function etapaDe(cuenta: Cuenta, pedidos: Pedido[]): Etapa {
 }
 
 // Pedidos para llevar y delivery: los que llegan desde la carta y los que toma el personal por teléfono.
-export function Llevar({ restaurante, admin, ajustes, categorias, platos, sucursales, servicio }: Props) {
+export function Llevar({ restaurante, admin, ajustes, categorias, platos, sucursales, servicio, localFijo }: Props) {
+  // Quien trabaja en un solo local ve y crea solo pedidos de ese local.
+  const fijo = sucursales.length > 0 && localFijo !== undefined;
   const avisar = useToast();
   const vivo = useServicio(restaurante.id, servicio);
   const { supabase, recargar } = vivo;
@@ -62,7 +66,7 @@ export function Llevar({ restaurante, admin, ajustes, categorias, platos, sucurs
 
   const lista = useMemo(() => {
     return vivo.cuentas
-      .filter((c) => c.tipo && c.tipo !== "mesa")
+      .filter((c) => c.tipo && c.tipo !== "mesa" && (!fijo || (c.sucursal_id ?? null) === localFijo))
       .map((c) => {
         const pedidos = vivo.pedidos.filter((p) => p.cuenta_id === c.id && p.estado !== "cancelado");
         const pagos = vivo.pagos.filter((p) => p.cuenta_id === c.id);
@@ -71,7 +75,7 @@ export function Llevar({ restaurante, admin, ajustes, categorias, platos, sucurs
         return { cuenta: c, pedidos, total, pagado, etapa: etapaDe(c, pedidos) };
       })
       .sort((a, b) => (a.cuenta.para_hora ?? a.cuenta.abierta_at).localeCompare(b.cuenta.para_hora ?? b.cuenta.abierta_at));
-  }, [vivo.cuentas, vivo.pedidos, vivo.pagos]);
+  }, [vivo.cuentas, vivo.pedidos, vivo.pagos, fijo, localFijo]);
 
   // Suena cuando entra un pedido desde la carta.
   useEffect(() => {
@@ -231,7 +235,14 @@ export function Llevar({ restaurante, admin, ajustes, categorias, platos, sucurs
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <div className="mr-auto min-w-0">
-          <h1 className="text-xl font-semibold">Para llevar y delivery</h1>
+          <h1 className="flex flex-wrap items-center gap-2 text-xl font-semibold">
+            Para llevar y delivery
+            {fijo && (
+              <span className="rounded-full bg-stone-100 px-3 py-1 text-sm font-medium" title="Tu local asignado en Equipo">
+                {sucursales.find((s) => s.id === localFijo)?.nombre ?? rotuloPrincipal(restaurante, ajustes)}
+              </span>
+            )}
+          </h1>
           <p className="flex items-center gap-2 text-sm text-suave">
             <span className={`inline-block h-2 w-2 rounded-full ${vivo.enVivo ? "bg-emerald-500" : "bg-stone-300"}`} />
             {lista.length === 0
@@ -297,6 +308,7 @@ export function Llevar({ restaurante, admin, ajustes, categorias, platos, sucurs
           restaurante={restaurante}
           ajustes={ajustes}
           sucursales={sucursales}
+          localFijo={fijo ? (localFijo ?? null) : undefined}
           supabase={supabase}
           formato={formato}
           platos={platos}
@@ -484,6 +496,7 @@ function NuevoPedido({
   restaurante,
   ajustes,
   sucursales,
+  localFijo,
   supabase,
   formato,
   platos,
@@ -493,6 +506,7 @@ function NuevoPedido({
   restaurante: Restaurante;
   ajustes: Ajustes;
   sucursales: Sucursal[];
+  localFijo?: string | null;
   supabase: ReturnType<typeof useServicio>["supabase"];
   formato: (n: number) => string;
   platos: Plato[];
@@ -512,11 +526,12 @@ function NuevoPedido({
   });
   const [envio, setEnvio] = useState(ajustes.llevar.envio);
   // Local del pedido: el principal (null) o una sucursal. Arranca en el último elegido en el panel.
-  const [sucursal, setSucursal] = useState<string | null>(null);
+  const [sucursal, setSucursal] = useState<string | null>(localFijo ?? null);
   useEffect(() => {
+    if (localFijo !== undefined) return;
     const guardado = leerLocalGuardado(restaurante.id, sucursales);
     if (guardado !== undefined) setSucursal(guardado);
-  }, [restaurante.id, sucursales]);
+  }, [restaurante.id, sucursales, localFijo]);
   const [conocido, setConocido] = useState<ClienteResumen | null>(null);
   const [guardando, setGuardando] = useState(false);
   // Últimos pedidos de este cliente, para repetir uno con un toque.
@@ -765,7 +780,7 @@ function NuevoPedido({
             />
           </label>
         </div>
-        {sucursales.length > 0 && (
+        {sucursales.length > 0 && localFijo === undefined && (
           <label className="block text-sm">
             Local
             <select

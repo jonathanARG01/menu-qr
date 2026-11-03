@@ -6,7 +6,7 @@ import { Llevar } from "./Llevar";
 export const dynamic = "force-dynamic";
 
 export default async function PanelLlevar() {
-  const { supabase, restaurante, admin, ajustes } = await requerirSeccion("llevar");
+  const { supabase, restaurante, admin, ajustes, localFijo } = await requerirSeccion("llevar");
   const rid = restaurante.id;
 
   const [cuentas, categorias, platos, sucursales, prueba] = await Promise.all([
@@ -45,6 +45,7 @@ export default async function PanelLlevar() {
       categorias={(categorias.data ?? []) as Categoria[]}
       platos={(platos.data ?? []) as Plato[]}
       sucursales={(sucursales.data ?? []) as Sucursal[]}
+      localFijo={localFijo}
       servicio={{
         cuentas: (cuentas.data ?? []) as Cuenta[],
         pedidos: (pedidos.data ?? []) as Pedido[],
