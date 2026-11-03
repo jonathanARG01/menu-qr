@@ -29,7 +29,13 @@ export function Agregar({ plato, className = "" }: { plato: Plato; className?: s
         agregar: t("agregar"),
         cancelar: t("cerrar"),
         obligatorio: t("obligatorio"),
-        hasta: (k) => (k === 1 ? t("elegirUno") : t("hastaN").replace("{n}", String(k))),
+        regla: {
+          uno: t("elegirUno"),
+          hastaN: t("hastaN"),
+          eligeN: t("eligeN"),
+          entreN: t("entreN"),
+          todas: t("todasOpciones"),
+        },
       }}
       onCerrar={() => setEligiendo(false)}
       onElegir={(o) => {

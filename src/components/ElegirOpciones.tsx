@@ -4,16 +4,11 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { GrupoOpciones } from "@/lib/types";
 import type { OpcionElegida } from "@/lib/salon";
-import { extraOpciones, faltanOpciones } from "@/lib/opciones";
+import { extraOpciones, faltanOpciones, reglaGrupo, TEXTOS_REGLA, type TextosRegla } from "@/lib/opciones";
 
-type Textos = { agregar: string; cancelar: string; obligatorio: string; hasta: (n: number) => string };
+type Textos = { agregar: string; cancelar: string; obligatorio: string; regla: TextosRegla };
 
-const TEXTOS: Textos = {
-  agregar: "Agregar",
-  cancelar: "Cancelar",
-  obligatorio: "Obligatorio",
-  hasta: (n) => (n === 1 ? "Elige 1" : `Hasta ${n}`),
-};
+const TEXTOS: Textos = { agregar: "Agregar", cancelar: "Cancelar", obligatorio: "Obligatorio", regla: TEXTOS_REGLA };
 
 // Hoja para elegir las opciones de un plato antes de sumarlo al pedido. La usan la carta y el panel.
 export function ElegirOpciones({
@@ -43,6 +38,7 @@ export function ElegirOpciones({
       .map((g) => ({ grupo: g.nombre, valor: g.valores[0].nombre, precio: g.valores[0].precio })),
   );
   const faltan = faltanOpciones(grupos, elegidas);
+  const cuantas = (g: GrupoOpciones) => elegidas.filter((e) => e.grupo === g.nombre).length;
 
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
@@ -93,23 +89,27 @@ export function ElegirOpciones({
             <fieldset key={g.nombre}>
               <legend className="flex w-full items-baseline justify-between gap-2 text-sm font-semibold">
                 {g.nombre}
-                <span className={`text-xs font-normal ${faltan.includes(g) ? "text-red-600" : "text-stone-500"}`}>
-                  {g.min > 0 ? `${textos.obligatorio} · ` : ""}
-                  {textos.hasta(g.max)}
+                <span className={`text-right text-xs font-normal ${faltan.includes(g) ? "text-red-600" : "text-stone-500"}`}>
+                  {g.min > 0 && g.max === 1 ? `${textos.obligatorio} · ` : ""}
+                  {reglaGrupo(g, textos.regla)}
+                  {g.max > 1 && <span className="tabular-nums"> · {cuantas(g)}/{g.max}</span>}
                 </span>
               </legend>
               <div className="mt-2 grid gap-1.5">
                 {g.valores.map((v) => {
                   const activa = elegidas.some((e) => e.grupo === g.nombre && e.valor === v.nombre);
+                  // Con el tope alcanzado, las demás se ven apagadas: hay que desmarcar una para cambiarla.
+                  const llena = !activa && g.max > 1 && cuantas(g) >= g.max;
                   return (
                     <button
                       key={v.nombre}
                       type="button"
                       aria-pressed={activa}
+                      aria-disabled={llena}
                       onClick={() => tocar(g, v)}
                       className={`flex items-center gap-3 rounded-xl border-2 px-3 py-2.5 text-left text-sm transition ${
                         activa ? "border-stone-900 bg-stone-50 font-semibold" : "border-stone-200"
-                      }`}
+                      } ${llena ? "opacity-40" : ""}`}
                     >
                       <span
                         className={`flex h-5 w-5 shrink-0 items-center justify-center border-2 ${g.max === 1 ? "rounded-full" : "rounded-md"} ${
