@@ -6,7 +6,7 @@ import { Salon } from "./Salon";
 export const dynamic = "force-dynamic";
 
 export default async function PanelSalon() {
-  const { supabase, restaurante, admin, ajustes } = await requerirSeccion("salon");
+  const { supabase, restaurante, admin, ajustes, localFijo } = await requerirSeccion("salon");
   const rid = restaurante.id;
 
   const [pisos, mesas, sucursales, cuentas, categorias, platos] = await Promise.all([
@@ -46,6 +46,7 @@ export default async function PanelSalon() {
       pisosIniciales={(pisos.data ?? []) as Piso[]}
       mesasIniciales={(mesas.data ?? []) as Mesa[]}
       sucursales={(sucursales.data ?? []) as Sucursal[]}
+      localFijo={localFijo}
       categorias={(categorias.data ?? []) as Categoria[]}
       platos={(platos.data ?? []) as Plato[]}
       servicio={{

@@ -66,6 +66,8 @@ type Props = {
   categorias: Categoria[];
   platos: Plato[];
   servicio: DatosServicio;
+  // Local asignado a esta persona en Equipo: undefined = puede ver todos; null = principal; texto = sucursal.
+  localFijo?: string | null;
 };
 
 const nuevoId = () => Math.random().toString(36).slice(2, 10);
@@ -80,6 +82,7 @@ export function Salon({
   categorias,
   platos,
   servicio,
+  localFijo,
 }: Props) {
   const avisar = useToast();
   const servicioVivo = useServicio(restaurante.id, servicio);
@@ -92,18 +95,22 @@ export function Salon({
   // Con sucursales (Plan Grupo) cada local tiene su propio salón: el principal (lo que no tiene sucursal)
   // y uno por sucursal. La carta es la misma, pero pisos, mesas y avisos son de cada local.
   const conLocales = sucursales.length > 0;
+  // Quien trabaja en un solo local ve solo ese salón, sin selector.
+  const fijo = conLocales && localFijo !== undefined;
   const [sucursalId, setSucursalId] = useState<string | null>(() =>
-    !conLocales || pisosIniciales.some((p) => !p.sucursal_id) || mesasIniciales.some((m) => !m.sucursal_id)
+    fijo
+      ? (localFijo ?? null)
+      : !conLocales || pisosIniciales.some((p) => !p.sucursal_id) || mesasIniciales.some((m) => !m.sucursal_id)
       ? null
       : sucursales[0].id,
   );
   const delLocal = <T extends { sucursal_id?: string | null }>(x: T) => !conLocales || (x.sucursal_id ?? null) === sucursalId;
   // Se recuerda el último local elegido en este equipo (lo comparten Salón, QR y Para llevar).
   useEffect(() => {
-    if (!conLocales) return;
+    if (!conLocales || fijo) return;
     const guardado = leerLocalGuardado(restaurante.id, sucursales);
     if (guardado !== undefined) setSucursalId(guardado);
-  }, [conLocales, sucursales, restaurante.id]);
+  }, [conLocales, fijo, sucursales, restaurante.id]);
   function elegirLocal(id: string | null) {
     setSucursalId(id);
     setPisoId(null);
@@ -218,7 +225,8 @@ export function Salon({
 
   // Suena cuando una mesa llama al mesero o pide la cuenta (no al abrir la pantalla). Cada aviso suena distinto.
   useEffect(() => {
-    const actuales = cuentas.filter((c) => c.aviso).map((c) => ({ clave: `${c.id}:${c.aviso!.at}`, tipo: c.aviso!.tipo }));
+    // Con un local asignado solo suenan los avisos de ese local.
+    const actuales = cuentas.filter((c) => c.aviso && (!fijo || delLocal(c))).map((c) => ({ clave: `${c.id}:${c.aviso!.at}`, tipo: c.aviso!.tipo }));
     if (avisosOidos.current === null) {
       avisosOidos.current = new Set(actuales.map((a) => a.clave));
       return;
@@ -227,6 +235,7 @@ export function Salon({
     nuevos.forEach((a) => avisosOidos.current!.add(a.clave));
     if (nuevos.some((a) => a.tipo === "cuenta" || a.tipo === "pago")) sonar("cuenta");
     else if (nuevos.length) sonar("mozo");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cuentas]);
 
   // Aviso nuevo de una mesa de otro piso: el plano pasa a ese piso y marca la mesa unos segundos.
@@ -254,7 +263,7 @@ export function Salon({
 
   // Pedidos para llevar que esperan que alguien los acepte (llegaron desde la carta).
   const llevarPorAceptar = ajustes.modulos.llevar
-    ? cuentas.filter((c) => c.tipo && c.tipo !== "mesa" && pedidos.some((p) => p.cuenta_id === c.id && p.estado === "pendiente"))
+    ? cuentas.filter((c) => c.tipo && c.tipo !== "mesa" && (!fijo || delLocal(c)) && pedidos.some((p) => p.cuenta_id === c.id && p.estado === "pendiente"))
         .length
     : 0;
 
@@ -548,7 +557,12 @@ export function Salon({
             {ocupadas} de {mesasLocal.length} mesas ocupadas · {personas} {personas === 1 ? "persona" : "personas"}
           </p>
         </div>
-        {conLocales && (
+        {fijo && (
+          <span className="rounded-full bg-stone-100 px-3 py-1.5 text-sm font-medium" title="Tu local asignado en Equipo">
+            {sucursales.find((s) => s.id === sucursalId)?.nombre ?? rotuloPrincipal(restaurante, ajustes)}
+          </span>
+        )}
+        {conLocales && !fijo && (
           <select
             value={sucursalId ?? ""}
             onChange={(e) => elegirLocal(e.target.value || null)}

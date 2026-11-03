@@ -21,13 +21,15 @@ export const obtenerContexto = cache(async () => {
   if (!user) redirect("/login");
 
   const membresias = () => supabase.from("usuarios").select("rol, restaurantes(*)").eq("user_id", user.id).order("created_at");
-  const [primera, { data: esSuperadmin }, { data: aceptadas }, almacen] = await Promise.all([
+  const [primera, { data: esSuperadmin }, { data: aceptadas }, almacen, locales] = await Promise.all([
     membresias(),
     // Si aún no se ejecutó la migración 0003 la función no existe y devuelve error: no es superadmin.
     supabase.rpc("es_superadmin"),
     // Quien fue invitado al equipo entra solo la primera vez (sin la migración 0004 no hace nada).
     supabase.rpc("aceptar_invitaciones"),
     cookies(),
+    // Local asignado en cada restaurante (migración 0031). Sin ella da error y se trabaja en todos.
+    supabase.from("usuarios").select("restaurante_id, sucursal_id, todas_sucursales").eq("user_id", user.id),
   ]);
   const { data } = Number(aceptadas) > 0 ? await membresias() : primera;
 
@@ -45,6 +47,9 @@ export const obtenerContexto = cache(async () => {
     pedidos_whatsapp: Boolean(guardado.pedidos_whatsapp) && pedidosWhatsappIncluido(guardado.plan),
   };
   const admin = esAdmin(actual?.rol);
+  const asignado = ((locales.data ?? []) as { restaurante_id: string; sucursal_id: string | null; todas_sucursales: boolean }[]).find(
+    (l) => l.restaurante_id === guardado?.id,
+  );
 
   return {
     supabase,
@@ -52,6 +57,8 @@ export const obtenerContexto = cache(async () => {
     restaurante,
     rol: actual?.rol,
     admin,
+    // Local fijo de esta persona: undefined = todos los locales; null = el principal; texto = id de la sucursal.
+    localFijo: asignado && asignado.todas_sucursales === false ? asignado.sucursal_id : undefined,
     ajustes,
     ajustesGuardados,
     secciones: seccionesVisibles(actual?.rol, ajustes, sellosContratado(guardado)),
