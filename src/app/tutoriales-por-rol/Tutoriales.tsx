@@ -11,7 +11,31 @@ const dos = (n: number) => String(n).padStart(2, "0");
 export function Tutoriales({ inicial }: { inicial: IdTutorial | null }) {
   const [activo, setActivo] = useState<IdTutorial>(inicial ?? "administrador");
   const [ampliada, setAmpliada] = useState<Imagen | null>(null);
+  const [visible, setVisible] = useState<string | null>(null);
   const tutorial = TUTORIALES.find((t) => t.id === activo)!;
+
+  // Marca en la barra el paso que se está leyendo y lo deja a la vista dentro de la barra.
+  useEffect(() => {
+    const pasos = Array.from(document.querySelectorAll<HTMLElement>(".tut-paso"));
+    const observador = new IntersectionObserver(
+      (entradas) => {
+        const arriba = entradas
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (arriba) setVisible(arriba.target.id);
+      },
+      { rootMargin: "-35% 0px -60% 0px" },
+    );
+    pasos.forEach((p) => observador.observe(p));
+    return () => observador.disconnect();
+  }, [activo]);
+
+  useEffect(() => {
+    if (!visible) return;
+    const indice = document.getElementById("tut-indice");
+    const chip = indice?.querySelector<HTMLElement>(`[data-ancla="${visible}"]`);
+    if (indice && chip) indice.scrollTo({ left: chip.offsetLeft - indice.clientWidth / 2 + chip.clientWidth / 2, behavior: "smooth" });
+  }, [visible]);
 
   // El rol elegido queda en la dirección, para compartir el enlace de un tutorial puntual.
   const elegir = (id: IdTutorial) => {
@@ -78,16 +102,31 @@ export function Tutoriales({ inicial }: { inicial: IdTutorial | null }) {
           <p className="tut-eyebrow">Tutorial · {tutorial.rol}</p>
           <h2>{tutorial.titulo}</h2>
           <p>{tutorial.bajada}</p>
-          <ol className="tut-indice">
-            {tutorial.pasos.map((p, i) => (
-              <li key={p.id}>
-                <a href={`#${tutorial.id}-${p.id}`}>
-                  <span>{dos(i + 1)}</span> {p.titulo}
-                </a>
-              </li>
-            ))}
-          </ol>
         </div>
+
+        {/* Barra fija al bajar: cambiar de rol o saltar a cualquier paso */}
+        <nav className="tut-barra" aria-label="Pasos del tutorial">
+          <div className="tut-barra-roles">
+            {TUTORIALES.map((t) => (
+              <button key={t.id} type="button" aria-pressed={t.id === activo} onClick={() => elegir(t.id)}>
+                <Icono nombre={t.icono} className="h-4 w-4" />
+                <span>{t.rol}</span>
+              </button>
+            ))}
+          </div>
+          <ol className="tut-indice" id="tut-indice">
+            {tutorial.pasos.map((p, i) => {
+              const ancla = `${tutorial.id}-${p.id}`;
+              return (
+                <li key={p.id}>
+                  <a href={`#${ancla}`} data-ancla={ancla} aria-current={visible === ancla ? "step" : undefined}>
+                    <span>{dos(i + 1)}</span> {p.titulo}
+                  </a>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
 
         <div className="tut-pasos">
           {tutorial.pasos.map((p, i) => (

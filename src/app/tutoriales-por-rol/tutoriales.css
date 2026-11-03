@@ -14,6 +14,7 @@
   --t-naranjo: #ff7a1a;
   --t-naranjo-claro: #ffa45c;
   --t-brillo: 0 0 10px rgb(255 122 26 / 0.75), 0 0 24px rgb(255 122 26 / 0.35);
+  --tut-alto-cabecera: 4rem;
   color-scheme: dark;
   min-height: 100vh;
   background:
@@ -32,6 +33,8 @@
 .tut-cabecera {
   position: sticky;
   top: 0;
+  height: var(--tut-alto-cabecera);
+  box-sizing: border-box;
   z-index: 30;
   display: flex;
   align-items: center;
@@ -309,11 +312,80 @@
   color: var(--t-suave);
   line-height: 1.6;
 }
+/* Barra fija bajo la cabecera: roles + pasos (una sola fila que se desliza) */
+.tut-barra {
+  position: sticky;
+  top: var(--tut-alto-cabecera);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 1.5rem calc(-1 * clamp(1rem, 4vw, 3rem)) 0;
+  padding: 0.7rem clamp(1rem, 4vw, 3rem);
+  background: rgb(10 10 10 / 0.88);
+  backdrop-filter: blur(12px);
+  /* Fondo y borde de lado a lado de la pantalla, aunque la barra viva dentro del contenido centrado */
+  box-shadow:
+    0 0 0 100vmax rgb(10 10 10 / 0.88),
+    0 1px 0 100vmax var(--t-borde);
+  clip-path: inset(0 -100vmax);
+}
+@media (min-width: 900px) {
+  .tut-barra {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+.tut-barra-roles {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid var(--t-borde-2);
+  border-radius: 999px;
+  background: var(--t-caja);
+}
+.tut-barra-roles button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--t-suave);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tut-barra-roles button:hover {
+  color: var(--t-tinta);
+}
+.tut-barra-roles button[aria-pressed="true"] {
+  background: var(--t-naranjo);
+  color: #1a0d02;
+  box-shadow: 0 0 16px -2px rgb(255 122 26 / 0.7);
+}
 .tut-indice {
   display: flex;
-  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
   gap: 0.5rem;
-  margin-top: 1.5rem;
+  padding: 0 1.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 1.25rem, #000 calc(100% - 1.25rem), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 1.25rem, #000 calc(100% - 1.25rem), transparent);
+}
+.tut-indice::-webkit-scrollbar {
+  display: none;
+}
+.tut-indice li {
+  flex-shrink: 0;
 }
 .tut-indice a {
   display: inline-flex;
@@ -323,13 +395,24 @@
   border: 1px solid var(--t-borde-2);
   border-radius: 999px;
   font-size: 0.85rem;
+  white-space: nowrap;
   text-decoration: none;
   color: var(--t-suave);
   background: var(--t-caja);
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
 }
 .tut-indice a:hover {
   border-color: var(--t-naranjo);
   color: var(--t-tinta);
+}
+.tut-indice a[aria-current="step"] {
+  border-color: var(--t-naranjo);
+  color: var(--t-tinta);
+  background: rgb(255 122 26 / 0.12);
+  box-shadow: 0 0 14px -4px rgb(255 122 26 / 0.8);
 }
 .tut-indice a span {
   font-weight: 700;
@@ -344,7 +427,7 @@
 }
 .tut-paso {
   position: relative;
-  scroll-margin-top: 5.5rem;
+  scroll-margin-top: calc(var(--tut-alto-cabecera) + 8rem);
   padding: clamp(1.25rem, 3vw, 2.25rem);
   border: 1px solid var(--t-borde-2);
   border-radius: 1.5rem;
