@@ -1,4 +1,4 @@
-import type { Ajustes } from "./salon";
+import type { Ajustes, SillasMesa } from "./salon";
 
 // Textos traducidos por idioma: {"en": {"nombre": "...", "descripcion": "..."}}
 export type Traducciones = Partial<Record<string, Record<string, string | undefined>>>;
@@ -132,6 +132,9 @@ export type Mesa = {
   capacidad?: number;
   // Mesero a cargo de esta mesa (migración 0018).
   mesero_id?: string | null;
+  // Color de la mesa en el plano y sillas elegidas a mano (migración 0027). null: las de siempre.
+  color?: string | null;
+  sillas?: SillasMesa | null;
 };
 
 export type Sucursal = {

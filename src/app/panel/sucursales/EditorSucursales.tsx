@@ -13,6 +13,9 @@ import { revalidarCarta } from "../actions";
 type Borrador = Pick<Sucursal, "nombre" | "slug" | "direccion" | "horario" | "whatsapp">;
 const VACIA: Borrador = { nombre: "", slug: "", direccion: "", horario: "", whatsapp: "" };
 
+// Tope del plan Grupo: 5 sucursales contando la principal (la base de datos también lo exige, SQL 0027).
+export const MAX_SUCURSALES = 5;
+
 export function EditorSucursales({ restaurante, iniciales }: { restaurante: Restaurante; iniciales: Sucursal[] }) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
@@ -28,6 +31,9 @@ export function EditorSucursales({ restaurante, iniciales }: { restaurante: Rest
       horario: datos.horario?.trim() || null,
       whatsapp: datos.whatsapp?.replace(/\D/g, "") || null,
     };
+    if (editando === "nueva" && sucursales.length >= MAX_SUCURSALES) {
+      return avisar(`Máximo ${MAX_SUCURSALES} sucursales, contando la principal.`, "error");
+    }
     const consulta =
       editando === "nueva"
         ? supabase
@@ -80,7 +86,7 @@ export function EditorSucursales({ restaurante, iniciales }: { restaurante: Rest
 
       {sucursales.length === 0 && (
         <div className="tarjeta p-6 text-center text-sm text-suave">
-          Si tienes un solo local no necesitas cargar nada aquí. Agrega sucursales cuando tengas más de uno.
+          Si tienes un solo local no necesitas cargar nada aquí. Agrega sucursales cuando tengas más de uno (hasta 5, contando la principal).
         </div>
       )}
 
@@ -120,9 +126,20 @@ export function EditorSucursales({ restaurante, iniciales }: { restaurante: Rest
         ))}
       </ul>
 
-      <button type="button" className="boton" onClick={() => setEditando("nueva")}>
-        + Agregar sucursal
-      </button>
+      {sucursales.length < MAX_SUCURSALES ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" className="boton" onClick={() => setEditando("nueva")}>
+            + Agregar sucursal
+          </button>
+          <span className="text-sm text-suave">
+            {sucursales.length} de {MAX_SUCURSALES}, contando la principal
+          </span>
+        </div>
+      ) : (
+        <p className="tarjeta p-4 text-sm text-suave">
+          Llegaste al máximo de {MAX_SUCURSALES} sucursales, contando la principal. Para agregar otra, borra una que ya no uses.
+        </p>
+      )}
 
       {editando && (
         <FormSucursal

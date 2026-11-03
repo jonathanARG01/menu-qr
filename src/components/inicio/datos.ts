@@ -12,7 +12,7 @@ export const PLANES = [
     incluye: [
       "Carta QR ilimitada con fotos",
       "21 diseños, tu logo y tus colores",
-      "6 idiomas para turistas",
+      "7 idiomas para turistas",
       "QR por mesa listos para imprimir",
       "Platos destacados, agotados y promos por horario",
     ],
@@ -41,7 +41,7 @@ export const PLANES = [
       "Hasta 5 sucursales con su propia carta",
       "Estadísticas por local",
       "Un solo panel para todos los locales",
-      "Soporte prioritario por WhatsApp",
+      "Soporte prioritario por WhatsApp 24/7",
     ],
   },
 ] as const;
@@ -79,15 +79,6 @@ export const ARMADOS = [
       "Traducciones revisadas y platos destacados",
       "Ajustes del salón y cuentas del equipo",
       "Capacitación en tu local",
-    ],
-  },
-  {
-    id: "pro",
-    nombre: "Pro",
-    precio: 39990,
-    para: "Todo el local listo, y nosotros cargamos lo nuevo.",
-    incluye: [
-      "Todo lo del Completo",
       "Plano del salón con todas las mesas y pisos, en 3D",
       "Los primeros 2 meses, cargamos tus platos nuevos",
     ],
@@ -98,7 +89,7 @@ export const DIAS_PRUEBA = 14;
 
 export const MODULOS: { icono: string; titulo: string; texto: string }[] = [
   { icono: "carta", titulo: "Carta QR con 21 diseños", texto: "Del café de barrio al bar de cócteles. Cambias precios y fotos desde el celular y se actualiza al instante." },
-  { icono: "externo", titulo: "6 idiomas", texto: "Español, inglés, portugués, francés, italiano y alemán. El turista elige el suyo con un toque." },
+  { icono: "externo", titulo: "7 idiomas", texto: "Español, inglés, portugués, francés, italiano, alemán y chino. El turista elige el suyo con un toque." },
   { icono: "whatsapp", titulo: "Pedidos por WhatsApp", texto: "El cliente arma su pedido y te llega con la mesa y el total. Sin comisiones por pedido." },
   { icono: "salon", titulo: "Salón y mapa de mesas", texto: "Dibuja tu local por pisos, ve qué mesa está libre, ocupada o pidiendo la cuenta." },
   { icono: "cocina", titulo: "Pantalla de cocina", texto: "Las comandas llegan en vivo por estación, se ordenan y avisan al mesero cuando están listas." },
@@ -173,10 +164,10 @@ export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; punto
 ];
 
 export const SERVICIOS: [string, string][] = [
-  ["Armado de la carta", "Cargamos platos, precios, fotos y traducciones por ti, en tres niveles desde $19.990."],
+  ["Armado de la carta", "Cargamos platos, precios, fotos y traducciones por ti, en dos niveles desde $19.990."],
   ["QR impresos", "Te entregamos el PDF con un QR por mesa, listo para la imprenta."],
   ["Capacitación del equipo", "Una sesión para meseros, cocina y caja, en tu local o por videollamada."],
-  ["Soporte por WhatsApp", "Hablas con una persona, no con un bot, en horario de atención."],
+  ["Soporte por WhatsApp 24/7", "Hablas con una persona, no con un bot. Escríbenos a la hora que quieras, todos los días: siempre te respondemos."],
 ];
 
 // Cartas de ejemplo publicadas en el sistema (cada una con un diseño distinto).
