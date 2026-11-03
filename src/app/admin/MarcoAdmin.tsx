@@ -13,6 +13,7 @@ type Tema = "oscuro" | "claro";
 const MENU = [
   { href: "/admin", texto: "Restaurantes", icono: "restaurantes", ayuda: "Planes, pruebas y pagos" },
   { href: "/admin/referidos", texto: "Referidos", icono: "referidos", ayuda: "Quién invitó a quién y descuentos" },
+  { href: "/admin/sitio", texto: "Sitio web", icono: "correo", ayuda: "Contacto, redes sociales y mensajes de platovi.cl" },
 ];
 
 // Marco de /admin con el mismo estilo del panel: menú lateral flotante en computadora y pestañas arriba en el teléfono.
