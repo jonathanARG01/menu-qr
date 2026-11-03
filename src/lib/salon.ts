@@ -52,7 +52,13 @@ export const SECCIONES: InfoSeccion[] = [
   { id: "estadisticas", href: "/panel/estadisticas", texto: "Estadísticas", grupo: "Negocio", ayuda: "Visitas y lo más pedido" },
   { id: "reportes", href: "/panel/reportes", texto: "Reportes", grupo: "Negocio", ayuda: "Ventas y propinas por mesero" },
   { id: "clientes", href: "/panel/clientes", texto: "Clientes", grupo: "Negocio", ayuda: "Clientes frecuentes" },
-  { id: "sellos", href: "/panel/sellos", texto: "Loyalty Cards", grupo: "Negocio", ayuda: "Tarjetas de sellos y premios en el celular" },
+  {
+    id: "sellos",
+    href: "/panel/sellos",
+    texto: "Loyalty Cards",
+    grupo: "Negocio",
+    ayuda: "Tarjetas de sellos y premios en el celular",
+  },
   { id: "sucursales", href: "/panel/sucursales", texto: "Sucursales", grupo: "Negocio", ayuda: "Locales del mismo negocio" },
   { id: "equipo", href: "/panel/equipo", texto: "Equipo", grupo: "Negocio", ayuda: "Meseros, cocina y administradores" },
   {
@@ -296,21 +302,158 @@ export function seccionesVisibles(rol: string | undefined, ajustes: Ajustes, sel
 }
 
 // ── Plano ─────────────────────────────────────
-export type TipoElemento = "pasillo" | "pared" | "barra" | "bano" | "cocina" | "entrada" | "escalera" | "planta" | "caja";
+export type TipoElemento =
+  | "pasillo"
+  | "pared"
+  | "barra"
+  | "bano"
+  | "cocina"
+  | "entrada"
+  | "escalera"
+  | "planta"
+  | "caja"
+  // Calle y terraza
+  | "toldo"
+  | "vereda"
+  | "calle"
+  | "macetero"
+  | "farol"
+  // Playa
+  | "palmera"
+  | "sombrilla"
+  | "arena"
+  | "deck"
+  | "mar"
+  | "choza";
 
-export const ELEMENTOS: Record<TipoElemento, { texto: string; bloquea: boolean; ancho: number; alto: number }> = {
-  pasillo: { texto: "Pasillo", bloquea: true, ancho: 8, alto: 2 },
-  pared: { texto: "Pared", bloquea: true, ancho: 6, alto: 1 },
-  barra: { texto: "Barra", bloquea: true, ancho: 6, alto: 2 },
-  bano: { texto: "Baños", bloquea: true, ancho: 3, alto: 3 },
-  cocina: { texto: "Cocina", bloquea: true, ancho: 5, alto: 4 },
-  entrada: { texto: "Entrada", bloquea: true, ancho: 3, alto: 1 },
-  escalera: { texto: "Escalera", bloquea: true, ancho: 3, alto: 3 },
-  caja: { texto: "Caja", bloquea: true, ancho: 3, alto: 2 },
-  planta: { texto: "Planta", bloquea: false, ancho: 1, alto: 1 },
+export type GrupoElemento = "local" | "calle" | "playa";
+export const GRUPOS_ELEMENTO: { id: GrupoElemento; texto: string }[] = [
+  { id: "local", texto: "Dentro del local" },
+  { id: "calle", texto: "Calle y terraza" },
+  { id: "playa", texto: "Playa y aire libre" },
+];
+
+// bloquea: las mesas no se pueden poner encima. suelo: es una zona del piso (vereda, arena, toldo…) que se dibuja
+// debajo de todo y sobre la que sí van mesas. color: el color que trae al agregarlo (cada uno se puede cambiar).
+export const ELEMENTOS: Record<
+  TipoElemento,
+  {
+    texto: string;
+    bloquea: boolean;
+    ancho: number;
+    alto: number;
+    grupo: GrupoElemento;
+    suelo?: boolean;
+    color?: string;
+    asientos?: boolean;
+  }
+> = {
+  pasillo: { texto: "Pasillo", bloquea: true, ancho: 8, alto: 2, grupo: "local" },
+  pared: { texto: "Pared", bloquea: true, ancho: 6, alto: 1, grupo: "local" },
+  barra: { texto: "Barra", bloquea: true, ancho: 6, alto: 2, grupo: "local", asientos: true },
+  bano: { texto: "Baños", bloquea: true, ancho: 3, alto: 3, grupo: "local" },
+  cocina: { texto: "Cocina", bloquea: true, ancho: 5, alto: 4, grupo: "local" },
+  entrada: { texto: "Entrada", bloquea: true, ancho: 3, alto: 1, grupo: "local" },
+  escalera: { texto: "Escalera", bloquea: true, ancho: 3, alto: 3, grupo: "local" },
+  caja: { texto: "Caja", bloquea: true, ancho: 3, alto: 2, grupo: "local" },
+  planta: { texto: "Planta", bloquea: false, ancho: 1, alto: 1, grupo: "local" },
+  toldo: { texto: "Toldo", bloquea: false, ancho: 8, alto: 4, grupo: "calle", suelo: true, color: "#b91c1c" },
+  vereda: { texto: "Vereda", bloquea: false, ancho: 12, alto: 4, grupo: "calle", suelo: true },
+  calle: { texto: "Calle", bloquea: true, ancho: 14, alto: 3, grupo: "calle" },
+  macetero: { texto: "Macetero", bloquea: true, ancho: 2, alto: 1, grupo: "calle" },
+  farol: { texto: "Farol", bloquea: false, ancho: 1, alto: 1, grupo: "calle" },
+  palmera: { texto: "Palmera", bloquea: false, ancho: 2, alto: 2, grupo: "playa" },
+  sombrilla: { texto: "Sombrilla", bloquea: false, ancho: 3, alto: 3, grupo: "playa", color: "#0e7490" },
+  arena: { texto: "Arena", bloquea: false, ancho: 12, alto: 6, grupo: "playa", suelo: true },
+  deck: { texto: "Deck de madera", bloquea: false, ancho: 10, alto: 5, grupo: "playa", suelo: true },
+  mar: { texto: "Mar", bloquea: true, ancho: 14, alto: 3, grupo: "playa" },
+  choza: { texto: "Quincho", bloquea: false, ancho: 4, alto: 4, grupo: "playa", asientos: true },
 };
 
-export type Elemento = { id: string; tipo: TipoElemento; x: number; y: number; ancho: number; alto: number; texto?: string };
+export type Lado = "arriba" | "abajo" | "izquierda" | "derecha";
+export const LADOS: { id: Lado; texto: string }[] = [
+  { id: "arriba", texto: "Arriba" },
+  { id: "abajo", texto: "Abajo" },
+  { id: "izquierda", texto: "Izquierda" },
+  { id: "derecha", texto: "Derecha" },
+];
+
+// Asientos de una barra o quincho: taburetes o sillas altas en uno de sus lados.
+export type AsientosElemento = { tipo: "taburete" | "silla"; n: number; lado: Lado };
+
+export type Elemento = {
+  id: string;
+  tipo: TipoElemento;
+  x: number;
+  y: number;
+  ancho: number;
+  alto: number;
+  texto?: string;
+  // Color elegido (si falta, el de siempre).
+  color?: string;
+  asientos?: AsientosElemento;
+};
+
+// Sillas de una mesa, elegidas a mano: por lado (mesas cuadradas y rectangulares) o alrededor (redondas).
+// banca y sillon ocupan todo el lado; n es cuántas personas se sientan ahí.
+export type TipoAsiento = "silla" | "taburete" | "banca" | "sillon";
+export const TIPOS_ASIENTO: { id: TipoAsiento; texto: string; redonda: boolean }[] = [
+  { id: "silla", texto: "Sillas", redonda: true },
+  { id: "taburete", texto: "Taburetes", redonda: true },
+  { id: "banca", texto: "Banca", redonda: false },
+  { id: "sillon", texto: "Sillón", redonda: true },
+];
+export type LadoSillas = { tipo: TipoAsiento; n: number };
+export type SillasMesa = Partial<Record<Lado | "alrededor", LadoSillas>>;
+
+// Total de personas que entran con esas sillas.
+export const personasSillas = (s: SillasMesa) => Object.values(s).reduce((t, l) => t + (l?.n ?? 0), 0);
+
+// Sillas que se dibujan si no se eligieron a mano: repartidas por los lados largos (o alrededor si es redonda).
+export function sillasAutomaticas(forma: string | undefined, capacidad: number, ancho: number, alto: number): SillasMesa {
+  const n = Math.min(capacidad, 24);
+  if (forma === "redonda") return { alrededor: { tipo: "silla", n } };
+  const unLado = Math.ceil(n / 2);
+  return ancho >= alto
+    ? { arriba: { tipo: "silla", n: unLado }, abajo: { tipo: "silla", n: n - unLado } }
+    : { izquierda: { tipo: "silla", n: unLado }, derecha: { tipo: "silla", n: n - unLado } };
+}
+
+// Colores para elegir en el plano (además del selector libre).
+export const COLORES_PLANO = [
+  "#7b5332",
+  "#a8a29e",
+  "#1f2937",
+  "#b91c1c",
+  "#ea580c",
+  "#ca8a04",
+  "#15803d",
+  "#0e7490",
+  "#1d4ed8",
+  "#7c3aed",
+  "#be185d",
+  "#f5f5f4",
+];
+
+// Texto legible sobre un color de fondo.
+export function textoSobre(hex: string) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return "#ffffff";
+  const n = parseInt(m[1], 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return 0.299 * r + 0.587 * g + 0.114 * b > 160 ? "#1c1917" : "#ffffff";
+}
+
+// Mezcla un color con negro (t > 0) o blanco (t < 0) para sombras y brillos.
+export function tono(hex: string, t: number) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const destino = t > 0 ? 0 : 255;
+  const k = Math.abs(t);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v + (destino - v) * k));
+  return `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
 
 export type Piso = {
   id: string;

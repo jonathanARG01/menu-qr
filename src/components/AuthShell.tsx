@@ -3,7 +3,7 @@ import { Icono } from "@/components/Icono";
 import { Logo } from "@/components/Logo";
 
 const VENTAJAS: [string, string, string][] = [
-  ["carta", "Carta QR en 6 idiomas", "Más de 20 diseños, fotos y pedidos desde la mesa."],
+  ["carta", "Carta QR en 7 idiomas", "Más de 20 diseños, fotos y pedidos desde la mesa."],
   ["salon", "Salón y cocina en vivo", "Plano de mesas por pisos y comandas al instante."],
   ["personas", "Cuentas sin vueltas", "Divide por persona, propinas y medios de pago."],
 ];

@@ -6,7 +6,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/components/Toast";
 import { Icono } from "@/components/Icono";
 import {
+  COLORES_PLANO,
   ELEMENTOS,
+  GRUPOS_ELEMENTO,
+  LADOS,
+  personasSillas,
+  sillasAutomaticas,
+  TIPOS_ASIENTO,
+  type Lado,
+  type SillasMesa,
+  type TipoAsiento,
   nombreMesa,
   NOMBRE_ESTADO,
   regionDe,
@@ -85,8 +94,7 @@ export function Salon({
       ? null
       : sucursales[0].id,
   );
-  const delLocal = <T extends { sucursal_id?: string | null }>(x: T) =>
-    !conLocales || (x.sucursal_id ?? null) === sucursalId;
+  const delLocal = <T extends { sucursal_id?: string | null }>(x: T) => !conLocales || (x.sucursal_id ?? null) === sucursalId;
   // Se recuerda el último local elegido en este equipo.
   useEffect(() => {
     if (!conLocales) return;
@@ -387,7 +395,15 @@ export function Salon({
     if (!piso) return;
     const { ancho, alto } = ELEMENTOS[tipo];
     const lugar = primerHueco(ancho, alto, piso, mesas, false) ?? { x: 0, y: 0, ancho, alto };
-    const el: Elemento = { id: nuevoId(), tipo, ...lugar };
+    const el: Elemento = {
+      id: nuevoId(),
+      tipo,
+      ...lugar,
+      // La barra y el quincho traen taburetes de entrada (se pueden quitar o cambiar).
+      ...(ELEMENTOS[tipo].asientos
+        ? { asientos: { tipo: "taburete" as const, n: tipo === "barra" ? 5 : 0, lado: "abajo" as const } }
+        : {}),
+    };
     guardarElementos([...piso.elementos, el]);
     setSeleccion({ tipo: "elemento", id: el.id });
   }
@@ -1003,6 +1019,8 @@ function PanelEdicion({
           >
             Girar
           </button>
+          <EditorSillas mesa={mesa} onCambiar={(c) => onMesa(mesa, c)} />
+          <SelectorColor valor={mesa.color ?? null} onCambiar={(color) => onMesa(mesa, { color })} />
           <div className="flex gap-2 pt-1 text-sm">
             <button type="button" className="text-suave hover:text-tinta" onClick={() => onQuitarMesa(mesa)}>
               Sacar del plano
@@ -1047,6 +1065,15 @@ function PanelEdicion({
           >
             Girar
           </button>
+          {ELEMENTOS[elemento.tipo]?.asientos && (
+            <EditorAsientos elemento={elemento} onCambiar={(asientos) => onElemento(elemento.id, { asientos })} />
+          )}
+          {elemento.tipo !== "pasillo" && (
+            <SelectorColor
+              valor={elemento.color ?? null}
+              onCambiar={(color) => onElemento(elemento.id, { color: color ?? undefined })}
+            />
+          )}
           <button type="button" className="text-sm text-red-600 hover:underline" onClick={() => onBorrarElemento(elemento.id)}>
             Quitar del plano
           </button>
@@ -1122,20 +1149,28 @@ function PanelEdicion({
           </div>
         )}
         <p className="pt-1 text-sm font-semibold">Agregar al plano</p>
-        <div className="flex flex-wrap gap-1.5">
-          {(Object.keys(ELEMENTOS) as TipoElemento[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => onAgregarElemento(t)}
-              className="rounded-lg border border-borde px-2.5 py-1 text-xs hover:border-marca"
-            >
-              {ELEMENTOS[t].texto}
-            </button>
-          ))}
-        </div>
+        {GRUPOS_ELEMENTO.map((g) => (
+          <div key={g.id}>
+            <p className="mb-1.5 text-xs text-suave">{g.texto}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {(Object.keys(ELEMENTOS) as TipoElemento[])
+                .filter((t) => ELEMENTOS[t].grupo === g.id)
+                .map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => onAgregarElemento(t)}
+                    className="rounded-lg border border-borde px-2.5 py-1 text-xs hover:border-marca"
+                  >
+                    {ELEMENTOS[t].texto}
+                  </button>
+                ))}
+            </div>
+          </div>
+        ))}
         <p className="text-xs text-suave">
-          Las mesas no se pueden poner sobre pasillos, paredes, barra, baños, cocina, caja, escalera ni entrada.
+          Las mesas no se pueden poner sobre pasillos, paredes, barra, baños, cocina, caja, escalera, entrada, calle, mar ni
+          maceteros. Sí van sobre la vereda, el toldo, la arena, el deck y el quincho.
         </p>
       </div>
 
@@ -1361,6 +1396,185 @@ function BuscarPlato({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+// Color a elección para una mesa o un elemento del plano: colores sugeridos o cualquiera con el selector.
+function SelectorColor({ valor, onCambiar }: { valor: string | null; onCambiar: (c: string | null) => void }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-sm">Color</p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => onCambiar(null)}
+          className={`h-7 rounded-full border px-2.5 text-xs ${!valor ? "border-marca bg-marca/10 text-marca" : "border-borde"}`}
+        >
+          El de siempre
+        </button>
+        {COLORES_PLANO.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onCambiar(c)}
+            aria-label={`Color ${c}`}
+            title={c}
+            className={`h-7 w-7 rounded-full border border-black/15 ${valor === c ? "ring-2 ring-marca ring-offset-2" : ""}`}
+            style={{ background: c }}
+          />
+        ))}
+        <label
+          className="relative flex h-7 w-7 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-borde text-xs"
+          title="Otro color"
+          style={valor && !COLORES_PLANO.includes(valor) ? { background: valor } : undefined}
+        >
+          <span aria-hidden>{valor && !COLORES_PLANO.includes(valor) ? "" : "+"}</span>
+          <input
+            type="color"
+            aria-label="Elegir otro color"
+            value={valor ?? "#7b5332"}
+            onChange={(e) => onCambiar(e.target.value)}
+            className="absolute inset-0 cursor-pointer opacity-0"
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+const NOMBRE_LADO: Record<Lado, string> = { arriba: "Arriba", abajo: "Abajo", izquierda: "Izquierda", derecha: "Derecha" };
+
+// Sillas de la mesa: qué tipo y cuántas en cada lado (o alrededor, si es redonda). Las personas se calculan solas.
+function EditorSillas({ mesa, onCambiar }: { mesa: Mesa; onCambiar: (c: Partial<Mesa>) => unknown }) {
+  const redonda = mesa.forma === "redonda";
+  const actual: SillasMesa =
+    mesa.sillas && Object.keys(mesa.sillas).length
+      ? mesa.sillas
+      : sillasAutomaticas(mesa.forma, mesa.capacidad ?? 4, mesa.ancho ?? 2, mesa.alto ?? 2);
+  const lados: (Lado | "alrededor")[] = redonda ? ["alrededor"] : ["arriba", "abajo", "izquierda", "derecha"];
+  const tipos = TIPOS_ASIENTO.filter((t) => !redonda || t.redonda);
+
+  function cambiar(lado: Lado | "alrededor", cambios: { tipo?: TipoAsiento; n?: number }) {
+    const base: SillasMesa = {};
+    // Al pasar de cuadrada a redonda (o al revés) se juntan o reparten las que había.
+    if (redonda) base.alrededor = actual.alrededor ?? { tipo: "silla", n: personasSillas(actual) };
+    else for (const l of ["arriba", "abajo", "izquierda", "derecha"] as Lado[]) if (actual[l]) base[l] = actual[l];
+    const previo = base[lado] ?? { tipo: "silla" as TipoAsiento, n: 0 };
+    const nuevo = { ...previo, ...cambios };
+    if (nuevo.n > 0) base[lado] = nuevo;
+    else delete base[lado];
+    const personas = Math.max(1, personasSillas(base));
+    onCambiar({ sillas: base, capacidad: personas });
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl border border-borde p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold">Sillas</p>
+        {mesa.sillas && (
+          <button type="button" className="text-xs text-suave hover:text-tinta" onClick={() => onCambiar({ sillas: null })}>
+            Automáticas
+          </button>
+        )}
+      </div>
+      {lados.map((lado) => {
+        const conf = actual[lado];
+        return (
+          <div key={lado} className="space-y-1">
+            <p className="text-xs text-suave">{lado === "alrededor" ? "Alrededor" : NOMBRE_LADO[lado]}</p>
+            <div className="flex items-center gap-2">
+              <select
+                value={conf?.n ? conf.tipo : "nada"}
+                onChange={(e) =>
+                  e.target.value === "nada"
+                    ? cambiar(lado, { n: 0 })
+                    : cambiar(lado, { tipo: e.target.value as TipoAsiento, n: conf?.n || (e.target.value === "banca" ? 3 : 2) })
+                }
+                className="campo min-w-0 flex-1 py-1 text-sm"
+                aria-label={`Tipo de asiento ${lado}`}
+              >
+                <option value="nada">Nada</option>
+                {tipos.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.texto}
+                  </option>
+                ))}
+              </select>
+              <span className="flex items-center rounded-lg border border-borde">
+                <button
+                  type="button"
+                  className="h-8 w-7 text-lg"
+                  onClick={() => cambiar(lado, { n: Math.max(0, (conf?.n ?? 0) - 1) })}
+                  aria-label={`Menos asientos ${lado}`}
+                >
+                  −
+                </button>
+                <span className="w-6 text-center text-sm font-semibold tabular-nums">{conf?.n ?? 0}</span>
+                <button
+                  type="button"
+                  className="h-8 w-7 text-lg"
+                  onClick={() => cambiar(lado, { n: Math.min(12, (conf?.n ?? 0) + 1) })}
+                  aria-label={`Más asientos ${lado}`}
+                >
+                  +
+                </button>
+              </span>
+            </div>
+          </div>
+        );
+      })}
+      <p className="text-xs text-suave">
+        {mesa.sillas
+          ? `Entran ${personasSillas(actual)} personas.`
+          : "Repartidas según las personas. Cámbialas para elegirlas a mano."}
+      </p>
+    </div>
+  );
+}
+
+// Taburetes o sillas altas de una barra (o quincho): en qué lado y cuántos.
+function EditorAsientos({
+  elemento,
+  onCambiar,
+}: {
+  elemento: Elemento;
+  onCambiar: (a: NonNullable<Elemento["asientos"]>) => void;
+}) {
+  const a = elemento.asientos ?? { tipo: "taburete" as const, n: 0, lado: "abajo" as const };
+  return (
+    <div className="space-y-2 rounded-xl border border-borde p-3">
+      <p className="text-sm font-semibold">Asientos</p>
+      <div className="flex gap-1.5">
+        {(
+          [
+            ["taburete", "Taburetes"],
+            ["silla", "Sillas altas"],
+          ] as const
+        ).map(([id, texto]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onCambiar({ ...a, tipo: id })}
+            className={`flex-1 rounded-lg border px-2 py-1.5 text-xs ${a.tipo === id ? "border-marca bg-marca/10 text-marca" : "border-borde"}`}
+          >
+            {texto}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-4 gap-1">
+        {LADOS.map((l) => (
+          <button
+            key={l.id}
+            type="button"
+            onClick={() => onCambiar({ ...a, lado: l.id })}
+            className={`rounded-lg border px-1 py-1 text-[11px] ${a.lado === l.id ? "border-marca bg-marca/10 text-marca" : "border-borde"}`}
+          >
+            {l.texto}
+          </button>
+        ))}
+      </div>
+      <Contador etiqueta="Cantidad" valor={a.n} min={0} max={24} onChange={(n) => onCambiar({ ...a, n })} />
     </div>
   );
 }

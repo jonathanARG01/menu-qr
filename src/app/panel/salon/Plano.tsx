@@ -2,7 +2,19 @@
 
 import { useRef, useState } from "react";
 import { Avatar } from "@/components/Avatar";
-import { ELEMENTOS, type Elemento, type Piso, nombreMesa } from "@/lib/salon";
+import {
+  ELEMENTOS,
+  type AsientosElemento,
+  type Elemento,
+  type Lado,
+  type LadoSillas,
+  type Piso,
+  type SillasMesa,
+  nombreMesa,
+  sillasAutomaticas,
+  textoSobre,
+  tono,
+} from "@/lib/salon";
 import type { Mesa } from "@/lib/types";
 
 export type Caja = { x: number; y: number; ancho: number; alto: number };
@@ -84,7 +96,23 @@ const ESTILO_ELEMENTO: Record<string, string> = {
     "bg-[repeating-linear-gradient(0deg,var(--color-stone-200)_0,var(--color-stone-200)_4px,var(--color-stone-50)_4px,var(--color-stone-50)_8px)] text-stone-600 border-stone-300",
   caja: "bg-violet-100 text-violet-800 border-violet-200",
   planta: "bg-transparent text-xl border-transparent",
+  toldo: "text-red-900 border-red-300 border-dashed",
+  vereda: "bg-stone-200/70 text-stone-600 border-stone-300",
+  calle: "bg-stone-600 text-stone-100 border-stone-700",
+  macetero: "bg-lime-100 text-lime-800 border-lime-300",
+  farol: "bg-transparent border-transparent",
+  palmera: "bg-transparent border-transparent",
+  sombrilla: "bg-transparent border-transparent",
+  arena: "bg-amber-100/80 text-amber-800 border-amber-200",
+  deck: "bg-orange-100/80 text-orange-900 border-orange-200",
+  mar: "bg-sky-200 text-sky-900 border-sky-300",
+  choza: "bg-transparent border-transparent text-amber-950",
 };
+
+// Elementos que se dibujan con su propio dibujo (sin caja ni texto encima).
+const DIBUJADOS = new Set(["planta", "palmera", "sombrilla", "farol"]);
+// Zonas grandes con el nombre en letra chica, para que no tape lo que va encima.
+const ZONAS = new Set(["toldo", "vereda", "arena", "deck", "mar", "calle", "choza"]);
 
 function colorMesa(e?: EstadoMesa) {
   if (!e?.ocupada) return "bg-superficie border-stone-300 text-stone-700";
@@ -126,7 +154,107 @@ const AMBIENTE: Record<string, React.CSSProperties> = {
   escalera: { background: "repeating-linear-gradient(0deg,#6e6258 0 8px,#544a42 8px 10px)", color: "#efe6da" },
   caja: { background: "linear-gradient(135deg,#4b3a2c,#2e231a)", color: "#fde68a", boxShadow: "0 0 14px rgb(251 191 36 / 0.25)" },
   planta: { background: "radial-gradient(circle,#4d7c0f 0 45%,#365314 46% 60%,transparent 62%)" },
+  toldo: {
+    background: "repeating-linear-gradient(90deg,rgb(185 28 28 / 0.55) 0 18px,rgb(254 243 199 / 0.5) 18px 36px)",
+    color: "#fff7ed",
+    boxShadow: "0 6px 18px rgb(0 0 0 / 0.35)",
+  },
+  vereda: { background: "repeating-conic-gradient(#8f8a84 0 25%,#9c968f 0 50%) 0 0/26px 26px", color: "#2a2724" },
+  calle: {
+    background:
+      "linear-gradient(90deg,transparent 0 46%,#facc15 46% 54%,transparent 54%) 0 50%/34px 4px repeat-x, linear-gradient(#3a3a3c,#2c2c2e)",
+    color: "#e5e5e5",
+  },
+  macetero: {
+    background:
+      "radial-gradient(circle at 30% 50%,#4d7c0f 0 22%,transparent 24%), radial-gradient(circle at 70% 50%,#3f6212 0 22%,transparent 24%), linear-gradient(#7c4a2a,#5b3520)",
+    color: "#ecfccb",
+  },
+  arena: {
+    background:
+      "radial-gradient(rgb(120 90 40 / 0.18) 1px, transparent 1.5px) 0 0/9px 9px, linear-gradient(135deg,#e9cf98,#d8b878)",
+    color: "#6b4f1d",
+  },
+  deck: { background: "repeating-linear-gradient(0deg,#9a6a40 0 10px,#7f5532 10px 12px)", color: "#fde9c8" },
+  mar: {
+    background:
+      "repeating-radial-gradient(ellipse at 50% 140%, rgb(255 255 255 / 0.18) 0 2px, transparent 3px 16px), linear-gradient(180deg,#38bdf8,#0369a1)",
+    color: "#e0f2fe",
+  },
+  choza: { background: "transparent", color: "#3b2410" },
 };
+
+// Fondo de un elemento con el color que eligió el dueño: en el ambientado con volumen, en el simple plano.
+function fondoConColor(tipo: string, color: string, ambientado: boolean): React.CSSProperties {
+  const texto = textoSobre(color);
+  if (tipo === "toldo")
+    return {
+      background: `repeating-linear-gradient(90deg,${color}${ambientado ? "8c" : "66"} 0 18px,rgb(255 251 235 / ${ambientado ? 0.5 : 0.6}) 18px 36px)`,
+      color: ambientado ? "#fff" : tono(color, 0.4),
+    };
+  if (!ambientado) return { background: color, color: texto, borderColor: tono(color, 0.25) };
+  return {
+    background: `linear-gradient(135deg,${tono(color, -0.12)},${color} 50%,${tono(color, 0.3)})`,
+    color: texto,
+    boxShadow: `inset 0 -4px 0 ${tono(color, 0.45)}, 0 3px 8px rgb(0 0 0 / 0.45)`,
+  };
+}
+
+// Dibujos que escalan con su caja (palmera, sombrilla, farol, quincho).
+function Dibujo({ tipo, color }: { tipo: string; color?: string }) {
+  if (tipo === "palmera")
+    return (
+      <svg viewBox="0 0 40 40" className="h-full w-full drop-shadow-[0_3px_3px_rgb(0_0_0/0.4)]" aria-hidden>
+        {[0, 51, 103, 154, 206, 257, 309].map((g, i) => (
+          <path
+            key={g}
+            d="M20 20 C 24 12, 30 7, 37 6 C 31 11, 26 15, 20 20 Z"
+            fill={i % 2 ? (color ?? "#3f7d20") : tono(color ?? "#3f7d20", 0.25)}
+            transform={`rotate(${g} 20 20)`}
+          />
+        ))}
+        <circle cx="20" cy="20" r="3" fill="#7c5a32" />
+      </svg>
+    );
+  if (tipo === "sombrilla") {
+    const c = color ?? "#0e7490";
+    return (
+      <svg viewBox="0 0 40 40" className="h-full w-full opacity-90 drop-shadow-[0_4px_4px_rgb(0_0_0/0.35)]" aria-hidden>
+        {Array.from({ length: 8 }, (_, i) => (
+          <path
+            key={i}
+            d="M20 20 L20 2 A18 18 0 0 1 32.73 7.27 Z"
+            fill={i % 2 ? "#fefce8" : c}
+            transform={`rotate(${i * 45} 20 20)`}
+          />
+        ))}
+        <circle cx="20" cy="20" r="2" fill={tono(c, 0.4)} />
+      </svg>
+    );
+  }
+  if (tipo === "farol")
+    return (
+      <span
+        className="block h-[70%] w-[70%] rounded-full"
+        style={{
+          background: `radial-gradient(circle,${color ?? "#fde68a"} 0 30%,#3f3f46 32% 48%,rgb(253 224 71 / 0.25) 50%,transparent 70%)`,
+        }}
+        aria-hidden
+      />
+    );
+  if (tipo === "planta") return <span aria-hidden>🪴</span>;
+  return null;
+}
+
+// Techo de paja del quincho (palapa): líneas desde el centro.
+function techoQuincho(color?: string): React.CSSProperties {
+  const c = color ?? "#b88a4a";
+  return {
+    background: `repeating-conic-gradient(from 0deg, ${c} 0 6deg, ${tono(c, 0.22)} 6deg 12deg)`,
+    boxShadow: `inset 0 0 0 3px ${tono(c, 0.4)}, 0 6px 16px rgb(0 0 0 / 0.4)`,
+    color: textoSobre(c),
+  };
+}
 
 // Color de las sillas según cómo está la mesa.
 function colorSillas(e?: EstadoMesa) {
@@ -138,59 +266,180 @@ function colorSillas(e?: EstadoMesa) {
   return "#f59e0b";
 }
 
-// Sillas alrededor de la mesa: en las redondas en círculo; en las demás repartidas por los lados largos.
+// Posición de un asiento pegado a un lado de la caja (de la mesa o de la barra), por fuera.
+function enLado(lado: Lado, t: number, separacion = "1px"): React.CSSProperties {
+  const pos = `${t * 100}%`;
+  switch (lado) {
+    case "arriba":
+      return { left: pos, bottom: `calc(100% + ${separacion})`, transform: "translateX(-50%)" };
+    case "abajo":
+      return { left: pos, top: `calc(100% + ${separacion})`, transform: "translateX(-50%)" };
+    case "izquierda":
+      return { top: pos, right: `calc(100% + ${separacion})`, transform: "translateY(-50%)" };
+    case "derecha":
+      return { top: pos, left: `calc(100% + ${separacion})`, transform: "translateY(-50%)" };
+  }
+}
+
+const SOMBRA_ASIENTO = "0 1px 2px rgb(0 0 0 / 0.5)";
+
+// Asientos de un lado: sillas o taburetes repartidos, o una banca/sillón que ocupa todo el lado.
+function LadoAsientos({
+  lado,
+  conf,
+  color,
+  ancho,
+  alto,
+}: {
+  lado: Lado;
+  conf: LadoSillas;
+  color: string;
+  ancho: number;
+  alto: number;
+}) {
+  if (!conf.n) return null;
+  const horizontal = lado === "arriba" || lado === "abajo";
+  const largo = horizontal ? ancho : alto;
+  if (conf.tipo === "banca" || conf.tipo === "sillon") {
+    const sillon = conf.tipo === "sillon";
+    const grosor = sillon ? "clamp(8px, 30%, 18px)" : "clamp(5px, 20%, 11px)";
+    const base: React.CSSProperties = horizontal
+      ? { left: "4%", right: "4%", height: grosor, [lado === "arriba" ? "bottom" : "top"]: "calc(100% + 2px)" }
+      : { top: "4%", bottom: "4%", width: grosor, [lado === "izquierda" ? "right" : "left"]: "calc(100% + 2px)" };
+    // El respaldo queda del lado de afuera.
+    const respaldo = { arriba: "inset 0 3px 0", abajo: "inset 0 -3px 0", izquierda: "inset 3px 0 0", derecha: "inset -3px 0 0" }[
+      lado
+    ];
+    const fondo = sillon ? tono(color, 0.15) : color;
+    return (
+      <span
+        aria-hidden
+        className="pointer-events-none absolute rounded-md"
+        style={{
+          ...base,
+          background: `repeating-linear-gradient(${horizontal ? "90deg" : "0deg"}, ${fondo} 0 calc(${100 / conf.n}% - 1px), ${tono(color, 0.5)} calc(${100 / conf.n}% - 1px) calc(${100 / conf.n}%))`,
+          boxShadow: `${respaldo} ${tono(color, sillon ? 0.55 : 0.4)}, ${SOMBRA_ASIENTO}`,
+          borderRadius: sillon ? 6 : 4,
+        }}
+      />
+    );
+  }
+  const taburete = conf.tipo === "taburete";
+  // Tamaño según cuántas entran en el lado, con un mínimo y un máximo para que se vean.
+  const tam = `clamp(6px, ${Math.min(30, (70 * largo) / Math.max(1, conf.n) / largo)}%, ${taburete ? 14 : 18}px)`;
+  const redondeo = {
+    arriba: "6px 6px 2px 2px",
+    abajo: "2px 2px 6px 6px",
+    izquierda: "6px 2px 2px 6px",
+    derecha: "2px 6px 6px 2px",
+  }[lado];
+  return (
+    <>
+      {Array.from({ length: Math.min(conf.n, 24) }, (_, i) => (
+        <span
+          key={i}
+          aria-hidden
+          className="pointer-events-none absolute"
+          style={{
+            ...enLado(lado, (i + 0.5) / conf.n, taburete ? "3px" : "1px"),
+            width: taburete ? tam : horizontal ? tam : `clamp(5px, 22%, 13px)`,
+            height: taburete ? undefined : horizontal ? `clamp(5px, 22%, 13px)` : tam,
+            aspectRatio: taburete ? "1" : undefined,
+            background: taburete ? `radial-gradient(circle at 40% 35%, ${tono(color, -0.25)}, ${color} 60%)` : color,
+            borderRadius: taburete ? "999px" : redondeo,
+            boxShadow: SOMBRA_ASIENTO,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+// Sillas alrededor de una mesa redonda (sillas, taburetes o sillones individuales).
+function Alrededor({ conf, color }: { conf: LadoSillas; color: string }) {
+  const n = Math.min(conf.n, 24);
+  const sillon = conf.tipo === "sillon";
+  const taburete = conf.tipo === "taburete";
+  return (
+    <>
+      {Array.from({ length: n }, (_, i) => {
+        const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+        const r = sillon ? 64 : 58;
+        return (
+          <span
+            key={i}
+            aria-hidden
+            className="pointer-events-none absolute"
+            style={{
+              left: `${50 + Math.cos(a) * r}%`,
+              top: `${50 + Math.sin(a) * r}%`,
+              width: sillon ? "38%" : taburete ? "24%" : "30%",
+              height: sillon ? "30%" : taburete ? "24%" : "22%",
+              maxWidth: sillon ? 26 : 20,
+              maxHeight: sillon ? 20 : 16,
+              minWidth: 8,
+              minHeight: 6,
+              background: taburete
+                ? `radial-gradient(circle at 40% 35%, ${tono(color, -0.25)}, ${color} 60%)`
+                : sillon
+                  ? tono(color, 0.15)
+                  : color,
+              borderRadius: taburete ? "999px" : sillon ? "8px 8px 5px 5px" : "6px 6px 2px 2px",
+              boxShadow: sillon ? `inset 0 3px 0 ${tono(color, 0.55)}, ${SOMBRA_ASIENTO}` : SOMBRA_ASIENTO,
+              transform: `translate(-50%,-50%) rotate(${(a * 180) / Math.PI + 90}deg)`,
+            }}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+// Sillas de una mesa: las elegidas a mano o, si no hay, repartidas según las personas.
 function Sillas({
   forma,
   capacidad,
+  sillas,
   color,
   ancho,
   alto,
 }: {
   forma: Mesa["forma"];
   capacidad: number;
+  sillas?: SillasMesa | null;
   color: string;
   ancho: number;
   alto: number;
 }) {
-  const n = Math.min(capacidad, 16);
-  const puntos: { left: string; top: string; giro: number }[] = [];
+  const conf = sillas && Object.keys(sillas).length ? sillas : sillasAutomaticas(forma, capacidad, ancho, alto);
   if (forma === "redonda") {
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2 - Math.PI / 2;
-      puntos.push({ left: `${50 + Math.cos(a) * 58}%`, top: `${50 + Math.sin(a) * 58}%`, giro: (a * 180) / Math.PI + 90 });
-    }
-  } else {
-    const horizontal = ancho >= alto;
-    const porLado = Math.ceil(n / 2);
-    for (let i = 0; i < n; i++) {
-      const lado = i < porLado ? 0 : 1;
-      const k = lado ? i - porLado : i;
-      const cuantos = lado ? n - porLado : porLado;
-      const t = `${((k + 0.5) / cuantos) * 100}%`;
-      puntos.push(
-        horizontal
-          ? { left: t, top: lado ? "112%" : "-12%", giro: lado ? 180 : 0 }
-          : { left: lado ? "112%" : "-12%", top: t, giro: lado ? 90 : -90 },
-      );
-    }
+    const todas = conf.alrededor ?? { tipo: "silla" as const, n: Object.values(conf).reduce((t, l) => t + (l?.n ?? 0), 0) };
+    return <Alrededor conf={todas} color={color} />;
   }
   return (
     <>
-      {puntos.map((p, i) => (
-        <span
-          key={i}
-          aria-hidden
-          className="pointer-events-none absolute h-[22%] max-h-4 min-h-2 w-[30%] max-w-5 min-w-2.5 rounded-t-md"
-          style={{
-            left: p.left,
-            top: p.top,
-            background: color,
-            transform: `translate(-50%,-50%) rotate(${p.giro}deg)`,
-            boxShadow: "0 1px 2px rgb(0 0 0 / 0.5)",
-          }}
-        />
-      ))}
+      {(["arriba", "abajo", "izquierda", "derecha"] as Lado[]).map((l) =>
+        conf[l] ? <LadoAsientos key={l} lado={l} conf={conf[l]!} color={color} ancho={ancho} alto={alto} /> : null,
+      )}
     </>
+  );
+}
+
+// Taburetes o sillas altas a un lado de la barra (o del quincho).
+function AsientosBarra({
+  asientos,
+  ancho,
+  alto,
+  ambientado,
+}: {
+  asientos: AsientosElemento;
+  ancho: number;
+  alto: number;
+  ambientado: boolean;
+}) {
+  const color = ambientado ? "#c9894b" : "#a16207";
+  return (
+    <LadoAsientos lado={asientos.lado} conf={{ tipo: asientos.tipo, n: asientos.n }} color={color} ancho={ancho} alto={alto} />
   );
 }
 
@@ -350,33 +599,59 @@ export function Plano({
               style={{ opacity: (piso.fondo_opacidad ?? 60) / 100 }}
             />
           )}
-          {piso.elementos.map((el: Elemento) => {
-            const caja = cajaDe("elemento", el.id, el);
-            const elegido = seleccion?.tipo === "elemento" && seleccion.id === el.id;
-            return (
-              <div
-                key={el.id}
-                onPointerDown={(e) => empezar(e, "elemento", el.id, el)}
-                className={`absolute flex items-center justify-center overflow-hidden rounded-md text-[11px] font-semibold ${
-                  ambientado ? "" : `border ${ESTILO_ELEMENTO[el.tipo] ?? ""}`
-                } ${
-                  editando ? "cursor-grab active:cursor-grabbing" : ""
-                } ${elegido ? "ring-2 ring-marca ring-offset-1" : ""} ${arrastre?.id === el.id && !arrastre.valido ? "!border-red-500 opacity-70" : ""}`}
-                style={{ ...pct(caja), ...(ambientado ? AMBIENTE[el.tipo] : {}) }}
-                title={el.texto || ELEMENTOS[el.tipo]?.texto}
-              >
-                {el.tipo === "planta" ? (
-                  ambientado ? null : (
-                    "🪴"
-                  )
-                ) : (
-                  <span className="truncate px-1" style={tres ? { transform: "translateZ(1px)" } : undefined}>
-                    {el.texto || ELEMENTOS[el.tipo]?.texto}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+          {/* Primero las zonas de piso (vereda, arena, toldo…), así las mesas y lo demás quedan encima. */}
+          {[...piso.elementos]
+            .sort((a, b) => Number(!!ELEMENTOS[b.tipo]?.suelo) - Number(!!ELEMENTOS[a.tipo]?.suelo))
+            .map((el: Elemento) => {
+              const caja = cajaDe("elemento", el.id, el);
+              const elegido = seleccion?.tipo === "elemento" && seleccion.id === el.id;
+              const dibujado = DIBUJADOS.has(el.tipo);
+              const zona = ZONAS.has(el.tipo);
+              const color = el.color ?? ELEMENTOS[el.tipo]?.color;
+              const estilo: React.CSSProperties =
+                el.tipo === "choza"
+                  ? techoQuincho(el.color)
+                  : dibujado
+                    ? {}
+                    : el.color
+                      ? fondoConColor(el.tipo, el.color, ambientado)
+                      : el.tipo === "toldo" && !ambientado
+                        ? fondoConColor("toldo", color ?? "#b91c1c", false)
+                        : ambientado
+                          ? (AMBIENTE[el.tipo] ?? {})
+                          : {};
+              return (
+                <div
+                  key={el.id}
+                  onPointerDown={(e) => empezar(e, "elemento", el.id, el)}
+                  className={`absolute flex items-center justify-center text-[11px] font-semibold ${
+                    el.tipo === "choza" ? "rounded-[30%]" : dibujado ? "rounded-full" : "rounded-md"
+                  } ${ambientado || dibujado || el.color ? "" : `border ${ESTILO_ELEMENTO[el.tipo] ?? ""}`} ${
+                    editando ? "cursor-grab active:cursor-grabbing" : ""
+                  } ${elegido ? "ring-2 ring-marca ring-offset-1" : ""} ${arrastre?.id === el.id && !arrastre.valido ? "!border-red-500 opacity-70" : ""}`}
+                  style={{ ...pct(caja), ...estilo }}
+                  title={el.texto || ELEMENTOS[el.tipo]?.texto}
+                >
+                  {dibujado ? (
+                    el.tipo === "planta" && ambientado ? (
+                      <span className="h-full w-full rounded-full" style={AMBIENTE.planta} />
+                    ) : (
+                      <Dibujo tipo={el.tipo} color={el.color ?? ELEMENTOS[el.tipo]?.color} />
+                    )
+                  ) : (
+                    <span
+                      className={`max-w-full truncate px-1 ${zona ? "self-start pt-0.5 text-[10px] uppercase tracking-wider opacity-80" : ""}`}
+                      style={tres ? { transform: "translateZ(1px)" } : undefined}
+                    >
+                      {el.texto || ELEMENTOS[el.tipo]?.texto}
+                    </span>
+                  )}
+                  {el.asientos && el.asientos.n > 0 && (
+                    <AsientosBarra asientos={el.asientos} ancho={caja.ancho} alto={caja.alto} ambientado={ambientado} />
+                  )}
+                </div>
+              );
+            })}
 
           {/* Cuerda verde entre mesas unidas (por debajo: si quedaron pegadas, casi no se ve). */}
           {!editando && enPiso.some((m) => estados.get(m.id)?.principal) && (
@@ -424,7 +699,9 @@ export function Plano({
                   else if (!editando) onAbrirMesa(m.id);
                 }}
                 className={`absolute flex flex-col items-center justify-center p-0.5 leading-tight transition-[box-shadow] ${
-                  ambientado ? "text-[#fff7ed]" : `border-2 shadow-sm ${colorMesa(editando ? undefined : est)}`
+                  ambientado
+                    ? "text-[#fff7ed]"
+                    : `border-2 shadow-sm ${m.color && (editando || !est?.ocupada) ? "" : colorMesa(editando ? undefined : est)}`
                 } ${m.forma === "redonda" ? "rounded-full" : ambientado ? "rounded-md" : "rounded-xl"} ${
                   editando || movibles?.has(m.id) ? "cursor-grab touch-none active:cursor-grabbing" : "hover:shadow-md"
                 } ${elegido ? (editando ? "ring-2 ring-marca ring-offset-2" : "animate-pulse ring-4 ring-marca ring-offset-2") : ""} ${invalido ? "!border-red-500 !bg-red-50 opacity-80" : ""} ${
@@ -432,10 +709,17 @@ export function Plano({
                 } ${!editando && est?.apagada ? "opacity-35" : ""}`}
                 style={{
                   ...pct(caja),
+                  // Color elegido para la mesa (en el simple, mientras está libre; ocupada manda el color del estado).
+                  ...(!ambientado && m.color && (editando || !est?.ocupada)
+                    ? { background: m.color, color: textoSobre(m.color), borderColor: tono(m.color, 0.3) }
+                    : {}),
                   ...(ambientado
                     ? {
-                        // Madera con un halo del color del estado para verla de lejos.
-                        background: "linear-gradient(135deg,#a8774a,#7b5332 55%,#6a4529)",
+                        // Madera (o el color elegido) con un halo del color del estado para verla de lejos.
+                        background: m.color
+                          ? `linear-gradient(135deg,${tono(m.color, -0.15)},${m.color} 55%,${tono(m.color, 0.2)})`
+                          : "linear-gradient(135deg,#a8774a,#7b5332 55%,#6a4529)",
+                        color: m.color ? textoSobre(m.color) : undefined,
                         boxShadow: `${tres ? "0 2px 0 #4a2e18, 0 4px 0 #3d2614, 0 10px 14px rgb(0 0 0 / 0.55)" : "0 3px 8px rgb(0 0 0 / 0.45)"}, 0 0 0 ${est?.ocupada && !editando ? 3 : 0}px ${colorSillas(est)}`,
                         transformStyle: tres ? "preserve-3d" : undefined,
                       }
@@ -443,15 +727,24 @@ export function Plano({
                 }}
                 aria-label={`${nombreMesa(m.numero)}${est?.ocupada ? ", ocupada" : ", libre"}`}
               >
-                {ambientado && (
+                {
                   <Sillas
                     forma={m.forma}
                     capacidad={m.capacidad ?? 4}
-                    color={editando ? "#56604f" : colorSillas(est)}
+                    sillas={m.sillas}
+                    color={
+                      !ambientado
+                        ? editando || !est?.ocupada
+                          ? "#a8a29e"
+                          : colorSillas(est)
+                        : editando
+                          ? "#56604f"
+                          : colorSillas(est)
+                    }
                     ancho={caja.ancho}
                     alto={caja.alto}
                   />
-                )}
+                }
                 <span
                   className={`text-sm font-bold sm:text-base ${ambientado ? "drop-shadow-[0_1px_1px_rgb(0_0_0/0.8)]" : ""}`}
                   style={tres ? { transform: "rotateZ(4deg) rotateX(-38deg) translateZ(10px)" } : undefined}

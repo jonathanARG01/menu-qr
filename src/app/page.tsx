@@ -276,7 +276,7 @@ function Telefono() {
 function Cifras() {
   const cifras: { n: number; antes?: string; despues?: string; texto: string }[] = [
     { n: 21, texto: "diseños de carta" },
-    { n: 6, texto: "idiomas" },
+    { n: 7, texto: "idiomas" },
     { n: 0, despues: " %", texto: "comisión por pedido" },
     { n: DIAS_PRUEBA, despues: " días", texto: "de prueba gratis" },
   ];
@@ -505,16 +505,22 @@ function Demo() {
               target="_blank"
               data-revelar="zoom"
               style={retraso((i % 4) * 80)}
-              className="group relative flex aspect-[4/5] flex-col md:aspect-[6/5] justify-between overflow-hidden rounded-[1.75rem] p-4 text-white ring-1 ring-white/10 transition duration-500 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-black/40 sm:p-5"
+              className="group relative flex aspect-[4/5] flex-col md:aspect-[4/5] justify-between overflow-hidden rounded-[1.75rem] p-4 text-white ring-1 ring-white/10 transition duration-500 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-black/40 sm:p-5"
             >
+              {/* Captura real de la parte de arriba de esa carta (public/inicio/demos) */}
+              <Image
+                src={`/inicio/demos/${d.slug}.webp`}
+                alt={`Carta de ${d.nombre}`}
+                fill
+                sizes="(min-width: 768px) 25vw, 50vw"
+                className="object-cover object-top transition duration-700 group-hover:scale-105"
+              />
               <span
                 aria-hidden
-                className="absolute inset-0 transition duration-700 group-hover:scale-110"
-                style={{
-                  background: `radial-gradient(circle at 80% 10%, rgb(255 255 255 / 0.28), transparent 45%), linear-gradient(165deg, ${d.color}, #050608 135%)`,
-                }}
+                className="absolute inset-0"
+                style={{ background: `linear-gradient(180deg, transparent 35%, ${d.color}cc 72%, #050608 100%)` }}
               />
-              <span className="relative self-start rounded-full bg-white/15 px-2.5 py-1 text-xs backdrop-blur">{d.tipo}</span>
+              <span className="relative self-start rounded-full bg-black/45 px-2.5 py-1 text-xs backdrop-blur">{d.tipo}</span>
               <span className="relative">
                 <span className="block font-marca text-lg font-bold leading-tight sm:text-xl">{d.nombre}</span>
                 <span className="mt-2 flex items-center gap-1.5 text-sm text-white/75 transition group-hover:text-white">
@@ -551,7 +557,7 @@ function Precios() {
             <h3 className="font-marca text-2xl font-bold">¿No tienes tiempo de cargar la carta? La armamos por ti</h3>
             <p className="mt-2 text-sitio-suave">Pago único y opcional. Si prefieres hacerlo tú, la armas en minutos desde el panel.</p>
           </div>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
+          <div className="mx-auto mt-8 grid max-w-4xl gap-4 md:grid-cols-2">
             {ARMADOS.map((a, i) => {
               const destacado = "destacado" in a && a.destacado;
               return (
@@ -623,14 +629,10 @@ function Servicios() {
 
 function Testimonios() {
   if (TESTIMONIOS.length === 0) return null;
-  const sonEjemplo = TESTIMONIOS.some((t) => t.ejemplo);
   return (
     <section className="py-24 lg:py-32">
       <Contenedor>
         <Titulo etiqueta="Testimonios" titulo="Lo que cambia" acento="en el día a día." />
-        {sonEjemplo && (
-          <p className="mt-3 text-sm text-sitio-suave">Textos de ejemplo mientras reunimos los de nuestros primeros clientes.</p>
-        )}
         <div className="mt-12 grid gap-4 md:grid-cols-3">
           {TESTIMONIOS.map((t, i) => (
             <figure key={t.texto} data-revelar="" style={retraso(i * 110)} className="tarjeta-sitio flex flex-col p-7">
@@ -643,7 +645,6 @@ function Testimonios() {
                 <span className="min-w-0">
                   <span className="block font-semibold">{t.nombre}</span>
                   <span className="text-sitio-suave">{t.local}</span>
-                  {t.ejemplo && <span className="ml-2 rounded-full bg-sitio-vidrio px-2 py-0.5 text-xs text-sitio-suave ring-1 ring-sitio-borde">Ejemplo</span>}
                 </span>
               </figcaption>
             </figure>
