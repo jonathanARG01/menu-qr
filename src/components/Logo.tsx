@@ -49,11 +49,12 @@ export function Marca({ className = "h-10 w-10", oscuro = false }: { className?:
 }
 
 // Símbolo + nombre en Outfit Bold, con el punto final en mostaza.
-export function Logo({ oscuro = false, className = "" }: { oscuro?: boolean; className?: string }) {
+// nombreClase reemplaza el color del nombre (el sitio de venta lo pinta con el color de su tema).
+export function Logo({ oscuro = false, className = "", nombreClase }: { oscuro?: boolean; className?: string; nombreClase?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <Marca oscuro={oscuro} className="h-[1.75em] w-[1.75em]" />
-      <span className={`font-marca font-bold leading-none tracking-tight ${oscuro ? "text-white" : "text-marca-tinta"}`}>
+      <span className={`font-marca font-bold leading-none tracking-tight ${nombreClase ?? (oscuro ? "text-white" : "text-marca-tinta")}`}>
         Platovi<span className="text-marca-claro">.</span>
       </span>
     </span>
