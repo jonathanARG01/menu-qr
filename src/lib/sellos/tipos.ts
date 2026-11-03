@@ -7,7 +7,7 @@ import type { Restaurante } from "@/lib/types";
 export const NOMBRE_SELLOS = "Platovi Loyalty";
 
 // Precio del complemento (CLP al mes, por local). Grupo: todas las sucursales.
-export const PRECIO_SELLOS = { local: 12990, grupo: 19990 };
+export const PRECIO_SELLOS = { local: 19990, grupo: 34990 };
 
 export type ReglaSellos = "visita" | "monto";
 
