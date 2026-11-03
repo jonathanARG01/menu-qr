@@ -8,6 +8,24 @@ type Novedad = { titulo: string; texto: string; donde?: { href: string; texto: s
 const NOVEDADES: { fecha: string; titulo: string; items: Novedad[] }[] = [
   {
     fecha: "Noviembre 2026",
+    titulo: "Íconos para tus platos",
+    items: [
+      {
+        titulo: "Elige un ícono para cada plato sin foto",
+        texto:
+          "Al editar un plato toca “Elegir ícono”: hay 135 para elegir (bebidas, cervezas, tragos, jugos, postres como flan, leche asada o jalea, carnes, mariscos, ensaladas y más) y un buscador. Se ve en la carta en todos los diseños. Si después subes una foto, se usa la foto.",
+        donde: { href: "/panel", texto: "Carta" },
+      },
+      {
+        titulo: "Borrar una categoría sin perder sus platos",
+        texto:
+          "En el menú ⋯ de la categoría, “Borrar categoría” ahora te pregunta qué hacer con sus platos: pasarlos a otra categoría o borrarlos también.",
+        donde: { href: "/panel", texto: "Carta" },
+      },
+    ],
+  },
+  {
+    fecha: "Noviembre 2026",
     titulo: "Platovi Loyalty",
     items: [
       {

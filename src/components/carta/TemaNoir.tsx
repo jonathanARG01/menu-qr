@@ -1,5 +1,5 @@
 import { textoSobre } from "@/lib/utils";
-import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
+import { CartaVacia, Etiquetas, Foto, IconoPlato, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
 import { Destacados } from "./Destacados";
 import { useCarta } from "./contexto";
@@ -95,6 +95,7 @@ export function TemaNoir({ restaurante, secciones, vistaPrevia, pie }: PropsTema
                   {sinFoto.map((plato) => (
                     <li key={plato.id}>
                       <div className="flex items-baseline gap-3">
+                        <IconoPlato plato={plato} className="h-7 w-7 self-center" />
                         <h3 className="text-[15px] font-semibold uppercase tracking-wide">{plato.nombre}</h3>
                         <span className="mb-1 flex-1 border-b border-dotted border-stone-600" />
                         <span className="f-oswald text-lg font-medium tabular-nums" style={{ color: acento }}>

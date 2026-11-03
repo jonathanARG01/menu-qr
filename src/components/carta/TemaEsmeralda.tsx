@@ -1,4 +1,5 @@
 import { textoSobre } from "@/lib/utils";
+import { iconoValido } from "@/lib/iconos";
 import { CartaVacia, Etiquetas, Foto, Logo, precio, idSeccion, type PropsTema } from "./comun";
 import { Agregar } from "./Agregar";
 import { Destacados } from "./Destacados";
@@ -68,7 +69,7 @@ export function TemaEsmeralda({ restaurante, secciones, vistaPrevia, pie }: Prop
                 return (
                   <li key={plato.id}>
                     {i > 0 && <Hilo invertido={derecha} color={acento} />}
-                    {plato.foto_url ? (
+                    {plato.foto_url || iconoValido(plato.icono) ? (
                       <div className={`flex items-center gap-5 ${derecha ? "flex-row-reverse text-right" : ""}`}>
                         <Foto
                           plato={plato}
