@@ -467,7 +467,7 @@ function HojaPedido({
               <li key={clave} className="flex items-center gap-3 py-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{traducir(plato, idioma, ["nombre"]).nombre}</p>
-                  {opciones.length > 0 && <p className="truncate text-xs text-stone-500">{textoOpciones(opciones)}</p>}
+                  {opciones.length > 0 && <p className="text-xs text-stone-500">{textoOpciones(opciones)}</p>}
                   <p className="text-sm tabular-nums text-stone-500">{precio(unitario)}</p>
                   {conDespues && (
                     <button

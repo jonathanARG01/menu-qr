@@ -98,8 +98,15 @@ export type Plato = {
   precio_llevar?: number | null;
 };
 
-// Un grupo de opciones del plato. min 1 = obligatorio; max = cuántas se pueden marcar.
-export type GrupoOpciones = { nombre: string; min: number; max: number; valores: { nombre: string; precio: number }[] };
+// Un grupo de opciones del plato. min = cuántas hay que marcar como mínimo (0 = opcional); max = cuántas se pueden marcar.
+// todas = sin tope: max sigue a la cantidad de opciones aunque se agreguen más.
+export type GrupoOpciones = {
+  nombre: string;
+  min: number;
+  max: number;
+  todas?: boolean;
+  valores: { nombre: string; precio: number }[];
+};
 
 export type Promo = {
   id: string;

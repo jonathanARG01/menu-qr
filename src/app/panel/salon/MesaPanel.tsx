@@ -810,7 +810,7 @@ export function MesaPanel({
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm font-medium">{i.nombre}</span>
                               {i.opciones?.length ? (
-                                <span className="block truncate text-xs text-suave">{textoOpciones(i.opciones)}</span>
+                                <span className="block text-xs text-suave">{textoOpciones(i.opciones)}</span>
                               ) : null}
                               {i.nota && <span className="block truncate text-xs text-amber-700">{i.nota}</span>}
                             </span>

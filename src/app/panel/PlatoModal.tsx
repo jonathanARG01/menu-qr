@@ -453,23 +453,7 @@ function EditorOpciones({
               ×
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            <label className="flex items-center gap-1.5">
-              <input type="checkbox" checked={g.min > 0} onChange={(e) => cambiar(i, { min: e.target.checked ? 1 : 0 })} />
-              Obligatorio
-            </label>
-            <label className="flex items-center gap-1.5">
-              Se pueden marcar
-              <input
-                type="number"
-                min={1}
-                max={10}
-                value={g.max}
-                onChange={(e) => cambiar(i, { max: Math.min(10, Math.max(1, Number(e.target.value) || 1)) })}
-                className="w-14 rounded-lg border border-borde px-2 py-1"
-              />
-            </label>
-          </div>
+          <ReglaGrupo grupo={g} onChange={(cambios) => cambiar(i, cambios)} />
           {g.valores.map((v, j) => (
             <div key={j} className="flex gap-2">
               <input
@@ -493,7 +477,10 @@ function EditorOpciones({
               </span>
               <button
                 type="button"
-                onClick={() => cambiar(i, { valores: g.valores.filter((_, k) => k !== j) })}
+                onClick={() => {
+                  const valores = g.valores.filter((_, k) => k !== j);
+                  cambiar(i, { valores, ...topes(g, valores.length) });
+                }}
                 className="shrink-0 px-1 text-suave hover:text-red-600"
                 aria-label="Quitar opción"
               >
@@ -503,7 +490,10 @@ function EditorOpciones({
           ))}
           <button
             type="button"
-            onClick={() => cambiar(i, { valores: [...g.valores, { nombre: "", precio: 0 }] })}
+            onClick={() => {
+              const valores = [...g.valores, { nombre: "", precio: 0 }];
+              cambiar(i, { valores, ...topes(g, valores.length) });
+            }}
             className="text-sm font-medium text-marca"
           >
             + Opción
@@ -518,5 +508,102 @@ function EditorOpciones({
         + Grupo de opciones
       </button>
     </fieldset>
+  );
+}
+
+// Con "todas", el máximo sigue a la cantidad de opciones al agregar o quitar una.
+function topes(g: GrupoOpciones, total: number): Partial<GrupoOpciones> {
+  if (!g.todas) return {};
+  const max = Math.max(1, total);
+  return { max, min: Math.min(g.min, max) };
+}
+
+type Modo = "uno" | "varias" | "todas";
+
+// Cómo se elige en el grupo: una sola, varias con tope (ej. hasta 3 ingredientes) o todas las que quiera.
+function ReglaGrupo({ grupo: g, onChange }: { grupo: GrupoOpciones; onChange: (c: Partial<GrupoOpciones>) => void }) {
+  const total = Math.max(1, g.valores.length);
+  // El tope de "varias" puede pasar a las opciones mientras se cargan; al guardar se ajusta a las que haya.
+  const TOPE = 50;
+  const [modo, setModo] = useState<Modo>(g.todas ? "todas" : g.max > 1 ? "varias" : "uno");
+  const elegirModo = (m: Modo) => {
+    setModo(m);
+    if (m === "uno") onChange({ todas: false, max: 1, min: Math.min(g.min, 1) });
+    else if (m === "todas") onChange({ todas: true, max: total, min: Math.min(g.min, total) });
+    else {
+      const max = g.max > 1 && !g.todas ? g.max : Math.min(3, Math.max(2, total));
+      onChange({ todas: false, max, min: Math.min(g.min, max) });
+    }
+  };
+  const numero = (v: string, desde: number, hasta: number) => Math.min(hasta, Math.max(desde, Math.round(Number(v)) || desde));
+  const MODOS: [Modo, string][] = [
+    ["uno", "Solo 1"],
+    ["varias", "Varias, con tope"],
+    ["todas", "Todas las que quiera"],
+  ];
+
+  return (
+    <div className="space-y-2 text-sm">
+      <div role="radiogroup" aria-label="Cuántas puede elegir" className="flex flex-wrap gap-1.5">
+        {MODOS.map(([m, texto]) => (
+          <button
+            key={m}
+            type="button"
+            role="radio"
+            aria-checked={modo === m}
+            onClick={() => elegirModo(m)}
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+              modo === m ? "border-marca bg-marca text-white" : "border-borde bg-superficie text-suave hover:text-tinta"
+            }`}
+          >
+            {texto}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+        {modo === "uno" ? (
+          <label className="flex items-center gap-1.5">
+            <input type="checkbox" checked={g.min > 0} onChange={(e) => onChange({ min: e.target.checked ? 1 : 0 })} />
+            Obligatorio
+          </label>
+        ) : (
+          <>
+            {modo === "varias" && (
+              <label className="flex items-center gap-1.5">
+                Hasta
+                <input
+                  type="number"
+                  min={Math.max(1, g.min)}
+                  max={TOPE}
+                  value={g.max}
+                  onChange={(e) => {
+                    const max = numero(e.target.value, 1, TOPE);
+                    onChange({ max, min: Math.min(g.min, max) });
+                  }}
+                  className="w-14 rounded-lg border border-borde px-2 py-1"
+                />
+              </label>
+            )}
+            <label className="flex items-center gap-1.5">
+              Mínimo
+              <input
+                type="number"
+                min={0}
+                max={g.max}
+                value={g.min}
+                onChange={(e) => onChange({ min: numero(e.target.value, 0, g.max) })}
+                className="w-14 rounded-lg border border-borde px-2 py-1"
+              />
+              <span className="text-xs text-suave">(0 = opcional)</span>
+            </label>
+          </>
+        )}
+      </div>
+      {modo === "varias" && g.valores.length < g.max && (
+        <p className="text-xs text-suave">
+          Hay {g.valores.length} {g.valores.length === 1 ? "opción" : "opciones"}: agrega más o baja el tope.
+        </p>
+      )}
+    </div>
   );
 }
