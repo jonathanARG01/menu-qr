@@ -1,6 +1,7 @@
 import { requerirSeccion } from "@/lib/panel";
 import { EditorEquipo, type Miembro } from "./EditorEquipo";
 import { PinesEquipo } from "./PinesEquipo";
+import { TutorialesEquipo } from "./TutorialesEquipo";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ export default async function PanelEquipo() {
         miembros={(data ?? []) as Miembro[]}
         activo={ajustesGuardados.pin_autorizacion}
       />
+      <TutorialesEquipo />
     </div>
   );
 }

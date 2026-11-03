@@ -16,6 +16,7 @@ import { SelectorRestaurante } from "./SelectorRestaurante";
 import { AvisoPrueba } from "./AvisoPrueba";
 import { NOMBRE_PLAN, planDeSeccion, WHATSAPP_VENTAS, type Plan } from "@/lib/planes";
 import { EditorPerfil, type Perfil } from "./equipo/EditorPerfil";
+import { tutorialDeRol, urlTutorial } from "@/lib/tutoriales";
 
 type Props = {
   restaurante: {
@@ -372,6 +373,15 @@ function MenuLateral({
         >
           <Icono nombre="estrella" className="h-4 w-4 text-marca" /> Novedades
         </Link>
+        <a
+          href={urlTutorial(tutorialDeRol(rol))}
+          target="_blank"
+          rel="noopener"
+          title="Tutorial paso a paso de tu rol, con pantallazos del sistema"
+          className="inline-flex items-center gap-1.5 rounded-full border border-borde px-3 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-50 hover:text-tinta"
+        >
+          <Icono nombre="tutorial" className="h-4 w-4 text-[#ff7a1a]" /> Tutorial
+        </a>
         {instalar && (
           <button
             type="button"
