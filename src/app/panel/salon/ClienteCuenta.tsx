@@ -7,7 +7,7 @@ import { Icono } from "@/components/Icono";
 import { regionDe, type Ajustes, type Cuenta } from "@/lib/salon";
 import { formatoFecha } from "@/lib/region";
 import { mensajeError } from "@/lib/utils";
-import { nombrePersona, useEquipo } from "@/lib/equipo";
+import { nombrePersona, trabajaEn, useEquipo } from "@/lib/equipo";
 import { rutaTarjeta } from "@/lib/sellos/tipos";
 
 export type ClienteResumen = {
@@ -230,7 +230,10 @@ export function BuscarCliente({
 // o al mesero que tiene la mesa asignada.
 export function Atiende({ supabase, cuenta, onCambio }: { supabase: SupabaseClient; cuenta: Cuenta; onCambio: () => unknown }) {
   const avisar = useToast();
-  const equipo = useEquipo(supabase, cuenta.restaurante_id).equipo.filter((p) => p.rol !== "cocina");
+  // Solo quienes trabajan en el local de la mesa (o en todos). Quien ya la atiende sigue en la lista.
+  const equipo = useEquipo(supabase, cuenta.restaurante_id).equipo.filter(
+    (p) => p.rol !== "cocina" && (trabajaEn(p, cuenta.sucursal_id) || p.user_id === cuenta.mesero_id),
+  );
 
   if (cuenta.mesero_id === undefined || equipo.length < 2) return null;
 
