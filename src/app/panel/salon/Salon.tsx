@@ -38,6 +38,8 @@ import { minutosDesde, useAhora, useServicio, type DatosServicio } from "@/lib/u
 import {
   cajaMesa,
   ESTILOS_PLANO,
+  huecoCerca,
+  libreParaElemento,
   lugarLibre,
   Plano,
   primerHueco,
@@ -352,6 +354,36 @@ export function Salon({
     setSeleccion({ tipo: "mesa", id: data.id });
   }
 
+  // Copia exacta de la mesa (forma, tamaño, personas, sillas y color) al lado, con el número siguiente.
+  async function duplicarMesa(mesa: Mesa) {
+    const suPiso = pisos.find((p) => p.id === mesa.piso_id) ?? piso;
+    if (!suPiso) return;
+    const lugar = huecoCerca(cajaMesa(mesa), suPiso, (c) => lugarLibre(c, suPiso, mesas));
+    if (!lugar) return avisar("No queda lugar libre en este piso para la copia. Agrándalo o mueve algo.", "error");
+    const { data, error } = await supabase
+      .from("mesas")
+      .insert({
+        restaurante_id: restaurante.id,
+        sucursal_id: mesa.sucursal_id ?? suPiso.sucursal_id ?? sucursalId,
+        numero: siguienteNumero(),
+        piso_id: suPiso.id,
+        forma: mesa.forma ?? "cuadrada",
+        capacidad: mesa.capacidad ?? 4,
+        color: mesa.color ?? null,
+        sillas: mesa.sillas ?? null,
+        x: lugar.x,
+        y: lugar.y,
+        ancho: lugar.ancho,
+        alto: lugar.alto,
+      })
+      .select()
+      .single();
+    if (error) return avisar(mensajeError(error), "error");
+    setMesas((m) => [...m, data as Mesa]);
+    setSeleccion({ tipo: "mesa", id: data.id });
+    avisar(`Listo: ${nombreMesa(data.numero)} es una copia de ${nombreMesa(mesa.numero)}.`);
+  }
+
   async function ubicarMesa(mesa: Mesa) {
     if (!piso) return;
     const { ancho, alto } = { ancho: mesa.ancho ?? 2, alto: mesa.alto ?? 2 };
@@ -407,6 +439,42 @@ export function Salon({
     guardarElementos([...piso.elementos, el]);
     setSeleccion({ tipo: "elemento", id: el.id });
   }
+
+  // Copia exacta del elemento (tamaño, texto, color y asientos) al lado del original.
+  function duplicarElemento(el: Elemento) {
+    if (!piso) return;
+    const lugar =
+      huecoCerca(el, piso, (c) => libreParaElemento(c, piso, mesas, el.tipo)) ??
+      huecoCerca(el, piso, () => true);
+    if (!lugar) return avisar("No queda lugar en este piso para la copia.", "error");
+    const copia: Elemento = { ...el, id: nuevoId(), x: lugar.x, y: lugar.y };
+    guardarElementos([...piso.elementos, copia]);
+    setSeleccion({ tipo: "elemento", id: copia.id });
+  }
+
+  // Ctrl + D (o Cmd + D en Mac) duplica lo que está elegido mientras se edita el plano.
+  const duplicarElegido = useRef<() => void>(() => {});
+  duplicarElegido.current = () => {
+    if (seleccion?.tipo === "mesa") {
+      const m = mesas.find((x) => x.id === seleccion.id);
+      if (m) duplicarMesa(m);
+    } else if (seleccion?.tipo === "elemento") {
+      const e = piso?.elementos.find((x) => x.id === seleccion.id);
+      if (e) duplicarElemento(e);
+    }
+  };
+  useEffect(() => {
+    if (!editando) return;
+    const alTeclear = (ev: KeyboardEvent) => {
+      if (!(ev.ctrlKey || ev.metaKey) || ev.key.toLowerCase() !== "d") return;
+      const t = ev.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      ev.preventDefault();
+      duplicarElegido.current();
+    };
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [editando]);
 
   function actualizarElemento(id: string, cambios: Partial<Elemento>) {
     if (!piso) return;
@@ -725,6 +793,8 @@ export function Salon({
                     setSeleccion(null);
                   }}
                   onBorrarMesa={borrarMesa}
+                  onDuplicarMesa={duplicarMesa}
+                  onDuplicarElemento={duplicarElemento}
                   onFondo={cambiarFondo}
                   onAgregarElemento={agregarElemento}
                   onElemento={actualizarElemento}
@@ -956,6 +1026,8 @@ function PanelEdicion({
   onAgregarElemento,
   onElemento,
   onBorrarElemento,
+  onDuplicarMesa,
+  onDuplicarElemento,
   onFondo,
 }: {
   piso: Piso;
@@ -972,6 +1044,8 @@ function PanelEdicion({
   onAgregarElemento: (t: TipoElemento) => void;
   onElemento: (id: string, c: Partial<Elemento>) => void;
   onBorrarElemento: (id: string) => void;
+  onDuplicarMesa: (m: Mesa) => void;
+  onDuplicarElemento: (e: Elemento) => void;
   onFondo: (archivo: File | null) => Promise<unknown>;
 }) {
   return (
@@ -1019,6 +1093,15 @@ function PanelEdicion({
           >
             Girar
           </button>
+          <button
+            type="button"
+            className="boton w-full justify-center gap-2 py-1.5"
+            onClick={() => onDuplicarMesa(mesa)}
+            title="Crea otra igual al lado (Ctrl + D)"
+          >
+            <Icono nombre="copiar" className="h-4 w-4" />
+            Duplicar
+          </button>
           <EditorSillas mesa={mesa} onCambiar={(c) => onMesa(mesa, c)} />
           <SelectorColor valor={mesa.color ?? null} onCambiar={(color) => onMesa(mesa, { color })} />
           <div className="flex gap-2 pt-1 text-sm">
@@ -1064,6 +1147,15 @@ function PanelEdicion({
             onClick={() => onElemento(elemento.id, { ancho: elemento.alto, alto: elemento.ancho })}
           >
             Girar
+          </button>
+          <button
+            type="button"
+            className="boton w-full justify-center gap-2 py-1.5"
+            onClick={() => onDuplicarElemento(elemento)}
+            title="Crea otra igual al lado (Ctrl + D)"
+          >
+            <Icono nombre="copiar" className="h-4 w-4" />
+            Duplicar
           </button>
           {ELEMENTOS[elemento.tipo]?.asientos && (
             <EditorAsientos elemento={elemento} onCambiar={(asientos) => onElemento(elemento.id, { asientos })} />
