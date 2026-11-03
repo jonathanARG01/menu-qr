@@ -178,7 +178,7 @@ export function BotonInstalar() {
         onClick={instalar}
         aria-expanded={evento ? undefined : ayuda}
         title="Instalar Platovi como app"
-        className="flex h-10 items-center gap-2 rounded-full border border-sitio-borde bg-sitio-vidrio px-3 text-sm font-medium text-sitio-tinta transition hover:border-sitio-oro/50"
+        className="flex h-10 items-center gap-2 whitespace-nowrap rounded-full border border-sitio-borde bg-sitio-vidrio px-3 text-sm font-medium text-sitio-tinta transition hover:border-sitio-oro/50"
       >
         <Icono nombre="pantalla" className="h-[18px] w-[18px]" />
         <span className="hidden lg:inline">Instalar app</span>
@@ -232,7 +232,7 @@ export function MenuMovil({ enlaces }: { enlaces: [string, string][] }) {
   }, [abierto]);
 
   return (
-    <div ref={caja} className="relative md:hidden">
+    <div ref={caja} className="relative xl:hidden">
       <button
         type="button"
         onClick={() => setAbierto((a) => !a)}

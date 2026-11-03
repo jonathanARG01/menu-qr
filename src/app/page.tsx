@@ -7,6 +7,8 @@ import { AnimacionesSitio, BotonInstalar, BotonTema, MenuMovil } from "@/compone
 import { PreciosPlanes } from "@/components/inicio/Precios";
 import { SCRIPT_TEMA_SITIO } from "@/components/inicio/tema";
 import { FormContacto } from "@/components/inicio/Contacto";
+import { VitrinaLoyalty } from "@/components/inicio/Loyalty";
+import { NOMBRE_SELLOS, PRECIO_SELLOS } from "@/lib/sellos/tipos";
 import { createPublicClient } from "@/lib/supabase/server";
 import { leerAjustesSitio, REDES_SITIO, type AjustesSitio } from "@/lib/sitio";
 import { enlaceRed, INFO_RED } from "@/lib/redes";
@@ -50,6 +52,7 @@ const clp = (n: number) => "$" + n.toLocaleString("es-CL");
 const NAV: [string, string][] = [
   ["#como-funciona", "Cómo funciona"],
   ["#modulos", "Módulos"],
+  ["#loyalty", "Loyalty"],
   ["#demo", "Demo"],
   ["#precios", "Precios"],
   ["#preguntas", "Preguntas"],
@@ -77,6 +80,7 @@ export default async function Inicio() {
           <Recorrido />
           <Modulos />
         </div>
+        <Loyalty />
         <Demo />
         <Precios />
         <Servicios />
@@ -153,7 +157,7 @@ function Cabecera() {
         <Link href="/" aria-label="Platovi, inicio" className="shrink-0">
           <Logo oscuro nombreClase="text-sitio-tinta" className="text-xl" />
         </Link>
-        <nav className="hidden items-center gap-0.5 text-sm md:flex">
+        <nav className="hidden items-center gap-0.5 whitespace-nowrap text-sm xl:flex">
           {NAV.map(([href, texto]) => (
             <a
               key={href}
@@ -494,6 +498,93 @@ function Modulos() {
               </span>
               <h3 className="mt-5 font-marca text-lg font-bold">{m.titulo}</h3>
               <p className="mt-1.5 text-sm leading-relaxed text-sitio-suave">{m.texto}</p>
+            </div>
+          ))}
+        </div>
+      </Contenedor>
+    </section>
+  );
+}
+
+const VENTAJAS_LOYALTY: { icono: Parameters<typeof Icono>[0]["nombre"]; titulo: string; texto: string }[] = [
+  { icono: "pantalla", titulo: "En el celular, sin descargar nada", texto: "La tarjeta vive en la web y en Google Wallet. No se pierde ni se olvida en casa." },
+  { icono: "qr", titulo: "El sello se suma solo", texto: "El cliente escanea el QR de su precuenta y listo. Sin timbres ni cartón." },
+  { icono: "candado", titulo: "Canje seguro con PIN", texto: "El mesero entrega el premio con su PIN y todo queda registrado." },
+  { icono: "personas", titulo: "Sabes quién vuelve", texto: "Cada tarjeta tiene nombre: ves a tus clientes frecuentes y cuándo vinieron." },
+];
+
+const CAMPANAS_LOYALTY: { icono: Parameters<typeof Icono>[0]["nombre"]; titulo: string; texto: string }[] = [
+  { icono: "rayo", titulo: "Días de sello doble", texto: "Elige los días flojos y cada visita vale 2 sellos." },
+  { icono: "estrella", titulo: "Reseña en Google", texto: "Tras el sello, invita a dejar una reseña de 5 estrellas." },
+  { icono: "campana", titulo: "Te extrañamos", texto: "Si alguien deja de venir, le llega un aviso con un sello de regalo." },
+  { icono: "regalo", titulo: "Cumpleaños", texto: "Un sello extra o un regalo el día de su cumpleaños." },
+];
+
+// Platovi Loyalty: la tarjeta de sellos digital, complemento que se suma a cualquier plan.
+function Loyalty() {
+  return (
+    <section id="loyalty" className="relative scroll-mt-20 overflow-hidden py-24 lg:py-32">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-24 -z-10 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full opacity-60 blur-3xl"
+        style={{ background: "radial-gradient(circle, var(--sitio-brillo), transparent 70%)" }}
+      />
+      <Contenedor className="grid items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-20">
+        <div>
+          <Titulo
+            etiqueta={NOMBRE_SELLOS}
+            titulo="Clientes que vuelven,"
+            acento="sello a sello."
+            texto="Cambia la tarjeta de cartón por una tarjeta de sellos en el celular. Tus clientes juntan sellos en cada visita y ganan el premio que tú elijas."
+          />
+          <ul className="mt-10 grid gap-5 sm:grid-cols-2">
+            {VENTAJAS_LOYALTY.map((v, i) => (
+              <li key={v.titulo} data-revelar="" style={retraso(i * 80)} className="flex gap-3.5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-sitio-oro/30 bg-sitio-oro/10 text-sitio-oro-texto">
+                  <Icono nombre={v.icono} className="h-5 w-5" />
+                </span>
+                <span>
+                  <b className="block font-marca text-[0.95rem]">{v.titulo}</b>
+                  <span className="mt-0.5 block text-sm leading-relaxed text-sitio-suave">{v.texto}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div data-revelar="" className="vidrio mt-10 flex flex-wrap items-center gap-x-8 gap-y-5 rounded-[1.75rem] p-5 sm:p-6">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-sitio-suave">Complemento de tu plan</p>
+              <p className="mt-1 font-marca text-3xl font-bold tabular-nums">
+                {clp(PRECIO_SELLOS.local)}
+                <span className="text-base font-normal text-sitio-suave"> /mes por local</span>
+              </p>
+              <p className="mt-0.5 text-sm text-sitio-suave">
+                Plan Grupo: {clp(PRECIO_SELLOS.grupo)} /mes para todas tus sucursales.
+              </p>
+            </div>
+            <a href="#contacto" className="boton-oro px-6 py-3.5 text-base sm:ml-auto">
+              Lo quiero <Flecha />
+            </a>
+          </div>
+        </div>
+        <div data-revelar="zoom" style={retraso(120)}>
+          <VitrinaLoyalty />
+        </div>
+      </Contenedor>
+
+      <Contenedor className="mt-20">
+        <div data-revelar="" className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <Etiqueta>Para que vuelvan</Etiqueta>
+            <h3 className="mt-3 font-marca text-2xl font-bold sm:text-3xl">Campañas automáticas que trabajan por ti.</h3>
+          </div>
+          <p className="max-w-sm text-sm text-sitio-suave">Las activas una vez y se envían solas al celular de tus clientes.</p>
+        </div>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {CAMPANAS_LOYALTY.map((c, i) => (
+            <div key={c.titulo} data-revelar="" style={retraso(i * 90)} className="tarjeta-sitio p-6">
+              <Icono nombre={c.icono} className="h-6 w-6 text-sitio-oro-texto" />
+              <h4 className="mt-4 font-marca text-lg font-bold">{c.titulo}</h4>
+              <p className="mt-1.5 text-sm leading-relaxed text-sitio-suave">{c.texto}</p>
             </div>
           ))}
         </div>
