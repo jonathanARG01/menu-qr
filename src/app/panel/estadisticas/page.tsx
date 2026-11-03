@@ -2,6 +2,7 @@ import { nombreMesa, regionDe } from "@/lib/salon";
 import { ZONAS, formatoFecha, formatoNumero, type Region } from "@/lib/region";
 import Link from "next/link";
 import { requerirSeccion } from "@/lib/panel";
+import { rotuloPrincipal } from "@/lib/locales";
 import { NOMBRE_IDIOMA, type Idioma } from "@/lib/i18n";
 import { formatoPrecio } from "@/lib/utils";
 import { BarrasHorizontales, BarrasPorDia, BarrasPorHora } from "./Graficos";
@@ -140,7 +141,8 @@ export default async function Estadisticas({ searchParams }: { searchParams: Pro
               <tbody className="divide-y divide-borde">
                 {r.por_sucursal.map((s) => (
                   <tr key={s.sucursal}>
-                    <td className="py-2">{s.sucursal}</td>
+                    {/* La función SQL llama "Sin sucursal" a lo del local principal. */}
+                    <td className="py-2">{s.sucursal === "Sin sucursal" ? rotuloPrincipal(restaurante, ajustes) : s.sucursal}</td>
                     <td className="py-2 text-right tabular-nums">{formatoNumero(s.visitas, region)}</td>
                     <td className="py-2 text-right tabular-nums">{formatoNumero(s.pedidos, region)}</td>
                   </tr>

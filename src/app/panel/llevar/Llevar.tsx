@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
+import { guardarLocal, leerLocalGuardado, rotuloPrincipal } from "@/lib/locales";
 import { Icono } from "@/components/Icono";
 import { NOMBRE_TIPO, regionDe, type Ajustes, type Cuenta, type OpcionElegida, type Pedido, type TipoCuenta } from "@/lib/salon";
 import { fechaCorta } from "@/lib/imprimir";
@@ -510,7 +511,12 @@ function NuevoPedido({
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   });
   const [envio, setEnvio] = useState(ajustes.llevar.envio);
-  const [sucursal, setSucursal] = useState(sucursales.length > 1 ? sucursales[0].id : (sucursales[0]?.id ?? null));
+  // Local del pedido: el principal (null) o una sucursal. Arranca en el último elegido en el panel.
+  const [sucursal, setSucursal] = useState<string | null>(null);
+  useEffect(() => {
+    const guardado = leerLocalGuardado(restaurante.id, sucursales);
+    if (guardado !== undefined) setSucursal(guardado);
+  }, [restaurante.id, sucursales]);
   const [conocido, setConocido] = useState<ClienteResumen | null>(null);
   const [guardando, setGuardando] = useState(false);
   // Últimos pedidos de este cliente, para repetir uno con un toque.
@@ -759,10 +765,19 @@ function NuevoPedido({
             />
           </label>
         </div>
-        {sucursales.length > 1 && (
+        {sucursales.length > 0 && (
           <label className="block text-sm">
             Local
-            <select value={sucursal ?? ""} onChange={(e) => setSucursal(e.target.value)} className="campo mt-1">
+            <select
+              value={sucursal ?? ""}
+              onChange={(e) => {
+                const id = e.target.value || null;
+                setSucursal(id);
+                guardarLocal(restaurante.id, id);
+              }}
+              className="campo mt-1"
+            >
+              <option value="">{rotuloPrincipal(restaurante, ajustes)}</option>
               {sucursales.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.nombre}

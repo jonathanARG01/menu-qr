@@ -20,6 +20,7 @@ import {
   type EstiloQR,
 } from "@/lib/qr";
 import { useToast } from "@/components/Toast";
+import { guardarLocal, leerLocalGuardado } from "@/lib/locales";
 import { useUrlSitio } from "@/lib/useUrlSitio";
 
 export function GeneradorQR({
@@ -29,6 +30,7 @@ export function GeneradorQR({
   sucursalInicial,
   reservas = false,
   pisos = [],
+  nombrePrincipal: principal,
 }: {
   restaurante: Restaurante;
   mesasIniciales: Mesa[];
@@ -36,15 +38,27 @@ export function GeneradorQR({
   sucursalInicial?: string;
   reservas?: boolean;
   pisos?: { id: string; nombre: string }[];
+  nombrePrincipal: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
   const sitio = useUrlSitio();
   const [todas, setMesas] = useState(() => ordenarMesas(mesasIniciales));
   // Con sucursales, cada una tiene sus mesas y sus QR llevan ?s=<sucursal>.
-  const [sucursalId, setSucursalId] = useState<string>(
-    sucursales.find((s) => s.id === sucursalInicial)?.id ?? sucursales[0]?.id ?? "",
+  // Primero el local principal ("" = sin sucursal); si llega ?sucursal= se usa esa, si no la última elegida en el panel.
+  const [sucursalId, setSucursalIdEstado] = useState<string>(
+    sucursales.find((s) => s.id === sucursalInicial)?.id ?? "",
   );
+  useEffect(() => {
+    // ?sucursal=principal (desde Sucursales) o el id de una: manda el enlace.
+    if (sucursalInicial === "principal" || sucursales.some((s) => s.id === sucursalInicial)) return;
+    const guardado = leerLocalGuardado(restaurante.id, sucursales);
+    if (guardado !== undefined) setSucursalIdEstado(guardado ?? "");
+  }, [sucursales, sucursalInicial, restaurante.id]);
+  function setSucursalId(id: string) {
+    setSucursalIdEstado(id);
+    guardarLocal(restaurante.id, id || null);
+  }
   const sucursal = sucursales.find((s) => s.id === sucursalId);
   const mesas = todas.filter((m) => (m.sucursal_id ?? "") === sucursalId);
   const url = (mesa?: string) => urlCarta(restaurante.slug, mesa, sitio, sucursal?.slug);
@@ -187,7 +201,7 @@ export function GeneradorQR({
       {sucursales.length > 0 && (
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Sucursal">
           <span className="text-sm font-medium">Sucursal:</span>
-          {[...sucursales.map((s) => ({ id: s.id, nombre: s.nombre })), { id: "", nombre: "Sin sucursal" }].map((s) => (
+          {[{ id: "", nombre: `${principal} (principal)` }, ...sucursales.map((s) => ({ id: s.id, nombre: s.nombre }))].map((s) => (
             <button
               key={s.id}
               type="button"
@@ -209,7 +223,7 @@ export function GeneradorQR({
         <TarjetaQR url={url()} estilo={estilo} grande />
         <div className="min-w-0 flex-1 space-y-3 text-center sm:text-left">
           <div>
-            <h2 className="font-semibold">QR general{sucursal ? ` de ${sucursal.nombre}` : " de la carta"}</h2>
+            <h2 className="font-semibold">QR general de {sucursal?.nombre ?? principal}</h2>
             <p className="text-sm text-suave">Para la puerta, el mostrador, Instagram o la carta impresa.</p>
           </div>
           <p className="break-all rounded-lg bg-stone-50 px-3 py-2 font-mono text-xs text-suave">{url()}</p>

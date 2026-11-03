@@ -16,12 +16,43 @@ const VACIA: Borrador = { nombre: "", slug: "", direccion: "", horario: "", what
 // Tope del plan Grupo: 5 sucursales contando la principal (la base de datos también lo exige, SQL 0027).
 export const MAX_SUCURSALES = 5;
 
-export function EditorSucursales({ restaurante, iniciales }: { restaurante: Restaurante; iniciales: Sucursal[] }) {
+export function EditorSucursales({
+  restaurante,
+  iniciales,
+  nombrePrincipalInicial,
+}: {
+  restaurante: Restaurante;
+  iniciales: Sucursal[];
+  nombrePrincipalInicial: string;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
   const sitio = useUrlSitio();
   const [sucursales, setSucursales] = useState(iniciales);
   const [editando, setEditando] = useState<Sucursal | "nueva" | null>(null);
+  // Nombre del local principal (restaurantes.ajustes.nombre_principal): el que no es sucursal.
+  const [principal, setPrincipal] = useState(nombrePrincipalInicial);
+  const [principalGuardado, setPrincipalGuardado] = useState(nombrePrincipalInicial);
+  const [guardandoPrincipal, setGuardandoPrincipal] = useState(false);
+
+  // Se lee antes lo último guardado en ajustes para no pisar otros cambios.
+  async function guardarPrincipal(e: { preventDefault(): void }) {
+    e.preventDefault();
+    const nombre = principal.trim().slice(0, 60);
+    setGuardandoPrincipal(true);
+    const { data, error } = await supabase.from("restaurantes").select("ajustes").eq("id", restaurante.id).single();
+    const { error: e2 } = error
+      ? { error }
+      : await supabase
+          .from("restaurantes")
+          .update({ ajustes: { ...(data?.ajustes ?? {}), nombre_principal: nombre } })
+          .eq("id", restaurante.id);
+    setGuardandoPrincipal(false);
+    if (e2) return avisar(mensajeError(e2), "error");
+    setPrincipal(nombre);
+    setPrincipalGuardado(nombre);
+    avisar("Nombre del local principal guardado");
+  }
 
   async function guardar(datos: Borrador) {
     const fila = {
@@ -83,6 +114,39 @@ export function EditorSucursales({ restaurante, iniciales }: { restaurante: Rest
           mesa.
         </p>
       </div>
+
+      <form onSubmit={guardarPrincipal} className="tarjeta space-y-3 p-4">
+        <div>
+          <p className="font-semibold">Local principal</p>
+          <p className="text-sm text-suave">
+            Es tu local de siempre, el que no es sucursal. Este nombre se ve en los selectores de Salón, QR, Para llevar y
+            Estadísticas. Si lo dejas vacío se usa &quot;{restaurante.nombre}&quot;.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            maxLength={60}
+            value={principal}
+            onChange={(e) => setPrincipal(e.target.value)}
+            placeholder={restaurante.nombre}
+            className="campo min-w-0 flex-1"
+            aria-label="Nombre del local principal"
+          />
+          <button
+            type="submit"
+            className="boton"
+            disabled={guardandoPrincipal || principal.trim() === principalGuardado.trim()}
+          >
+            {guardandoPrincipal ? "Guardando…" : "Guardar"}
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <span className="break-all font-mono text-xs text-suave">{urlCarta(restaurante.slug, undefined, sitio)}</span>
+          <Link href="/panel/qr?sucursal=principal" className="text-marca">
+            QR del local principal
+          </Link>
+        </div>
+      </form>
 
       {sucursales.length === 0 && (
         <div className="tarjeta p-6 text-center text-sm text-suave">

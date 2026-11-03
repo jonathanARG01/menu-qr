@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/components/Toast";
+import { guardarLocal, leerLocalGuardado, rotuloPrincipal } from "@/lib/locales";
 import { Icono } from "@/components/Icono";
 import {
   COLORES_PLANO,
@@ -97,21 +98,16 @@ export function Salon({
       : sucursales[0].id,
   );
   const delLocal = <T extends { sucursal_id?: string | null }>(x: T) => !conLocales || (x.sucursal_id ?? null) === sucursalId;
-  // Se recuerda el último local elegido en este equipo.
+  // Se recuerda el último local elegido en este equipo (lo comparten Salón, QR y Para llevar).
   useEffect(() => {
     if (!conLocales) return;
-    try {
-      const guardado = localStorage.getItem(`salon:local:${restaurante.id}`);
-      if (guardado === "principal") setSucursalId(null);
-      else if (guardado && sucursales.some((s) => s.id === guardado)) setSucursalId(guardado);
-    } catch {}
+    const guardado = leerLocalGuardado(restaurante.id, sucursales);
+    if (guardado !== undefined) setSucursalId(guardado);
   }, [conLocales, sucursales, restaurante.id]);
   function elegirLocal(id: string | null) {
     setSucursalId(id);
     setPisoId(null);
-    try {
-      localStorage.setItem(`salon:local:${restaurante.id}`, id ?? "principal");
-    } catch {}
+    guardarLocal(restaurante.id, id);
   }
   const pisosVisibles = pisos.filter(delLocal);
   const [pisoId, setPisoId] = useState<string | null>(pisosVisibles[0]?.id ?? null);
@@ -560,7 +556,7 @@ export function Salon({
             aria-label="Local"
             title="Elige el local para ver y editar su salón"
           >
-            <option value="">{restaurante.nombre} (principal)</option>
+            <option value="">{rotuloPrincipal(restaurante, ajustes)}</option>
             {sucursales.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.nombre}
