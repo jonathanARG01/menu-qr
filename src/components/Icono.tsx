@@ -93,6 +93,7 @@ const TRAZOS: Record<string, React.ReactNode> = {
   lapiz: <path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />,
   mas_simple: <path d="M12 5v14M5 12h14" />,
   check: <path d="M5 12.5l4.5 4.5L19 7" />,
+  copiar: <path d="M9 9h10v10H9zM5 15V5h10" />,
   sonido: <path d="M4 10v4h4l5 4V6L8 10zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" />,
   silencio: <path d="M4 10v4h4l5 4V6L8 10zM17 10l4 4M21 10l-4 4" />,
   sol: (

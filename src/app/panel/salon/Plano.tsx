@@ -52,6 +52,49 @@ export function lugarLibre(caja: Caja, piso: Piso, mesas: Mesa[], ignorar?: stri
   return !piso.elementos.some((e) => e.id !== ignorar && ELEMENTOS[e.tipo]?.bloquea && seTocan(caja, e));
 }
 
+// Hueco libre más cerca de una caja (para duplicar): prueba primero al lado, abajo, a la izquierda y arriba,
+// y si no, el lugar libre más próximo del piso.
+export function huecoCerca(origen: Caja, piso: Piso, libre: (c: Caja) => boolean): Caja | null {
+  const { ancho, alto } = origen;
+  const vecinos = [
+    { x: origen.x + ancho, y: origen.y },
+    { x: origen.x, y: origen.y + alto },
+    { x: origen.x - ancho, y: origen.y },
+    { x: origen.x, y: origen.y - alto },
+  ];
+  const dentro = (c: Caja) => c.x >= 0 && c.y >= 0 && c.x + c.ancho <= piso.columnas && c.y + c.alto <= piso.filas;
+  for (const v of vecinos) {
+    const c = { ...v, ancho, alto };
+    if (dentro(c) && libre(c)) return c;
+  }
+  let mejor: Caja | null = null;
+  let distancia = Infinity;
+  for (let y = 0; y + alto <= piso.filas; y++) {
+    for (let x = 0; x + ancho <= piso.columnas; x++) {
+      const d = Math.abs(x - origen.x) + Math.abs(y - origen.y);
+      if (d === 0 || d >= distancia) continue;
+      const c = { x, y, ancho, alto };
+      if (libre(c)) {
+        mejor = c;
+        distancia = d;
+      }
+    }
+  }
+  return mejor;
+}
+
+// ¿Puede ir aquí la copia de un elemento? Un suelo (vereda, toldo, arena) no pisa otro igual ni lo que bloquea
+// (calle, pared…); lo demás no pisa mesas ni otros elementos que no sean suelo.
+export function libreParaElemento(caja: Caja, piso: Piso, mesas: Mesa[], tipo: Elemento["tipo"]) {
+  const suelo = !!ELEMENTOS[tipo]?.suelo;
+  if (!suelo && mesas.some((m) => m.piso_id === piso.id && seTocan(caja, cajaMesa(m)))) return false;
+  return !piso.elementos.some((e) => {
+    if (!seTocan(caja, e)) return false;
+    const info = ELEMENTOS[e.tipo];
+    return suelo ? e.tipo === tipo || !!info?.bloquea : !info?.suelo;
+  });
+}
+
 // Primer hueco libre (de arriba a la izquierda) para algo de este tamaño.
 export function primerHueco(ancho: number, alto: number, piso: Piso, mesas: Mesa[], esMesa: boolean): Caja | null {
   for (let y = 0; y + alto <= piso.filas; y++) {
