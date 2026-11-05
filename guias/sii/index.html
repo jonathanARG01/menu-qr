@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Inicio de actividades Platovi</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: una columna de lectura (~760px) con "fichas" de trámite; diagramas en SVG con colores de la paleta */
+:root{
+  --bg:#f6f7f9; --paper:#ffffff; --ink:#14213d; --muted:#5a6478; --line:#d9dee7;
+  --accent:#1f4fd1; --accent-soft:#e6edff; --stamp:#c2410c; --stamp-soft:#fdeee5;
+  --ok:#15803d; --ok-soft:#e5f5ea; --warn:#a16207; --warn-soft:#fdf5dc;
+  --neto:#1f4fd1; --iva:#c2410c;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1424; --paper:#151d31; --ink:#e8ecf5; --muted:#9aa5bd; --line:#2a3550;
+  --accent:#7ea2ff; --accent-soft:#1c2a52; --stamp:#fb8a55; --stamp-soft:#3a2216;
+  --ok:#4ade80; --ok-soft:#14301f; --warn:#facc15; --warn-soft:#332a0c;
+  --neto:#7ea2ff; --iva:#fb8a55; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0e1424; --paper:#151d31; --ink:#e8ecf5; --muted:#9aa5bd; --line:#2a3550;
+  --accent:#7ea2ff; --accent-soft:#1c2a52; --stamp:#fb8a55; --stamp-soft:#3a2216;
+  --ok:#4ade80; --ok-soft:#14301f; --warn:#facc15; --warn-soft:#332a0c;
+  --neto:#7ea2ff; --iva:#fb8a55; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+.wrap{max-width:780px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:clamp(2rem,6vw,3rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(1.45rem,4vw,1.85rem);font-weight:700;margin-bottom:.6rem}
+h3{font-size:1.12rem;font-weight:700}
+p{margin:0 0 .9rem}
+a{color:var(--accent)}
+.eyebrow{font-family:var(--mono);font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--stamp);font-weight:600}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+header.hero{padding-block:40px 24px;display:grid;gap:14px}
+.lede{font-size:1.15rem;color:var(--muted);max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.toc a{font-size:.88rem;text-decoration:none;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:5px 11px;border-radius:999px}
+.toc a:hover,.toc a:focus-visible{border-color:var(--accent);outline:none}
+section{padding-block:34px;border-top:1px solid var(--line)}
+.secnum{font-family:var(--mono);color:var(--accent);font-weight:600;font-size:.9rem;display:block;margin-bottom:4px}
+.note{border-left:4px solid var(--warn);background:var(--warn-soft);padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:.97rem}
+.note.ok{border-color:var(--ok);background:var(--ok-soft)}
+.note.red{border-color:var(--stamp);background:var(--stamp-soft)}
+.note strong:first-child{display:block;margin-bottom:2px}
+.contador{display:inline-block;font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;font-weight:600;
+  color:var(--warn);border:1.5px solid var(--warn);border-radius:4px;padding:0 6px;margin-left:4px;vertical-align:2px;white-space:nowrap}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:14px 0}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+.card h3{margin-bottom:8px}
+.card ul{margin:0;padding-left:1.1rem}
+.card li{margin-bottom:4px}
+.pick{border:2px solid var(--accent)}
+.badge{display:inline-block;font-size:.78rem;font-weight:700;background:var(--accent);color:var(--paper);padding:2px 9px;border-radius:999px;margin-bottom:8px}
+.pros li::marker{content:"＋ ";color:var(--ok)}
+.cons li::marker{content:"－ ";color:var(--stamp)}
+.diagram{overflow-x:auto;margin:16px 0;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px}
+.diagram svg{display:block;width:100%;height:auto;min-width:560px}
+svg text{font-family:var(--body);fill:var(--ink)}
+svg .t-muted{fill:var(--muted)}
+svg .t-mono{font-family:var(--mono)}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+.tablewrap{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--display);font-weight:700;background:var(--accent-soft);font-size:.92rem}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* barras IVA */
+.bars{display:grid;gap:14px;margin:16px 0}
+.barrow{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center}
+.barrow .lbl{font-weight:700;font-size:.95rem}
+.barrow .lbl small{display:block;font-weight:400;color:var(--muted);font-size:.8rem}
+.bar{display:flex;height:30px;border-radius:6px;overflow:hidden;background:var(--line)}
+.bar span{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.78rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden}
+.bar .n{background:var(--neto)} .bar .i{background:var(--iva)}
+:root[data-theme="dark"] .bar span{color:#0e1424}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .bar span{color:#0e1424}}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.88rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--paper);gap:3px}
+.seg button{font:inherit;font-size:.9rem;border:0;background:transparent;color:var(--ink);padding:6px 14px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--paper);font-weight:700}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* calculadora */
+.calc{display:grid;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px;margin:16px 0}
+.calc label{font-weight:600;font-size:.92rem}
+.calc input{font:inherit;font-family:var(--mono);font-size:1.1rem;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:100%;max-width:220px}
+.calc input:focus-visible{outline:2px solid var(--accent);border-color:var(--accent)}
+.calcout{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.calcout div{background:var(--bg);border-radius:8px;padding:10px 12px}
+.calcout small{display:block;color:var(--muted);font-size:.8rem}
+.calcout b{font-family:var(--mono);font-size:1.15rem;font-variant-numeric:tabular-nums}
+/* factura ejemplo */
+.doc{font-family:var(--mono);font-size:.85rem;background:var(--paper);border:1px dashed var(--muted);border-radius:8px;padding:16px;margin:14px 0;max-width:460px}
+.doc .box{border:2px solid var(--stamp);color:var(--stamp);text-align:center;padding:6px;font-weight:600;margin-bottom:10px;max-width:240px;margin-left:auto}
+.doc .row{display:flex;justify-content:space-between;gap:10px}
+.doc hr{border:0;border-top:1px dashed var(--line);margin:8px 0}
+/* pasos */
+ol.steps{list-style:none;counter-reset:s;padding:0;margin:16px 0;display:grid;gap:12px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:44px 1fr;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px}
+ol.steps li::before{content:counter(s);font-family:var(--display);font-weight:800;font-size:1.3rem;width:44px;height:44px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center}
+ol.steps h3{margin-bottom:4px}
+ol.steps p{margin:0;color:var(--muted);font-size:.97rem}
+.who{font-size:.78rem;font-family:var(--mono);color:var(--accent);font-weight:600}
+dl.glos{display:grid;grid-template-columns:minmax(120px,170px) 1fr;gap:8px 16px;margin:14px 0}
+dl.glos dt{font-weight:700;font-family:var(--display)}
+dl.glos dd{margin:0;color:var(--muted)}
+@media (max-width:520px){dl.glos{grid-template-columns:1fr} dl.glos dd{margin-bottom:8px} .barrow{grid-template-columns:1fr}}
+.checklist{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}
+.checklist li{display:flex;gap:10px;align-items:flex-start;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.checklist input{width:18px;height:18px;margin-top:4px;accent-color:var(--accent);flex:none}
+footer{padding-block:24px;color:var(--muted);font-size:.88rem;border-top:1px solid var(--line)}
+@media (prefers-reduced-motion:no-preference){.bar span{transition:width .35s ease}}
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <span class="eyebrow">Guía para novatos · Chile · noviembre 2026</span>
+  <h1>Inicio de actividades para vender Platovi</h1>
+  <p class="lede">Todo lo que necesitas saber, paso a paso, para emitir boletas y facturas cuando un restaurante te pague el plan. Sin tecnicismos y con tus precios reales.</p>
+  <div class="note"><strong>Cómo leer esta guía</strong>Es la regla general en Chile. Donde veas la etiqueta <span class="contador">Confirmar con contador</span> hay un detalle que depende de tu caso y que tu amigo contador debe revisar antes de que hagas el trámite.</div>
+  <nav class="toc" aria-label="Contenido">
+    <a href="#que-es">1. Qué es</a><a href="#natural-o-spa">2. Persona o SpA</a><a href="#tipos-empresa">2B. SpA, EIRL, Ltda., S.A.</a><a href="#tu-plata">2C. Tu plata y la empresa</a><a href="#tramite">3. El trámite</a><a href="#iva">4. IVA y precios</a><a href="#boleta-factura">5. Boleta o factura</a><a href="#emitir">6. Con qué emitir</a><a href="#calendario">7. Calendario</a><a href="#gastos">8. Gastos</a><a href="#extranjero">9. Fuera de Chile</a><a href="#pasos">10. Pasos en orden</a><a href="#glosario">Glosario</a><a href="#preguntas">Preguntas al contador</a>
+  </nav>
+</header>
+
+<!-- 1 -->
+<section id="que-es">
+  <span class="secnum">1</span>
+  <h2>¿Qué es el inicio de actividades?</h2>
+  <p>Es avisarle al <b>SII</b> (Servicio de Impuestos Internos) que empiezas a vender algo y que vas a pagar impuestos por eso. Es como "inscribir" tu negocio.</p>
+  <div class="grid2">
+    <div class="card"><h3>Sin inicio de actividades</h3><ul class="cons"><li>No puedes emitir boletas ni facturas.</li><li>Los restaurantes (empresas) no te pueden pagar formalmente, porque necesitan factura para su contabilidad.</li><li>Cobrar sin documento es informalidad y puede traer multas.</li></ul></div>
+    <div class="card"><h3>Con inicio de actividades</h3><ul class="pros"><li>Emites boleta o factura por cada pago.</li><li>Puedes descontar el IVA de lo que compras para el negocio.</li><li>Puedes abrir cuenta bancaria de empresa y cobrar con Mercado Pago o Flow a nombre del negocio.</li></ul></div>
+  </div>
+  <div class="note ok"><strong>Lo bueno</strong>El trámite es <b>gratis</b>, se hace <b>online en sii.cl</b> y toma unos minutos si ya tienes claras tus respuestas (las vemos abajo).</div>
+</section>
+
+<!-- 2 -->
+<section id="natural-o-spa">
+  <span class="secnum">2</span>
+  <h2>Primera decisión: ¿persona natural o empresa (SpA)?</h2>
+  <p>Antes del trámite debes decidir <b>quién</b> vende Platovi: tú con tu RUT personal, o una empresa con su propio RUT.</p>
+
+  <div class="diagram" role="img" aria-label="Diagrama: dos caminos. Persona natural: haces inicio de actividades con tu RUT. SpA: creas la empresa en el Registro de Empresas, obtienes un RUT nuevo y luego haces inicio de actividades con ese RUT. Ambos terminan en emitir boletas y facturas.">
+    <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>
+      <rect x="10" y="100" width="120" height="50" rx="10" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+      <text x="70" y="122" text-anchor="middle" font-weight="700" font-size="14">Tú, Jonathan</text>
+      <text x="70" y="140" text-anchor="middle" font-size="12" class="t-muted">¿quién vende?</text>
+      <path d="M130 115 C170 115 170 55 205 55" style="fill:none;stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar)"/>
+      <path d="M130 135 C170 135 170 195 205 195" style="fill:none;stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar)"/>
+      <!-- natural -->
+      <rect x="208" y="30" width="150" height="50" rx="10" style="fill:var(--paper);stroke:var(--line)"/>
+      <text x="283" y="52" text-anchor="middle" font-weight="700" font-size="13">Persona natural</text>
+      <text x="283" y="69" text-anchor="middle" font-size="12" class="t-muted">usa tu RUT personal</text>
+      <path d="M358 55 L520 55" style="fill:none;stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar)"/>
+      <text x="440" y="47" text-anchor="middle" font-size="11" class="t-muted">directo</text>
+      <!-- spa -->
+      <rect x="208" y="170" width="150" height="50" rx="10" style="fill:var(--paper);stroke:var(--accent);stroke-width:2"/>
+      <text x="283" y="192" text-anchor="middle" font-weight="700" font-size="13">SpA (empresa)</text>
+      <text x="283" y="209" text-anchor="middle" font-size="12" class="t-muted">se crea gratis online</text>
+      <path d="M358 195 L380 195" style="fill:none;stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar)"/>
+      <rect x="383" y="170" width="120" height="50" rx="10" style="fill:var(--paper);stroke:var(--line)"/>
+      <text x="443" y="192" text-anchor="middle" font-weight="700" font-size="12">RUT nuevo</text>
+      <text x="443" y="209" text-anchor="middle" font-size="11" class="t-muted">de la empresa</text>
+      <path d="M503 195 C520 195 515 150 525 150" style="fill:none;stroke:var(--muted);stroke-width:1.6"/>
+      <path d="M525 150 C535 140 535 90 540 82" style="fill:none;stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar)"/>
+      <!-- inicio -->
+      <rect x="523" y="30" width="185" height="50" rx="10" style="fill:var(--stamp-soft);stroke:var(--stamp)"/>
+      <text x="615" y="52" text-anchor="middle" font-weight="700" font-size="13">Inicio de actividades</text>
+      <text x="615" y="69" text-anchor="middle" font-size="12" class="t-muted">en sii.cl</text>
+      <path d="M615 80 L615 112" style="fill:none;stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar)"/>
+      <rect x="533" y="115" width="165" height="44" rx="10" style="fill:var(--ok-soft);stroke:var(--ok)"/>
+      <text x="615" y="142" text-anchor="middle" font-weight="700" font-size="13">Boletas y facturas ✓</text>
+    </svg>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><h3>Persona natural con giro</h3>
+      <ul class="pros"><li>Lo más rápido: un solo trámite.</li><li>Nada que crear ni mantener aparte.</li></ul>
+      <ul class="cons"><li>Respondes con tus bienes personales si el negocio tiene deudas.</li><li>Tu plata personal y la del negocio se mezclan.</li><li>Se ve menos "empresa" frente a cadenas o grupos de restaurantes.</li></ul>
+    </div>
+    <div class="card pick"><span class="badge">Lo más común para un software</span><h3>SpA (Sociedad por Acciones)</h3>
+      <ul class="pros"><li>Se crea gratis en <b>registrodeempresasysociedades.cl</b> ("empresa en un día"), con tu Clave Única.</li><li>Puede tener un solo dueño (tú).</li><li>Separa tus bienes de los del negocio.</li><li>Más fácil sumar un socio o inversionista después.</li><li>Da más confianza al restaurante que te paga.</li></ul>
+      <ul class="cons"><li>Un paso más y una cuenta bancaria aparte.</li><li>Más ordenada la contabilidad (tu contador la lleva).</li></ul>
+    </div>
+  </div>
+  <div class="note"><strong>Recomendación</strong>Para vender Platovi a muchos restaurantes, lo más usado es una <b>SpA con un solo accionista</b>. Si tu idea es partir muy chico y probar, persona natural también sirve y después puedes pasar a SpA. En la sección siguiente comparamos todos los tipos de empresa. <span class="contador">Confirmar con contador</span></div>
+</section>
+
+<!-- 2B -->
+<section id="tipos-empresa">
+  <span class="secnum">2 · B</span>
+  <h2>Los tipos de empresa en Chile: SpA, EIRL, Ltda. y S.A.</h2>
+  <p>Cuando creas una empresa, la ley la trata como una "persona" distinta de ti, con su propio RUT, sus propias deudas y su propia cuenta bancaria. A eso se le llama <b>persona jurídica</b>. Lo más importante que te da es la <b>responsabilidad limitada</b>: si al negocio le va mal, los acreedores cobran con lo que tiene la empresa, no con tu casa, tu auto ni tus ahorros.</p>
+
+  <div class="diagram" role="img" aria-label="Diagrama del escudo de responsabilidad. Como persona natural, una deuda del negocio llega directo a tus bienes personales. Con una empresa de responsabilidad limitada, la deuda llega solo hasta los bienes de la empresa y el escudo protege tus bienes personales.">
+    <svg viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--stamp)"/></marker></defs>
+      <text x="175" y="20" text-anchor="middle" font-weight="700" font-size="14">Persona natural con giro</text>
+      <text x="545" y="20" text-anchor="middle" font-weight="700" font-size="14">Empresa (SpA, EIRL, Ltda., S.A.)</text>
+      <line x1="360" y1="10" x2="360" y2="220" style="stroke:var(--line);stroke-width:1.5"/>
+      <!-- izquierda -->
+      <rect x="20" y="40" width="120" height="44" rx="10" style="fill:var(--stamp-soft);stroke:var(--stamp)"/>
+      <text x="80" y="60" text-anchor="middle" font-weight="700" font-size="12">Deuda del negocio</text>
+      <text x="80" y="76" text-anchor="middle" font-size="11" class="t-muted">banco, TGR, proveedor</text>
+      <rect x="40" y="150" width="270" height="56" rx="10" style="fill:var(--paper);stroke:var(--line)"/>
+      <text x="175" y="173" text-anchor="middle" font-weight="700" font-size="13">Tus bienes = los del negocio</text>
+      <text x="175" y="192" text-anchor="middle" font-size="12" class="t-muted">casa · auto · ahorros · sueldo</text>
+      <path d="M100 84 L150 145" style="fill:none;stroke:var(--stamp);stroke-width:2.5" marker-end="url(#ar4)"/>
+      <text x="230" y="120" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--stamp)">te pueden cobrar todo</text>
+      <!-- derecha -->
+      <rect x="390" y="40" width="120" height="44" rx="10" style="fill:var(--stamp-soft);stroke:var(--stamp)"/>
+      <text x="450" y="60" text-anchor="middle" font-weight="700" font-size="12">Deuda del negocio</text>
+      <text x="450" y="76" text-anchor="middle" font-size="11" class="t-muted">banco, TGR, proveedor</text>
+      <rect x="540" y="40" width="160" height="44" rx="10" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+      <text x="620" y="60" text-anchor="middle" font-weight="700" font-size="12">Bienes de la empresa</text>
+      <text x="620" y="76" text-anchor="middle" font-size="11" class="t-muted">lo que aportaste</text>
+      <path d="M510 62 L536 62" style="fill:none;stroke:var(--stamp);stroke-width:2.5" marker-end="url(#ar4)"/>
+      <path d="M545 112 L695 112" style="stroke:var(--ok);stroke-width:6;stroke-linecap:round"/>
+      <text x="620" y="132" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--ok)">escudo: responsabilidad limitada</text>
+      <rect x="540" y="150" width="160" height="56" rx="10" style="fill:var(--ok-soft);stroke:var(--ok)"/>
+      <text x="620" y="173" text-anchor="middle" font-weight="700" font-size="13">Tus bienes personales</text>
+      <text x="620" y="192" text-anchor="middle" font-size="12" class="t-muted">protegidos ✓</text>
+    </svg>
+  </div>
+
+  <div class="note"><strong>El escudo tiene límites</strong>La responsabilidad limitada te protege, pero se rompe si <b>firmas como aval o codeudor</b> (los bancos casi siempre lo piden a una empresa nueva para darle crédito), si <b>mezclas tu plata con la de la empresa</b>, o si hay fraude. Y las deudas personales que ya tengas siguen siendo tuyas. Por eso, aunque tengas empresa, usa siempre su cuenta bancaria y su RUT para todo lo del negocio.</div>
+
+  <h3 style="margin-top:22px">Las cinco opciones, una por una</h3>
+
+  <div class="card" style="margin-top:12px">
+    <span class="badge" style="background:var(--stamp)">Sin escudo</span>
+    <h3>Persona natural con giro (tu RUT)</h3>
+    <p><b>Qué es:</b> no se crea ninguna empresa. Tú mismo, con tu RUT personal, haces inicio de actividades y vendes.</p>
+    <div class="grid2" style="margin:8px 0">
+      <ul class="pros"><li>Un solo trámite y listo en el día.</li><li>Cero costo y cero papeles de constitución.</li><li>Sirve para probar si una idea vende.</li></ul>
+      <ul class="cons"><li><b>Responsabilidad ilimitada:</b> respondes con todos tus bienes por las deudas del negocio, incluidas las de impuestos que cobra la TGR (Tesorería).</li><li>Tu plata y la del negocio se mezclan.</li><li>No puedes sumar socios: tendrías que crear una empresa igual.</li><li>Se ve menos serio frente a cadenas de restaurantes.</li></ul>
+    </div>
+    <p style="margin:0"><b>Ejemplo:</b> un diseñador que vende logos con IVA, o alguien que parte vendiendo por Instagram para ver si funciona.</p>
+  </div>
+
+  <div class="card pick" style="margin-top:12px">
+    <span class="badge">La que te conviene</span>
+    <h3>SpA · Sociedad por Acciones</h3>
+    <p><b>Qué es:</b> la empresa más usada hoy por emprendedores en Chile (Ley 20.190). El capital se divide en <b>acciones</b>, y quien tiene acciones es dueño en esa proporción. Puede tener <b>un solo accionista</b> o muchos, y las reglas internas las escribes tú en el estatuto.</p>
+    <div class="grid2" style="margin:8px 0">
+      <ul class="pros"><li>Se crea <b>gratis</b> y online en el Registro de Empresas y Sociedades, con tu Clave Única.</li><li>Puedes ser el único dueño y después sumar socios.</li><li><b>Sumar socios o inversionistas es fácil:</b> solo les vendes o emites acciones, sin tener que reescribir toda la sociedad.</li><li>Puedes ofrecer acciones a un programador o vendedor clave como incentivo.</li><li>Es la forma que esperan las incubadoras, CORFO, aceleradoras e inversionistas.</li><li>Si los dueños son personas, puede usar el régimen Pro Pyme Transparente.</li></ul>
+      <ul class="cons"><li>Hay que llevar contabilidad y un libro de accionistas (lo hace tu contador).</li><li>Si el estatuto queda mal escrito (por ejemplo, sin reglas sobre quién puede comprar acciones), un socio podría vender a un desconocido.</li><li>Necesita su propia cuenta bancaria.</li></ul>
+    </div>
+    <p style="margin:0"><b>Ejemplo:</b> una app con dos fundadores, una agencia digital, una startup que quiere postular a CORFO. <b>Platovi SpA.</b></p>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <span class="badge" style="background:var(--muted)">Para un solo dueño que no crecerá en socios</span>
+    <h3>EIRL · Empresa Individual de Responsabilidad Limitada</h3>
+    <p><b>Qué es:</b> una empresa de <b>un solo dueño</b>, que tiene que ser una persona natural (Ley 19.857). Te da el mismo escudo que una sociedad. Su nombre lleva tu nombre y termina en "EIRL" (por ejemplo, "Jonathan Pérez Software EIRL").</p>
+    <div class="grid2" style="margin:8px 0">
+      <ul class="pros"><li>Simple y también gratis en el Registro de Empresas.</li><li>Responsabilidad limitada para una persona sola.</li><li>Puede ayudarte a pedir la <b>patente MEF</b> (Microempresa Familiar) si trabajas desde tu casa, que es más barata y fácil. Depende de cada municipalidad. <span class="contador">Confirmar con contador</span></li></ul>
+      <ul class="cons"><li><b>No puede tener socios.</b> Para sumar uno hay que transformarla en sociedad, con más trámites.</li><li>No sirve para recibir inversionistas.</li><li>El nombre queda atado al tuyo.</li></ul>
+    </div>
+    <p style="margin:0"><b>Ejemplo:</b> una peluquera que atiende en su casa, un gásfiter, una kinesióloga con consulta propia.</p>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <span class="badge" style="background:var(--muted)">Para familias y socios de confianza</span>
+    <h3>Ltda. · Sociedad de Responsabilidad Limitada</h3>
+    <p><b>Qué es:</b> la sociedad "clásica" chilena (Ley 3.918, de 1923). Necesita <b>entre 2 y 50 socios</b>. Cada uno responde solo hasta lo que aportó. La regla clave: para casi cualquier cambio importante (entrar un socio nuevo, vender tu parte, cambiar el estatuto) se necesita el <b>acuerdo del 100 % de los socios</b>.</p>
+    <div class="grid2" style="margin:8px 0">
+      <ul class="pros"><li>El "candado": nadie puede meter a un tercero sin que todos estén de acuerdo.</li><li>Ideal para negocios familiares donde quieren que la empresa siga "en la familia".</li><li>Se puede crear gratis en el Registro de Empresas.</li></ul>
+      <ul class="cons"><li><b>No puedes formarla solo:</b> mínimo 2 socios.</li><li>El mismo candado es rígido: si un socio no quiere firmar, todo se traba.</li><li>Recibir un inversionista es lento y requiere modificar la sociedad.</li></ul>
+    </div>
+    <p style="margin:0"><b>Ejemplo:</b> una panadería de tres hermanos, un restaurante de un matrimonio, una constructora familiar.</p>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <span class="badge" style="background:var(--stamp)">No para partir</span>
+    <h3>S.A. · Sociedad Anónima</h3>
+    <p><b>Qué es:</b> la forma de las empresas grandes (Ley 18.046). Puede ser <b>abierta</b> (sus acciones se transan en la Bolsa y la fiscaliza la CMF) o <b>cerrada</b>. Exige un <b>directorio</b> (en las cerradas, de al menos 3 personas), juntas de accionistas formales y más reglas de administración.</p>
+    <div class="grid2" style="margin:8px 0">
+      <ul class="pros"><li>Pensada para muchos accionistas y mucho capital.</li><li>La única que puede salir a la Bolsa (si es abierta).</li><li>Reglas muy claras para gobernar empresas grandes.</li></ul>
+      <ul class="cons"><li>Mucha pega administrativa: directorio, actas, juntas, publicaciones.</li><li>Más cara de mantener (abogado, contador, a veces auditores).</li><li>Todo lo que te sirve de ella, la SpA ya lo hace más simple.</li></ul>
+    </div>
+    <p style="margin:0"><b>Ejemplo:</b> bancos, aerolíneas, cadenas de supermercados, empresas que cotizan en la Bolsa de Santiago.</p>
+  </div>
+
+  <h3 style="margin-top:22px">Comparación lado a lado</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th></th><th>Persona natural</th><th>SpA</th><th>EIRL</th><th>Ltda.</th><th>S.A.</th></tr></thead>
+    <tbody>
+      <tr><td><b>¿Te protege tus bienes?</b></td><td>✕ No</td><td>✓ Sí</td><td>✓ Sí</td><td>✓ Sí</td><td>✓ Sí</td></tr>
+      <tr><td><b>Dueños</b></td><td>Solo tú</td><td>1 o más</td><td>Solo 1 (persona)</td><td>2 a 50</td><td>Varios</td></tr>
+      <tr><td><b>Crearla</b></td><td>Solo inicio de actividades</td><td>Gratis online</td><td>Gratis online</td><td>Gratis online</td><td>Más compleja</td></tr>
+      <tr><td><b>Sumar un socio</b></td><td>Imposible</td><td>Fácil (acciones)</td><td>Transformarla</td><td>Acuerdo del 100 %</td><td>Formal (acciones)</td></tr>
+      <tr><td><b>Recibir inversionistas</b></td><td>✕</td><td>✓ Lo más fácil</td><td>✕</td><td>Difícil</td><td>✓ (grandes)</td></tr>
+      <tr><td><b>Trabajo de administración</b></td><td>Bajo</td><td>Bajo a medio</td><td>Bajo</td><td>Medio</td><td>Alto</td></tr>
+      <tr><td><b>Pro Pyme Transparente</b></td><td>✓</td><td>✓ (dueños personas)</td><td>✓</td><td>✓ (dueños personas)</td><td>No suele aplicar</td></tr>
+      <tr><td><b>Ideal para</b></td><td>Probar una idea</td><td>Startups y software</td><td>Oficio de una persona</td><td>Negocio familiar</td><td>Empresas grandes</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 style="margin-top:22px">Aplicado a Platovi</h3>
+  <div class="diagram" role="img" aria-label="Árbol para Platovi: si quieres proteger tus bienes, descartas persona natural. Si quizás sumas socios o inversionistas, descartas EIRL. Si partes solo, descartas Ltda. Si eres pyme, descartas S.A. Resultado: SpA.">
+    <svg viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>
+      <g font-size="13">
+        <rect x="20" y="14" width="380" height="40" rx="8" style="fill:var(--paper);stroke:var(--line)"/><text x="210" y="39" text-anchor="middle">¿Quieres proteger tu casa y tus ahorros?  <tspan font-weight="700" style="fill:var(--ok)">Sí</tspan></text>
+        <rect x="470" y="14" width="230" height="40" rx="8" style="fill:var(--stamp-soft);stroke:var(--stamp)"/><text x="585" y="39" text-anchor="middle">✕ Persona natural</text>
+        <path d="M400 34 L466 34" style="stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 3" marker-end="url(#ar5)"/>
+        <path d="M210 54 L210 72" style="stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar5)"/>
+        <rect x="20" y="76" width="380" height="40" rx="8" style="fill:var(--paper);stroke:var(--line)"/><text x="210" y="101" text-anchor="middle">¿Podrías sumar un socio o inversionista?  <tspan font-weight="700" style="fill:var(--ok)">Quizás</tspan></text>
+        <rect x="470" y="76" width="230" height="40" rx="8" style="fill:var(--stamp-soft);stroke:var(--stamp)"/><text x="585" y="101" text-anchor="middle">✕ EIRL</text>
+        <path d="M400 96 L466 96" style="stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 3" marker-end="url(#ar5)"/>
+        <path d="M210 116 L210 134" style="stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar5)"/>
+        <rect x="20" y="138" width="380" height="40" rx="8" style="fill:var(--paper);stroke:var(--line)"/><text x="210" y="163" text-anchor="middle">¿Partes solo, sin socio hoy?  <tspan font-weight="700" style="fill:var(--ok)">Sí</tspan></text>
+        <rect x="470" y="138" width="230" height="40" rx="8" style="fill:var(--stamp-soft);stroke:var(--stamp)"/><text x="585" y="163" text-anchor="middle">✕ Ltda. (pide 2 socios)</text>
+        <path d="M400 158 L466 158" style="stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 3" marker-end="url(#ar5)"/>
+        <path d="M210 178 L210 196" style="stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar5)"/>
+        <rect x="20" y="200" width="380" height="40" rx="8" style="fill:var(--paper);stroke:var(--line)"/><text x="210" y="225" text-anchor="middle">¿Eres una pyme que recién parte?  <tspan font-weight="700" style="fill:var(--ok)">Sí</tspan></text>
+        <rect x="470" y="200" width="230" height="40" rx="8" style="fill:var(--stamp-soft);stroke:var(--stamp)"/><text x="585" y="225" text-anchor="middle">✕ S.A.</text>
+        <path d="M400 220 L466 220" style="stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 3" marker-end="url(#ar5)"/>
+        <path d="M210 240 L210 254" style="stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar5)"/>
+        <rect x="90" y="258" width="240" height="38" rx="19" style="fill:var(--ok-soft);stroke:var(--ok);stroke-width:2"/><text x="210" y="282" text-anchor="middle" font-weight="700" font-size="15">✓ Platovi SpA</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="grid2">
+    <div class="card pick"><h3>Por qué SpA para Platovi</h3><ul>
+      <li>Vas a firmar contratos con muchos restaurantes y procesar pagos: si algo sale mal (un reclamo, una deuda con un proveedor, un error tributario), tu patrimonio queda aparte.</li>
+      <li>Hoy partes solo, y la SpA lo permite.</li>
+      <li>Si mañana sumas un programador, un vendedor socio o un inversionista, les das acciones sin rehacer la empresa.</li>
+      <li>Si algún día quieres vender Platovi, se venden las acciones.</li>
+      <li>Te abre puertas a fondos CORFO y aceleradoras, que suelen pedir SpA.</li>
+      <li>Cabe en Pro Pyme Transparente, el régimen más simple.</li>
+    </ul></div>
+    <div class="card"><h3>Lo que no te conviene</h3><ul>
+      <li><b>Persona natural:</b> solo como prueba de pocas semanas. Si ya tienes clientes y pagos, el riesgo no vale la pena.</li>
+      <li><b>EIRL:</b> te protege, pero te cierra la puerta a socios e inversionistas. La patente MEF tampoco es clave para un software.</li>
+      <li><b>Ltda.:</b> necesitas otro socio desde el primer día y cada cambio pide la firma de todos.</li>
+      <li><b>S.A.:</b> demasiada administración para una pyme. Si Platovi crece mucho, una SpA se puede transformar después.</li>
+    </ul></div>
+  </div>
+
+  <h3 style="margin-top:18px">Tres consejos al crear Platovi SpA</h3>
+  <ol class="steps">
+    <li><div><h3>No agregues 20 giros "por si acaso"</h3><p>Elige 2 o 3 códigos que de verdad usas (programación, plataformas de software, procesamiento de datos). Muchos giros sin relación pueden llamar la atención del fiscalizador y complicar la patente municipal. Siempre puedes agregar uno después.</p></div></li>
+    <li><div><h3>Escribe bien el estatuto</h3><p>Aunque seas el único accionista, deja reglas para el futuro: que los socios tengan preferencia para comprar acciones antes que un tercero, quién administra y qué pasa si un socio se va. Que lo lea tu contador o un abogado.</p></div></li>
+    <li><div><h3>Registra la marca Platovi en INAPI</h3><p>El nombre de la SpA no protege tu marca. Para que nadie más use "Platovi" en software, se registra aparte en INAPI (se paga por clase, aprox. entre $100.000 y $200.000 en total por clase). <span class="contador">Confirmar con contador</span></p></div></li>
+  </ol>
+</section>
+
+<!-- 2C -->
+<section id="tu-plata">
+  <span class="secnum">2 · C</span>
+  <h2>Tu plata y la empresa: capital, cuenta, aval y cómo sacar tu ganancia</h2>
+  <p>Estas son las dudas más comunes al crear la SpA, respondidas para el caso de Platovi.</p>
+
+  <h3 style="margin-top:14px">¿Necesito capital inicial para crear la SpA?</h3>
+  <p><b>No.</b> Crearla en el Registro de Empresas es gratis y la ley no exige un capital mínimo. Lo que haces es <b>declarar un capital en el estatuto</b>, que es lo que te comprometes a aportar.</p>
+  <div class="grid2">
+    <div class="card"><h3>Cómo funciona el capital</h3><ul><li><b>Puede ser bajo:</b> muchos ponen entre $500.000 y $1.000.000.</li><li><b>No lo necesitas el primer día:</b> el estatuto fija un plazo para pagarlo (por ejemplo, 1 a 3 años) y puedes aportarlo de a poco.</li><li><b>Puede ser en plata o en bienes:</b> tu computador, por ejemplo, o incluso el software. <span class="contador">Confirmar con contador</span></li></ul></div>
+    <div class="card"><h3>Ojo con un capital alto</h3><p>La <b>patente municipal</b> se calcula según el capital de la empresa. Con un capital bajo normalmente pagas la patente mínima, aprox. 1 UTM al año (unos $70.000) en dos cuotas. Depende de la comuna.</p><p style="margin:0"><b>Para Platovi:</b> $500.000 a $1.000.000, pagado en 1 a 3 años.</p></div>
+  </div>
+
+  <h3 style="margin-top:18px">¿El banco siempre me pedirá firmar como aval?</h3>
+  <p><b>No.</b> El aval se pide <b>solo cuando la empresa pide plata o algo a crédito</b>:</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Situación</th><th>¿Te piden aval?</th></tr></thead>
+    <tbody>
+      <tr><td>Abrir una cuenta vista o cuenta pyme para recibir pagos</td><td>✓ Normalmente no</td></tr>
+      <tr><td>Abrir una cuenta en Mercado Pago a nombre de la empresa</td><td>✓ No</td></tr>
+      <tr><td>Crédito, préstamo o línea de crédito</td><td>✕ Casi siempre sí</td></tr>
+      <tr><td>Tarjeta de crédito de la empresa</td><td>✕ Normalmente sí</td></tr>
+      <tr><td>Cuenta corriente con línea de crédito incluida</td><td>✕ Normalmente sí</td></tr>
+      <tr><td>Leasing de auto o equipos</td><td>✕ Normalmente sí</td></tr>
+      <tr><td>Arrendar una oficina o comprar a crédito a un proveedor</td><td>Puede que sí</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note ok"><strong>En tu caso</strong>Platovi tiene costos bajos y los restaurantes pagan por adelantado, así que probablemente nunca necesites crédito. <b>Si nunca pides crédito, nunca firmas como aval, y el escudo de la SpA funciona completo.</b> Solo se rompe si mezclas tu plata con la de la empresa o si hay fraude (facturas falsas, esconder ventas).</div>
+
+  <h3 style="margin-top:18px">¿Necesito una cuenta bancaria para que me transfieran?</h3>
+  <p>Ninguna ley te obliga, pero <b>en la práctica sí, y a nombre de la empresa</b>. La plata que paga un restaurante es de la SpA, así que tiene que llegar a una cuenta con el RUT de la SpA. Si llega a tu cuenta personal, estás mezclando plata, y además tu contador no puede cuadrar cada factura con su pago.</p>
+  <div class="grid2">
+    <div class="card"><h3>Qué cuenta abrir</h3><ul><li>No necesitas cuenta corriente con línea de crédito.</li><li>Basta una <b>cuenta vista o cuenta pyme digital</b>, gratis o barata y sin aval.</li><li>La tienen varios bancos y fintech como <b>Mercado Pago</b>.</li><li>Te piden el RUT de la SpA, el estatuto y el inicio de actividades.</li></ul></div>
+    <div class="card"><h3>Mercado Pago a nombre de la empresa</h3><ul><li>Sí sirve y no rompe el escudo: lo importante es que esté <b>con el RUT de la SpA</b> y que la uses <b>solo para el negocio</b>.</li><li>Al crearla, elige la opción de cuenta para empresa.</li><li>Recibir transferencias normalmente es gratis; cobrar con tarjeta o link de pago tiene comisión (es un gasto deducible).</li><li>Si te ofrecen créditos y no los aceptas, nunca firmas aval.</li><li>Las condiciones cambian: revísalas en la app al abrirla.</li></ul></div>
+  </div>
+
+  <h3 style="margin-top:18px">¿Puedo usar la ganancia para mi casa, ropa, viajes o pañales?</h3>
+  <p><b>Sí.</b> Para eso es el negocio. La clave es el <b>camino de la plata</b>:</p>
+  <div class="diagram" role="img" aria-label="Camino correcto: el restaurante paga a la cuenta de la empresa, de ahí transfieres un retiro a tu cuenta personal y desde tu cuenta personal compras lo que quieras. Camino incorrecto: pagar gastos personales directo con la cuenta de la empresa.">
+    <svg viewBox="0 0 720 190" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ar6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--ok)"/></marker>
+        <marker id="ar7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--stamp)"/></marker>
+      </defs>
+      <g font-size="12">
+        <rect x="5" y="20" width="130" height="56" rx="10" style="fill:var(--paper);stroke:var(--line)"/><text x="70" y="44" text-anchor="middle" font-weight="700">Restaurante</text><text x="70" y="62" text-anchor="middle" class="t-muted">paga su plan</text>
+        <path d="M135 48 L178 48" style="stroke:var(--ok);stroke-width:2" marker-end="url(#ar6)"/>
+        <rect x="181" y="20" width="160" height="56" rx="10" style="fill:var(--accent-soft);stroke:var(--accent)"/><text x="261" y="44" text-anchor="middle" font-weight="700">Cuenta de la SpA</text><text x="261" y="62" text-anchor="middle" class="t-muted">guarda IVA + costos</text>
+        <path d="M341 48 L384 48" style="stroke:var(--ok);stroke-width:2" marker-end="url(#ar6)"/>
+        <text x="362" y="38" text-anchor="middle" font-size="11" font-weight="700" style="fill:var(--ok)">retiro</text>
+        <rect x="387" y="20" width="150" height="56" rx="10" style="fill:var(--paper);stroke:var(--line)"/><text x="462" y="44" text-anchor="middle" font-weight="700">Tu cuenta personal</text><text x="462" y="62" text-anchor="middle" class="t-muted">tu RUT</text>
+        <path d="M537 48 L580 48" style="stroke:var(--ok);stroke-width:2" marker-end="url(#ar6)"/>
+        <rect x="583" y="20" width="132" height="56" rx="10" style="fill:var(--ok-soft);stroke:var(--ok)"/><text x="649" y="44" text-anchor="middle" font-weight="700">Casa, ropa,</text><text x="649" y="62" text-anchor="middle" font-weight="700">viajes, pañales ✓</text>
+        <path d="M261 76 C261 150 600 150 640 84" style="fill:none;stroke:var(--stamp);stroke-width:2;stroke-dasharray:6 4" marker-end="url(#ar7)"/>
+        <text x="450" y="165" text-anchor="middle" font-weight="700" style="fill:var(--stamp)">✕ Pagar cosas personales directo con la cuenta o tarjeta de la empresa</text>
+        <text x="450" y="182" text-anchor="middle" class="t-muted">esto mezcla la plata y debilita el escudo</text>
+      </g>
+    </svg>
+  </div>
+
+  <p><b>No todo lo que entra es tuyo para sacar.</b> Ejemplo con 10 restaurantes en plan Pro (IVA incluido):</p>
+  <div class="tablewrap"><table>
+    <tbody>
+      <tr><td>Entra a la cuenta de la empresa (10 × $34.990)</td><td class="r">$349.900</td></tr>
+      <tr><td>IVA que debes guardar para el F29</td><td class="r">− $55.866</td></tr>
+      <tr><td>PPM aprox. (0,2 % de $294.034 netos)</td><td class="r">− $590</td></tr>
+      <tr><td>Costos del negocio (contador, hosting, etc., ejemplo)</td><td class="r">− $60.000</td></tr>
+      <tr><td><b>Te queda para sacar, aprox.</b></td><td class="r"><b>≈ $233.000</b></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="grid2">
+    <div class="card pick"><span class="badge">Lo más simple</span><h3>Retiro de utilidades</h3><p>Transfieres, por ejemplo, $200.000 a tu cuenta y el contador lo anota como retiro. En Pro Pyme Transparente esa ganancia se suma a tu declaración de renta de abril.</p><p style="margin:0">Con ganancias de unos $3 millones al año normalmente quedas bajo el tramo exento del impuesto personal (aprox. $10 millones al año): pagas $0 y hasta te devuelven los PPM. <span class="contador">Confirmar con contador</span></p></div>
+    <div class="card"><h3>Sueldo</h3><p>También se puede: la SpA te contrata y te paga un sueldo. Pero hay que hacer contrato y pagar cotizaciones (AFP, salud). Conviene más adelante, cuando ganes más.</p></div>
+  </div>
+  <div class="note"><strong>Consejo</strong>Antes de retirar, deja siempre un colchón en la cuenta de la empresa: <b>como mínimo el IVA del mes más un mes de costos.</b></div>
+</section>
+
+<!-- 3 -->
+<section id="tramite">
+  <span class="secnum">3</span>
+  <h2>El trámite en sii.cl: qué te van a preguntar</h2>
+  <p>En sii.cl entras a <b>Servicios online → RUT e Inicio de Actividades → Inicio de actividades</b>. Ten estas respuestas listas:</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Te piden</th><th>Qué es</th><th>Qué poner en tu caso</th></tr></thead>
+    <tbody>
+      <tr><td><b>Clave</b></td><td>Para entrar al SII.</td><td>Clave Tributaria del SII o Clave Única. Si es SpA, la empresa tiene su propia Clave Tributaria.</td></tr>
+      <tr><td><b>Domicilio</b></td><td>Dirección oficial del negocio.</td><td>Puede ser tu casa. Si arriendas, a veces piden contrato o una autorización del dueño.</td></tr>
+      <tr><td><b>Actividad económica (giro)</b></td><td>Un código de 6 dígitos que dice a qué te dedicas.</td><td>Algo del área informática, por ejemplo <span class="num">620100</span> "Actividades de programación informática" o <span class="num">631100</span> "Procesamiento de datos, hospedaje y actividades conexas". <span class="contador">Confirmar con contador</span></td></tr>
+      <tr><td><b>Categoría</b></td><td>Tipo de renta.</td><td><b>Primera categoría</b> (venta de servicios con IVA), no honorarios.</td></tr>
+      <tr><td><b>Afecto a IVA</b></td><td>Si tus ventas pagan IVA.</td><td><b>Sí.</b> Los servicios como el software por suscripción pagan IVA.</td></tr>
+      <tr><td><b>Régimen tributario</b></td><td>Cómo se calcula el impuesto a la renta.</td><td>Lo habitual para partir: <b>Pro Pyme Transparente</b> (14 D N°8). <span class="contador">Confirmar con contador</span></td></tr>
+      <tr><td><b>Capital inicial</b></td><td>Cuánto pones para empezar.</td><td>Puede ser un monto bajo. Influye en la patente municipal.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 style="margin-top:18px">¿Qué es el régimen Pro Pyme Transparente?</h3>
+  <div class="grid2">
+    <div class="card"><h3>Pro Pyme Transparente</h3><ul><li>La empresa <b>no paga</b> impuesto de primera categoría.</li><li>La utilidad pasa directo a tu declaración personal anual (Global Complementario).</li><li>Contabilidad simplificada: el SII te propone los registros.</li><li>Para pymes con ingresos promedio de hasta 75.000 UF al año y dueños personas naturales.</li></ul></div>
+    <div class="card"><h3>Pro Pyme General</h3><ul><li>La empresa paga impuesto de primera categoría (tasa rebajada pyme).</li><li>Sirve si quieres dejar utilidades dentro de la empresa para reinvertir.</li><li>Un poco más complejo.</li></ul></div>
+  </div>
+
+  <div class="note red"><strong>Dos cosas que muchos olvidan</strong>
+    <b>Patente municipal:</b> después del inicio de actividades, tu municipalidad te cobra una patente comercial (se paga en dos cuotas al año y depende del capital). Aunque trabajes desde la casa normalmente se pide. <span class="contador">Confirmar con contador</span><br>
+    <b>Autorización para facturar:</b> el SII puede pedir verificar tu domicilio o actividad antes de dejarte emitir facturas electrónicas. A veces es online con fotos o una videollamada.</div>
+</section>
+
+<!-- 4 -->
+<section id="iva">
+  <span class="secnum">4</span>
+  <h2>IVA: lo más importante para tus precios</h2>
+  <p>El <b>IVA</b> es un impuesto de <b class="num">19 %</b> que se suma a lo que vendes. Tú lo cobras, pero no es tuyo: se lo pasas al SII cada mes. Desde 2020 casi todos los servicios pagan IVA, y un software por suscripción también.</p>
+  <p>Tienes que decidir cómo muestras tus precios en la web. Cambia mucho cuánto te queda:</p>
+
+  <div class="seg" role="group" aria-label="Forma de mostrar el precio">
+    <button type="button" id="b-incl" aria-pressed="true">IVA incluido</button>
+    <button type="button" id="b-mas" aria-pressed="false">+ IVA</button>
+  </div>
+  <p id="modo-txt" style="margin-top:10px;color:var(--muted);font-size:.95rem"></p>
+  <div class="legend"><span><i style="background:var(--neto)"></i>Para ti (neto)</span><span><i style="background:var(--iva)"></i>Para el SII (IVA 19 %)</span></div>
+  <div class="bars" id="bars"></div>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th>Plan mensual</th><th class="r">Precio web</th><th class="r">Con IVA incluido:<br>te quedan</th><th class="r">Como "+ IVA":<br>paga el restaurante</th></tr></thead>
+    <tbody>
+      <tr><td>Carta</td><td class="r">$24.990</td><td class="r">$21.000</td><td class="r">$29.738</td></tr>
+      <tr><td>Pro</td><td class="r">$34.990</td><td class="r">$29.403</td><td class="r">$41.638</td></tr>
+      <tr><td>Grupo</td><td class="r">$54.990</td><td class="r">$46.210</td><td class="r">$65.438</td></tr>
+      <tr><td>Loyalty (por local)</td><td class="r">$19.990</td><td class="r">$16.798</td><td class="r">$23.788</td></tr>
+      <tr><td>Armado Básico (único)</td><td class="r">$19.990</td><td class="r">$16.798</td><td class="r">$23.788</td></tr>
+      <tr><td>Armado Completo (único)</td><td class="r">$29.990</td><td class="r">$25.202</td><td class="r">$35.688</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Cómo se calcula (fórmulas)</h3>
+  <div class="grid2">
+    <div class="card"><b>Si el precio incluye IVA</b><p class="num" style="margin:6px 0 0">neto = precio ÷ 1,19<br>IVA = precio − neto<br><span style="color:var(--muted)">24.990 ÷ 1,19 = 21.000 → IVA 3.990</span></p></div>
+    <div class="card"><b>Si el precio es + IVA</b><p class="num" style="margin:6px 0 0">IVA = precio × 0,19<br>total = precio × 1,19<br><span style="color:var(--muted)">24.990 × 1,19 = 29.738</span></p></div>
+  </div>
+
+  <div class="calc" aria-labelledby="calc-t">
+    <h3 id="calc-t">Calculadora rápida</h3>
+    <div><label for="c-precio">Precio en pesos chilenos</label><br><input id="c-precio" type="text" inputmode="numeric" value="24.990"></div>
+    <div class="calcout">
+      <div><small>Si es IVA incluido, te quedan</small><b id="o-neto">$21.000</b></div>
+      <div><small>IVA dentro del precio</small><b id="o-iva1">$3.990</b></div>
+      <div><small>Si es + IVA, paga el cliente</small><b id="o-total">$29.738</b></div>
+    </div>
+  </div>
+
+  <div class="note ok"><strong>¿Cuál conviene?</strong>A los restaurantes (que son empresas) lo normal es mostrarles el precio <b>"+ IVA"</b>: ellos recuperan ese IVA en su propia declaración, así que para ellos el costo real es el neto. Si publicas "IVA incluido", tú absorbes el 19 %. Esta decisión sigue pendiente en tu lista; cuando la tomes se ajustan la web y los planes.</div>
+</section>
+
+<!-- 5 -->
+<section id="boleta-factura">
+  <span class="secnum">5</span>
+  <h2>¿Boleta o factura?</h2>
+  <p>Depende de quién te compra. Sigue este árbol cada vez que alguien te paga:</p>
+  <div class="diagram" role="img" aria-label="Árbol de decisión: si el cliente es una empresa con RUT y giro y pide factura, emites factura electrónica. Si es una persona sin empresa o no pide factura, emites boleta electrónica. Nunca boleta de honorarios.">
+    <svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>
+      <rect x="250" y="10" width="220" height="44" rx="10" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+      <text x="360" y="37" text-anchor="middle" font-weight="700" font-size="14">Un cliente te paga</text>
+      <path d="M360 54 L360 80" style="fill:none;stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar2)"/>
+      <polygon points="360,84 520,118 360,152 200,118" style="fill:var(--paper);stroke:var(--ink);stroke-width:1.4"/>
+      <text x="360" y="114" text-anchor="middle" font-weight="700" font-size="13">¿Es empresa y te da</text>
+      <text x="360" y="131" text-anchor="middle" font-weight="700" font-size="13">RUT, razón social y giro?</text>
+      <path d="M200 118 L120 118 L120 180" style="fill:none;stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar2)"/>
+      <text x="150" y="110" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--ok)">Sí</text>
+      <path d="M520 118 L600 118 L600 180" style="fill:none;stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar2)"/>
+      <text x="570" y="110" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--stamp)">No</text>
+      <rect x="20" y="184" width="200" height="62" rx="10" style="fill:var(--ok-soft);stroke:var(--ok)"/>
+      <text x="120" y="208" text-anchor="middle" font-weight="700" font-size="14">Factura electrónica</text>
+      <text x="120" y="227" text-anchor="middle" font-size="12" class="t-muted">la mayoría de tus ventas</text>
+      <rect x="500" y="184" width="200" height="62" rx="10" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+      <text x="600" y="208" text-anchor="middle" font-weight="700" font-size="14">Boleta electrónica</text>
+      <text x="600" y="227" text-anchor="middle" font-size="12" class="t-muted">persona sin empresa</text>
+      <rect x="262" y="190" width="196" height="50" rx="10" style="fill:var(--stamp-soft);stroke:var(--stamp);stroke-dasharray:5 4"/>
+      <text x="360" y="211" text-anchor="middle" font-weight="700" font-size="13" style="fill:var(--stamp)">✕ Boleta de honorarios</text>
+      <text x="360" y="228" text-anchor="middle" font-size="11" class="t-muted">no corresponde a Platovi</text>
+    </svg>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><h3>Factura electrónica</h3><ul><li>Para empresas: restaurantes, cafés, cadenas.</li><li>Necesitas su <b>RUT, razón social, giro y dirección</b>.</li><li>Muestra neto + IVA por separado.</li><li>El restaurante la usa para recuperar el IVA, por eso casi todos la van a pedir.</li></ul></div>
+    <div class="card"><h3>Boleta electrónica</h3><ul><li>Para una persona sin empresa, o si el cliente no pide factura.</li><li>El IVA va incluido en el total.</li><li>Igual declaras ese IVA cada mes.</li><li>Es obligatoria desde 2021 aunque el cliente no la pida.</li></ul></div>
+  </div>
+  <div class="note red"><strong>No confundir con boleta de honorarios</strong>La boleta de honorarios es para trabajos personales sin IVA (una asesoría, una clase). Lo tuyo es la <b>venta de un servicio con IVA</b>, así que emites factura o boleta electrónica.</div>
+
+  <h3 style="margin-top:16px">Así se ve una factura del plan Carta (ejemplo ilustrativo)</h3>
+  <div class="doc" aria-label="Ejemplo ilustrativo de factura">
+    <div class="box">R.U.T.: 77.XXX.XXX-X<br>FACTURA ELECTRÓNICA<br>N° 1</div>
+    <div><b>Tu Empresa SpA</b> · Giro: Servicios de software</div>
+    <hr>
+    <div>Cliente: Aroma Café Ltda. · RUT 76.XXX.XXX-X</div>
+    <div>Giro: Restaurante · Fecha: 01-12-2026</div>
+    <hr>
+    <div class="row"><span>Plan Carta Platovi, diciembre</span><span>21.000</span></div>
+    <hr>
+    <div class="row"><span>Monto neto</span><span>$21.000</span></div>
+    <div class="row"><span>IVA 19 %</span><span>$3.990</span></div>
+    <div class="row"><b>Total</b><b>$24.990</b></div>
+  </div>
+  <p style="font-size:.9rem;color:var(--muted)">Con precio "IVA incluido". Si publicas "+ IVA", el neto sería $24.990, el IVA $4.748 y el total $29.738.</p>
+</section>
+
+<!-- 6 -->
+<section id="emitir">
+  <span class="secnum">6</span>
+  <h2>¿Con qué se emiten las boletas y facturas?</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Opción</th><th>Costo</th><th>Cómo funciona</th><th>Cuándo te sirve</th></tr></thead>
+    <tbody>
+      <tr><td><b>Sistema gratuito del SII</b><br><small>facturación Mipyme y boleta en web o app</small></td><td>Gratis</td><td>Entras a sii.cl y llenas cada documento a mano, uno por uno.</td><td>Al partir, con pocos clientes.</td></tr>
+      <tr><td><b>Proveedor pagado</b><br><small>OpenFactura, Bsale, Haulmer, otros</small></td><td>Aprox. $10.000 a $20.000 al mes</td><td>Se conecta a Platovi por API: la factura sale <b>sola</b> cada vez que un restaurante paga y llega a su correo.</td><td>Desde unos 10 clientes, o cuando cobres automático.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="diagram" role="img" aria-label="Flujo automático: el restaurante paga en Platovi, Mercado Pago o Flow confirma el pago, Platovi pide la factura al proveedor, el proveedor la timbra en el SII y llega al correo del restaurante.">
+    <svg viewBox="0 0 720 120" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>
+      <g font-size="12">
+        <rect x="5" y="30" width="120" height="56" rx="10" style="fill:var(--paper);stroke:var(--line)"/><text x="65" y="54" text-anchor="middle" font-weight="700">Restaurante</text><text x="65" y="72" text-anchor="middle" class="t-muted">paga su plan</text>
+        <path d="M125 58 L150 58" style="stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar3)"/>
+        <rect x="153" y="30" width="120" height="56" rx="10" style="fill:var(--paper);stroke:var(--line)"/><text x="213" y="54" text-anchor="middle" font-weight="700">Mercado Pago</text><text x="213" y="72" text-anchor="middle" class="t-muted">o Flow confirma</text>
+        <path d="M273 58 L298 58" style="stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar3)"/>
+        <rect x="301" y="30" width="120" height="56" rx="10" style="fill:var(--accent-soft);stroke:var(--accent)"/><text x="361" y="54" text-anchor="middle" font-weight="700">Platovi</text><text x="361" y="72" text-anchor="middle" class="t-muted">pide la factura</text>
+        <path d="M421 58 L446 58" style="stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar3)"/>
+        <rect x="449" y="30" width="120" height="56" rx="10" style="fill:var(--paper);stroke:var(--line)"/><text x="509" y="54" text-anchor="middle" font-weight="700">Proveedor</text><text x="509" y="72" text-anchor="middle" class="t-muted">la timbra en el SII</text>
+        <path d="M569 58 L594 58" style="stroke:var(--muted);stroke-width:1.6" marker-end="url(#ar3)"/>
+        <rect x="597" y="30" width="118" height="56" rx="10" style="fill:var(--ok-soft);stroke:var(--ok)"/><text x="656" y="54" text-anchor="middle" font-weight="700">Correo ✓</text><text x="656" y="72" text-anchor="middle" class="t-muted">del restaurante</text>
+      </g>
+    </svg>
+  </div>
+  <div class="note"><strong>También necesitas</strong>Para emitir facturas electrónicas (incluso con el sistema gratuito) se usa tu <b>certificado digital o firma electrónica</b>. Los proveedores pagados suelen ayudarte a sacarla; cuesta aprox. $15.000 a $25.000 al año. <span class="contador">Confirmar con contador</span></div>
+</section>
+
+<!-- 7 -->
+<section id="calendario">
+  <span class="secnum">7</span>
+  <h2>Lo que tienes que hacer después: calendario</h2>
+  <p>Una vez que haces el inicio de actividades, el SII espera que declares <b>todos los meses</b>, vendas o no.</p>
+
+  <h3>Cada mes</h3>
+  <div class="diagram" role="img" aria-label="Línea del mes: del 1 al 31 vendes y emites documentos; el día 20 del mes siguiente es el plazo del Formulario 29 por internet.">
+    <svg viewBox="0 0 720 150" xmlns="http://www.w3.org/2000/svg">
+      <text x="20" y="22" font-size="12" font-weight="700" class="t-muted">NOVIEMBRE</text>
+      <text x="380" y="22" font-size="12" font-weight="700" class="t-muted">DICIEMBRE</text>
+      <rect x="20" y="34" width="340" height="30" rx="6" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+      <text x="190" y="54" text-anchor="middle" font-size="13" font-weight="700">Vendes y emites boletas/facturas</text>
+      <rect x="380" y="34" width="320" height="30" rx="6" style="fill:var(--paper);stroke:var(--line)"/>
+      <!-- day 20 marker: x = 380 + (19/30)*320 = 583 -->
+      <rect x="380" y="34" width="203" height="30" rx="6" style="fill:var(--warn-soft);stroke:none"/>
+      <text x="481" y="54" text-anchor="middle" font-size="12">revisas compras y ventas</text>
+      <line x1="583" y1="28" x2="583" y2="80" style="stroke:var(--stamp);stroke-width:3"/>
+      <circle cx="583" cy="90" r="16" style="fill:var(--stamp)"/>
+      <text x="583" y="95" text-anchor="middle" font-size="13" font-weight="700" class="t-mono" style="fill:var(--paper)">20</text>
+      <text x="583" y="124" text-anchor="middle" font-size="13" font-weight="700" style="fill:var(--stamp)">Plazo F29</text>
+      <text x="583" y="141" text-anchor="middle" font-size="11" class="t-muted">declarar y pagar IVA + PPM de noviembre</text>
+      <text x="20" y="84" font-size="11" class="t-muted t-mono">1</text><text x="350" y="84" font-size="11" class="t-muted t-mono">30</text>
+      <text x="380" y="84" font-size="11" class="t-muted t-mono">1</text>
+    </svg>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><h3>Formulario 29 (F29)</h3><p>La declaración mensual de IVA. Plazo: <b>día 20</b> del mes siguiente si declaras por internet (si cae fin de semana o feriado, pasa al día hábil siguiente).</p><p style="margin:0"><b>Aunque no vendas nada, se declara en cero.</b> Si no, te multan.</p></div>
+    <div class="card"><h3>PPM (Pago Provisional Mensual)</h3><p>Un pequeño adelanto del impuesto anual, que va en el mismo F29. Es un porcentaje de lo vendido sin IVA; en Pro Pyme suele partir cerca del <b>0,2 % a 0,25 %</b>. <span class="contador">Confirmar con contador</span></p><p style="margin:0">En abril se descuenta de tu impuesto anual.</p></div>
+  </div>
+
+  <h3>Ejemplo de un mes con 10 restaurantes en plan Carta (IVA incluido)</h3>
+  <div class="tablewrap"><table>
+    <tbody>
+      <tr><td>Ventas del mes (10 × $24.990)</td><td class="r">$249.900</td></tr>
+      <tr><td>IVA de tus ventas (débito fiscal)</td><td class="r">$39.900</td></tr>
+      <tr><td>Menos IVA de compras con factura chilena (ej. plan de internet de la empresa $29.990)</td><td class="r">− $4.788</td></tr>
+      <tr><td><b>IVA a pagar</b></td><td class="r"><b>$35.112</b></td></tr>
+      <tr><td>PPM aprox. 0,2 % de $210.000 netos</td><td class="r">$420</td></tr>
+      <tr><td><b>Total F29 a pagar ese mes</b></td><td class="r"><b>$35.532</b></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Cada año</h3>
+  <div class="diagram" role="img" aria-label="Línea anual: F29 todos los meses; en abril el Formulario 22 de renta anual.">
+    <svg viewBox="0 0 720 110" xmlns="http://www.w3.org/2000/svg">
+      <g>
+        <rect x="20" y="30" width="54" height="30" rx="5" style="fill:var(--warn-soft);stroke:var(--warn)"/><text x="47" y="50" text-anchor="middle" font-size="12">Ene</text>
+        <rect x="76" y="30" width="54" height="30" rx="5" style="fill:var(--warn-soft);stroke:var(--warn)"/><text x="103" y="50" text-anchor="middle" font-size="12">Feb</text>
+        <rect x="132" y="30" width="54" height="30" rx="5" style="fill:var(--warn-soft);stroke:var(--warn)"/><text x="159" y="50" text-anchor="middle" font-size="12">Mar</text>
+        <rect x="188" y="30" width="54" height="30" rx="5" style="fill:var(--stamp);stroke:var(--stamp)"/><text x="215" y="50" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--paper)">Abr</text>
+        <rect x="244" y="30" width="54" height="30" rx="5" style="fill:var(--warn-soft);stroke:var(--warn)"/><text x="271" y="50" text-anchor="middle" font-size="12">May</text>
+        <rect x="300" y="30" width="54" height="30" rx="5" style="fill:var(--warn-soft);stroke:var(--warn)"/><text x="327" y="50" text-anchor="middle" font-size="12">Jun</text>
+        <rect x="356" y="30" width="54" height="30" rx="5" style="fill:var(--warn-soft);stroke:var(--warn)"/><text x="383" y="50" text-anchor="middle" font-size="12">Jul</text>
+        <rect x="412" y="30" width="54" height="30" rx="5" style="fill:var(--warn-soft);stroke:var(--warn)"/><text x="439" y="50" text-anchor="middle" font-size="12">Ago</text>
+        <rect x="468" y="30" width="54" height="30" rx="5" style="fill:var(--warn-soft);stroke:var(--warn)"/><text x="495" y="50" text-anchor="middle" font-size="12">Sep</text>
+        <rect x="524" y="30" width="54" height="30" rx="5" style="fill:var(--warn-soft);stroke:var(--warn)"/><text x="551" y="50" text-anchor="middle" font-size="12">Oct</text>
+        <rect x="580" y="30" width="54" height="30" rx="5" style="fill:var(--warn-soft);stroke:var(--warn)"/><text x="607" y="50" text-anchor="middle" font-size="12">Nov</text>
+        <rect x="636" y="30" width="54" height="30" rx="5" style="fill:var(--warn-soft);stroke:var(--warn)"/><text x="663" y="50" text-anchor="middle" font-size="12">Dic</text>
+      </g>
+      <text x="20" y="20" font-size="12" class="t-muted">Todos los meses: F29</text>
+      <text x="215" y="82" text-anchor="middle" font-size="13" font-weight="700" style="fill:var(--stamp)">Abril: F22</text>
+      <text x="215" y="99" text-anchor="middle" font-size="11" class="t-muted">renta anual + F29</text>
+      <text x="420" y="88" font-size="11" class="t-muted">Patente municipal: 2 cuotas al año (según tu comuna)</text>
+    </svg>
+  </div>
+  <div class="card"><h3>Formulario 22 (F22): la renta anual</h3><p style="margin:0">Se presenta en <b>abril</b> de cada año, por lo ganado el año anterior. El SII entrega una propuesta. En Pro Pyme Transparente, la utilidad del negocio se suma a tu renta personal y ahí se calcula el impuesto; los PPM que pagaste en el año se descuentan, y si pagaste de más te devuelven.</p></div>
+</section>
+
+<!-- 8 -->
+<section id="gastos">
+  <span class="secnum">8</span>
+  <h2>Gastos que te ayudan a pagar menos</h2>
+  <p>Todo lo que pagas <b>para el negocio</b> puede rebajarse como gasto, y si viene con <b>factura chilena con IVA</b>, ese IVA se resta del que debes pagar cada mes. Pide siempre factura a nombre del negocio (RUT de la SpA o el tuyo).</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Gasto</th><th>¿Cuenta como gasto?</th><th>¿Te descuenta IVA?</th></tr></thead>
+    <tbody>
+      <tr><td>Computador, monitor, celular (con factura)</td><td>✓ Sí</td><td>✓ Sí</td></tr>
+      <tr><td>Internet y plan de celular (con factura)</td><td>✓ Sí</td><td>✓ Sí</td></tr>
+      <tr><td>Dominio platovi.cl (NIC Chile)</td><td>✓ Sí</td><td>Depende si emiten factura</td></tr>
+      <tr><td>Contador, proveedor de facturas, certificado digital</td><td>✓ Sí</td><td>✓ Sí, si te facturan con IVA</td></tr>
+      <tr><td>Publicidad local, impresión de QR, diseño</td><td>✓ Sí</td><td>✓ Sí</td></tr>
+      <tr><td>Vercel, Supabase, Resend, Claude, GoDaddy (extranjeros)</td><td>✓ Sí</td><td>Normalmente no <span class="contador">Confirmar con contador</span></td></tr>
+      <tr><td>Publicidad en Instagram/Meta o Google</td><td>✓ Sí</td><td>Normalmente no <span class="contador">Confirmar con contador</span></td></tr>
+      <tr><td>Gastos personales (supermercado, ropa)</td><td>✕ No</td><td>✕ No</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><strong>Servicios del extranjero</strong>Plataformas como Vercel o Supabase cobran el "IVA digital" de 19 % en Chile. Si les registras el RUT de tu empresa como contribuyente de IVA, puede que no te lo cobren y que lo declares tú en el F29. Es un detalle técnico que vale la pena revisar con el contador.</div>
+</section>
+
+<!-- 9 -->
+<section id="extranjero">
+  <span class="secnum">9</span>
+  <h2>Si vendes a restaurantes fuera de Chile</h2>
+  <p>Platovi se puede vender a cualquier país. A un restaurante en Argentina, Perú o España normalmente <b>no se le cobra IVA chileno</b>, porque puede contar como <b>exportación de servicios</b>.</p>
+  <ul>
+    <li>Se usa una <b>factura de exportación electrónica</b>, no la factura normal.</li>
+    <li>Para que no lleve IVA, el servicio debe ser calificado como exportación (trámite ante Aduanas).</li>
+    <li>El cobro suele llegar en dólares por PayPal, Stripe o transferencia, y hay que registrar el tipo de cambio.</li>
+  </ul>
+  <div class="note"><strong>Déjalo para después</strong>Parte vendiendo en Chile. Cuando llegue tu primer cliente extranjero, revisas este punto con el contador. <span class="contador">Confirmar con contador</span></div>
+</section>
+
+<!-- 10 -->
+<section id="pasos">
+  <span class="secnum">10</span>
+  <h2>Pasos concretos, en orden</h2>
+  <ol class="steps">
+    <li><div><span class="who">TÚ + CONTADOR</span><h3>Conversar con tu amigo contador</h3><p>¿Persona natural o SpA? ¿Régimen? ¿Código de actividad? ¿Precios con IVA o + IVA? Lleva la lista de preguntas de abajo.</p></div></li>
+    <li><div><span class="who">TÚ · registrodeempresasysociedades.cl</span><h3>Crear la SpA (si eligen SpA)</h3><p>Gratis, con Clave Única. Te entrega estatuto y RUT de la empresa. Se puede hacer el inicio de actividades en el mismo flujo.</p></div></li>
+    <li><div><span class="who">TÚ · sii.cl</span><h3>Hacer el inicio de actividades</h3><p>Con las respuestas de la sección 3: domicilio, giro, primera categoría, afecto a IVA y régimen.</p></div></li>
+    <li><div><span class="who">TÚ · sii.cl</span><h3>Activar la facturación electrónica</h3><p>Inscribirte en el sistema gratuito de factura y boleta del SII. Sacar el certificado digital. Puede haber verificación de domicilio.</p></div></li>
+    <li><div><span class="who">TÚ · municipalidad</span><h3>Sacar la patente municipal</h3><p>En la municipalidad de tu domicilio. Muchas lo permiten online.</p></div></li>
+    <li><div><span class="who">TÚ + CLAUDE</span><h3>Decidir IVA incluido o + IVA y ajustar la web</h3><p>Cambiar los precios en platovi.cl, en los planes de /admin y en el material de venta.</p></div></li>
+    <li><div><span class="who">TÚ · banco</span><h3>Abrir la cuenta bancaria del negocio</h3><p>Ideal si es SpA. Conecta Mercado Pago o Flow a esa cuenta.</p></div></li>
+    <li><div><span class="who">TÚ + CLAUDE</span><h3>Con los primeros clientes: facturación automática</h3><p>Conectar OpenFactura (u otro) a Platovi para que la factura salga sola con cada pago. Y declarar el F29 todos los meses.</p></div></li>
+  </ol>
+</section>
+
+<section id="glosario">
+  <h2>Glosario rápido</h2>
+  <dl class="glos">
+    <dt>SII</dt><dd>Servicio de Impuestos Internos. La entidad que cobra los impuestos en Chile.</dd>
+    <dt>RUT</dt><dd>Tu número tributario. Una SpA tiene su propio RUT, distinto del tuyo.</dd>
+    <dt>Giro</dt><dd>La actividad a la que se dedica tu negocio, con un código del SII.</dd>
+    <dt>IVA</dt><dd>Impuesto al Valor Agregado, 19 %. Lo cobras en cada venta y lo pagas al SII.</dd>
+    <dt>Débito fiscal</dt><dd>El IVA que cobraste en tus ventas.</dd>
+    <dt>Crédito fiscal</dt><dd>El IVA que pagaste en compras del negocio con factura. Se resta del débito.</dd>
+    <dt>Neto</dt><dd>El precio sin IVA. Es lo que realmente te queda por la venta.</dd>
+    <dt>F29</dt><dd>Declaración mensual de IVA y PPM. Plazo día 20 por internet.</dd>
+    <dt>PPM</dt><dd>Pago Provisional Mensual: adelanto del impuesto a la renta anual.</dd>
+    <dt>F22</dt><dd>Declaración anual de renta, en abril.</dd>
+    <dt>Pro Pyme Transparente</dt><dd>Régimen simple para pymes: la empresa no paga impuesto, lo pagas tú en tu declaración personal.</dd>
+    <dt>SpA</dt><dd>Sociedad por Acciones. Tipo de empresa flexible que puede tener un solo dueño.</dd>
+    <dt>DTE</dt><dd>Documento Tributario Electrónico: así llama el SII a facturas y boletas electrónicas.</dd>
+    <dt>Timbrar</dt><dd>Que el SII valide un documento electrónico. Los proveedores lo hacen por ti.</dd>
+    <dt>RCV</dt><dd>Registro de Compras y Ventas: el SII junta ahí todas tus facturas y te propone el F29.</dd>
+  </dl>
+</section>
+
+<section id="preguntas">
+  <h2>Preguntas para llevarle a tu amigo contador</h2>
+  <p style="color:var(--muted);font-size:.95rem">Puedes ir marcándolas en la conversación (se guardan solo en este navegador).</p>
+  <ul class="checklist" id="qs">
+    <li><input type="checkbox" id="q1"><label for="q1">¿Me conviene partir como persona natural o crear una SpA?</label></li>
+    <li><input type="checkbox" id="q2"><label for="q2">¿Pro Pyme Transparente o Pro Pyme General para mi caso?</label></li>
+    <li><input type="checkbox" id="q3"><label for="q3">¿Qué código de actividad pongo para un software por suscripción para restaurantes?</label></li>
+    <li><input type="checkbox" id="q4"><label for="q4">¿Puedo usar mi casa como domicilio? ¿Qué papel me piden si arriendo?</label></li>
+    <li><input type="checkbox" id="q5"><label for="q5">¿Cuánto me cobra la patente municipal en mi comuna y con qué capital inicial conviene partir?</label></li>
+    <li><input type="checkbox" id="q6"><label for="q6">¿Publico mis precios con IVA incluido o + IVA?</label></li>
+    <li><input type="checkbox" id="q7"><label for="q7">¿Qué tasa de PPM me va a tocar?</label></li>
+    <li><input type="checkbox" id="q8"><label for="q8">¿Cómo manejo el IVA de Vercel, Supabase, Resend y publicidad en Meta/Google?</label></li>
+    <li><input type="checkbox" id="q9"><label for="q9">¿Qué hago con lo que ya gasté antes del inicio de actividades (dominios, computador)?</label></li>
+    <li><input type="checkbox" id="q10"><label for="q10">Si vendo a un restaurante de otro país, ¿cómo facturo y qué trámite de exportación necesito?</label></li>
+    <li><input type="checkbox" id="q12"><label for="q12">¿Me ayudas a revisar el estatuto de la SpA (venta de acciones, administración, salida de un socio)?</label></li>
+    <li><input type="checkbox" id="q13"><label for="q13">¿Qué 2 o 3 códigos de actividad dejo en la SpA?</label></li>
+    <li><input type="checkbox" id="q11"><label for="q11">¿Cuánto cobrarías por llevarme la contabilidad mensual y el F22?</label></li>
+  </ul>
+</section>
+
+<footer>
+  Guía preparada para Jonathan (Platovi) el 3 de noviembre de 2026. Es información general sobre impuestos en Chile y no reemplaza la asesoría de un contador. Las cifras de proveedores y certificados son aproximadas; los precios de Platovi son los vigentes en platovi.cl.
+</footer>
+</div>
+
+<script>
+(function(){
+  const fmt = n => "$" + Math.round(n).toLocaleString("es-CL");
+  const planes = [["Carta",24990],["Pro",34990],["Grupo",54990],["Loyalty",19990]];
+  const max = 54990*1.19;
+  let modo = "incl";
+  const bars = document.getElementById("bars"), txt = document.getElementById("modo-txt");
+  function render(){
+    bars.innerHTML = "";
+    planes.forEach(([nom,p])=>{
+      const total = modo==="incl" ? p : p*1.19;
+      const neto = modo==="incl" ? p/1.19 : p;
+      const iva = total-neto;
+      const row = document.createElement("div"); row.className="barrow";
+      row.innerHTML = '<div class="lbl">'+nom+'<small>paga '+fmt(total)+'</small></div>'+
+        '<div class="bar" style="width:'+(total/max*100).toFixed(1)+'%"><span class="n" style="width:'+(neto/total*100).toFixed(1)+'%">'+fmt(neto)+'</span><span class="i" style="width:'+(iva/total*100).toFixed(1)+'%">'+fmt(iva)+'</span></div>';
+      bars.appendChild(row);
+    });
+    txt.textContent = modo==="incl"
+      ? "Publicas $24.990 y el restaurante paga $24.990. Pero 19 % de eso es IVA: a ti te quedan $21.000."
+      : "Publicas \"$24.990 + IVA\". El restaurante paga $29.738, tú te quedas con los $24.990 completos y $4.748 van al SII.";
+    document.getElementById("b-incl").setAttribute("aria-pressed", modo==="incl");
+    document.getElementById("b-mas").setAttribute("aria-pressed", modo==="mas");
+  }
+  document.getElementById("b-incl").onclick=()=>{modo="incl";render()};
+  document.getElementById("b-mas").onclick=()=>{modo="mas";render()};
+  render();
+
+  const inp = document.getElementById("c-precio");
+  function calc(){
+    const v = parseInt((inp.value||"").replace(/\D/g,""),10)||0;
+    document.getElementById("o-neto").textContent = fmt(v/1.19);
+    document.getElementById("o-iva1").textContent = fmt(v - v/1.19);
+    document.getElementById("o-total").textContent = fmt(v*1.19);
+  }
+  inp.addEventListener("input",calc); calc();
+
+  document.querySelectorAll("#qs input").forEach(cb=>{
+    try{ cb.checked = localStorage.getItem("sii:"+cb.id)==="1"; }catch(e){}
+    cb.addEventListener("change",()=>{ try{ localStorage.setItem("sii:"+cb.id, cb.checked?"1":"0"); }catch(e){} });
+  });
+})();
+</script>
+</body>
+</html>
