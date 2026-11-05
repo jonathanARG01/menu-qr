@@ -1,0 +1,4 @@
+# Sitio estático de la guía de inicio de actividades (Netlify: platovi-guia-sii)
+[build]
+  publish = "."
+  command = ""
