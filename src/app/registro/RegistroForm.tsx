@@ -119,6 +119,17 @@ export function RegistroForm({ equipo = false, referido }: { equipo?: boolean; r
       <button type="submit" className="boton w-full" disabled={cargando}>
         {cargando ? "Creando…" : "Crear cuenta"}
       </button>
+      <p className="text-center text-xs text-suave">
+        Al crear la cuenta aceptas los{" "}
+        <a href="/terminos" target="_blank" className="underline hover:text-tinta">
+          términos y condiciones
+        </a>{" "}
+        y la{" "}
+        <a href="/privacidad" target="_blank" className="underline hover:text-tinta">
+          política de privacidad
+        </a>
+        .
+      </p>
     </form>
   );
 }

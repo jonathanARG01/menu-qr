@@ -113,7 +113,7 @@ export default async function PaginaPlan({ searchParams }: { searchParams: Promi
               <p className="mt-1 text-sm text-suave">{p.para}</p>
               <p className="mt-3 text-2xl font-semibold tabular-nums">
                 {formatoPrecio(p.precio, "CLP")}
-                <span className="text-sm font-normal text-suave"> /mes</span>
+                <span className="text-sm font-normal text-suave"> /mes + IVA</span>
               </p>
               <ul className="mt-3 flex-1 space-y-1.5 text-sm">
                 {p.incluye.map((i) => (
@@ -149,7 +149,7 @@ export default async function PaginaPlan({ searchParams }: { searchParams: Promi
               : `Tarjeta de sellos en el celular de tus clientes. ${formatoPrecio(
                   restaurante.plan === "grupo" ? PRECIO_SELLOS.grupo : PRECIO_SELLOS.local,
                   "CLP",
-                )} al mes${restaurante.plan === "grupo" ? " para todas tus sucursales" : " por local"}, aparte de tu plan.`}
+                )} + IVA al mes${restaurante.plan === "grupo" ? " para todas tus sucursales" : " por local"}, aparte de tu plan.`}
           </p>
         </div>
         <Link href="/panel/sellos" className={sellosContratado(restaurante) ? "boton-secundario" : "boton"}>

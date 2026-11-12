@@ -36,6 +36,8 @@ type Hacer = (accion: () => Promise<string | null>, ok?: string) => void;
 
 const nombrePlan = (plan: string) => NOMBRE_PLAN[plan as Plan] ?? plan;
 const pesos = (n: number) => formatoPrecio(n, "CLP");
+// Los precios son netos: al cobrar se suma el IVA del 19 %.
+const conIva = (n: number) => Math.round(n * 1.19);
 const meses = (n: number) => `${n} ${n === 1 ? "mes" : "meses"}`;
 
 const ESTADO: Record<string, { texto: string; color: string }> = {
@@ -185,12 +187,12 @@ export function AdminReferidos({ filas, activo, niveles, descuentos }: Props) {
                         className="boton py-1.5"
                         disabled={pendiente}
                         onClick={() => {
-                          if (confirm(`¿Le cobraste ${pesos(cobro.total)} a ${f.nombre}? Se gastan los meses de descuento de este cobro.`))
+                          if (confirm(`¿Le cobraste ${pesos(conIva(cobro.total))} (IVA incluido) a ${f.nombre}? Se gastan los meses de descuento de este cobro.`))
                             hacer(() => registrarCobro(f.id), "Listo: cobro anotado");
                         }}
                       >
                         <Icono nombre="check" className="h-4 w-4" />
-                        Cobré {pesos(cobro.total)}
+                        Cobré {pesos(conIva(cobro.total))}
                       </button>
                     )}
                   </div>
@@ -310,8 +312,13 @@ function DetalleCobro({ cobro, plan }: { cobro: ReturnType<typeof calcularCobro>
         />
       ))}
       <div className="flex items-baseline justify-between border-t border-borde pt-1.5 font-semibold">
-        <dt>A cobrar</dt>
+        <dt>Neto</dt>
         <dd className="tabular-nums">{pesos(cobro.total)}</dd>
+      </div>
+      <Linea texto="IVA (19 %)" valor={`+${pesos(conIva(cobro.total) - cobro.total)}`} />
+      <div className="flex items-baseline justify-between border-t border-borde pt-1.5 font-semibold">
+        <dt>A cobrar con IVA</dt>
+        <dd className="tabular-nums">{pesos(conIva(cobro.total))}</dd>
       </div>
     </dl>
   );

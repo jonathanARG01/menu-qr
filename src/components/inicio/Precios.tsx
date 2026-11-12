@@ -71,11 +71,11 @@ export function PreciosPlanes() {
                 <p className="mt-1 min-h-10 text-sm text-sitio-suave">{p.para}</p>
                 <p key={periodo.id} className="cambio-precio mt-6 flex flex-wrap items-baseline gap-x-2">
                   <span className={`font-marca text-5xl font-bold tracking-tight tabular-nums ${destacado ? "texto-oro" : ""}`}>{clp(mensual)}</span>
-                  <span className="text-sitio-suave">/mes</span>
+                  <span className="text-sitio-suave">/mes + IVA</span>
                   {periodo.descuento > 0 && <span className="text-sitio-suave tabular-nums line-through">{clp(p.precio)}</span>}
                 </p>
                 <p className="mt-1 h-5 text-sm text-sitio-suave tabular-nums">
-                  {periodo.meses > 1 && `${clp(mensual * periodo.meses)} cada ${periodo.meses} meses`}
+                  {periodo.meses > 1 && `${clp(mensual * periodo.meses)} + IVA cada ${periodo.meses} meses`}
                 </p>
                 <Link href="/registro" className={`mt-7 w-full ${destacado ? "boton-oro" : "boton-vidrio"}`}>
                   Probar gratis
