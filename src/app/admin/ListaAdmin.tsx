@@ -81,12 +81,21 @@ const isoDia = (d: Date) =>
 
 const esDemo = (f: FilaAdmin) => !f.duenos;
 
-export function ListaAdmin({ filas: iniciales, complementos = true }: { filas: FilaAdmin[]; complementos?: boolean }) {
+export function ListaAdmin({
+  filas: iniciales,
+  complementos = true,
+  buscar = "",
+}: {
+  filas: FilaAdmin[];
+  complementos?: boolean;
+  // Desde la campanita: /admin?q=<slug> muestra ese restaurante, tenga o no plan pago.
+  buscar?: string;
+}) {
   const avisar = useToast();
   const [filas, setFilas] = useState(iniciales);
-  const [busqueda, setBusqueda] = useState("");
+  const [busqueda, setBusqueda] = useState(buscar);
   // Por defecto, los clientes que pagan (lo que más se revisa).
-  const [filtro, setFiltro] = useState<Filtro>("pago");
+  const [filtro, setFiltro] = useState<Filtro>(buscar ? "todos" : "pago");
   const [creando, setCreando] = useState(false);
   const [editando, setEditando] = useState<FilaAdmin | null>(null);
   const [pendiente, empezar] = useTransition();

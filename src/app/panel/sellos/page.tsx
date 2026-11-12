@@ -9,6 +9,17 @@ export const dynamic = "force-dynamic";
 export default async function PanelSellos() {
   const { supabase, restaurante, admin, ajustes } = await requerirSeccion("sellos");
   if (!sellosContratado(restaurante)) {
+    // Queda en la campanita de /admin: está mirando Loyalty sin tenerlo.
+    await supabase
+      .rpc("registrar_notificacion_admin", {
+        p_restaurante: restaurante.id,
+        p_tipo: "interes",
+        p_detalle: "Abrió la página de Platovi Loyalty",
+      })
+      .then(
+        () => null,
+        () => null,
+      );
     return <OfertaSellos restaurante={restaurante} grupo={restaurante.plan === "grupo"} />;
   }
 
@@ -16,7 +27,9 @@ export default async function PanelSellos() {
     supabase.from("sellos_programas").select("*").eq("restaurante_id", restaurante.id).maybeSingle(),
     supabase
       .from("sellos_tarjetas")
-      .select("id, restaurante_id, cliente_id, codigo, nombre, telefono, email, cumpleanos, acepta_avisos, sellos, premios, total_sellos, canjes, created_at, ultima_at")
+      .select(
+        "id, restaurante_id, cliente_id, codigo, nombre, telefono, email, cumpleanos, acepta_avisos, sellos, premios, total_sellos, canjes, created_at, ultima_at",
+      )
       .eq("restaurante_id", restaurante.id)
       .order("ultima_at", { ascending: false, nullsFirst: false })
       .limit(3000),

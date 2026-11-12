@@ -14,6 +14,7 @@ import {
   type PlanPago,
 } from "@/lib/planes";
 import { formatoPrecio } from "@/lib/utils";
+import { EnlaceAvisado } from "@/components/EnlaceAvisado";
 import { NOMBRE_SELLOS, PRECIO_SELLOS, sellosContratado } from "@/lib/sellos/tipos";
 
 export const metadata = { title: "Tu plan · Platovi" };
@@ -44,9 +45,22 @@ function pedido(s?: string, m?: string): { nombre: string; plan: PlanPago } | nu
 const fecha = (d: Date | string) => new Date(d).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" });
 
 export default async function PaginaPlan({ searchParams }: { searchParams: Promise<{ s?: string; m?: string }> }) {
-  const { restaurante } = await requerirRestaurante();
+  const { restaurante, supabase } = await requerirRestaurante();
   const { s, m } = await searchParams;
   const quiere = pedido(s, m);
+  // Abrió algo que su plan no tiene: queda en la campanita de /admin (buen momento para ofrecerle el plan).
+  if (quiere && quiere.plan !== restaurante.plan) {
+    await supabase
+      .rpc("registrar_notificacion_admin", {
+        p_restaurante: restaurante.id,
+        p_tipo: "interes",
+        p_detalle: `Abrió «${quiere.nombre}» (plan ${NOMBRE_PLAN[quiere.plan]}; tiene ${NOMBRE_PLAN[restaurante.plan]})`,
+      })
+      .then(
+        () => null,
+        () => null,
+      );
+  }
   const prueba = estadoPrueba(restaurante);
   const enPrueba = restaurante.plan === "free";
 
@@ -125,9 +139,16 @@ export default async function PaginaPlan({ searchParams }: { searchParams: Promi
               </ul>
               {!actual &&
                 (contratar ? (
-                  <a href={contratar} target="_blank" className={`mt-4 ${destacado ? "boton" : "boton-secundario"}`}>
+                  <EnlaceAvisado
+                    href={contratar}
+                    target="_blank"
+                    restaurante={restaurante.id}
+                    tipo="plan"
+                    detalle={`Tocó «Quiero el plan ${p.nombre}» (tiene ${NOMBRE_PLAN[restaurante.plan]})`}
+                    className={`mt-4 ${destacado ? "boton" : "boton-secundario"}`}
+                  >
                     Quiero el plan {p.nombre}
-                  </a>
+                  </EnlaceAvisado>
                 ) : (
                   <p className="mt-4 text-center text-xs text-suave">Escríbenos para activarlo.</p>
                 ))}
