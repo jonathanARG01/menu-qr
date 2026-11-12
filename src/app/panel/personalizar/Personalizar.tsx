@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
 import { Icono } from "@/components/Icono";
 import { Interruptor } from "@/components/Interruptor";
-import { AJUSTES_BASE, PERMITIDAS, SECCIONES, type Ajustes, type Modulo, type Seccion } from "@/lib/salon";
+import { AJUSTES_BASE, PERMITIDAS, SECCIONES, horasTurno, type Ajustes, type Modulo, type Seccion, type TurnoReserva } from "@/lib/salon";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
 import { PAISES, ZONAS, paisDe } from "@/lib/region";
 import { revalidarCarta } from "../actions";
@@ -515,6 +515,7 @@ export function Personalizar({
             (y además cada mañana). A los demás, Reservas te ofrece mandar el recordatorio por WhatsApp con un enlace para
             confirmar o cancelar.
           </p>
+          <FormularioReservas valor={a.reservas} onChange={(reservas) => set({ reservas })} />
         </section>
       )}
 
@@ -913,6 +914,221 @@ function ListaEditable({
         </button>
       </form>
     </section>
+  );
+}
+
+const DIAS_CORTOS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"];
+// Lunes primero, como en el calendario de Chile.
+const ORDEN_DIAS = [1, 2, 3, 4, 5, 6, 0];
+
+// Lo que pide el formulario de reserva de la carta: horarios fijos por turno, adultos/niños, ubicación y correo.
+function FormularioReservas({ valor, onChange }: { valor: Ajustes["reservas"]; onChange: (v: Ajustes["reservas"]) => void }) {
+  const set = (cambios: Partial<Ajustes["reservas"]>) => onChange({ ...valor, ...cambios });
+  const setTurno = (i: number, cambios: Partial<TurnoReserva>) =>
+    set({ turnos: valor.turnos.map((t, j) => (j === i ? { ...t, ...cambios } : t)) });
+  const [nuevaUbicacion, setNuevaUbicacion] = useState("");
+  const agregarTurno = () =>
+    set({
+      turnos: [
+        ...valor.turnos,
+        valor.turnos.length === 0
+          ? { nombre: "Almuerzo", desde: "12:30", hasta: "15:30", cada: 30, dias: [], cupo: 0 }
+          : { nombre: "Cena", desde: "19:00", hasta: "22:30", cada: 30, dias: [], cupo: 0 },
+      ],
+    });
+
+  return (
+    <div className="space-y-5 border-t border-borde pt-4">
+      <div>
+        <h3 className="font-semibold">Horarios para reservar</h3>
+        <p className="text-sm text-suave">
+          Sin turnos, el cliente elige cualquier hora. Con turnos (por ejemplo almuerzo 12:30 a 15:30 y cena 18:30 a 20:30) solo
+          ve esos horarios, y los días que no tienen turno no se puede reservar.
+        </p>
+        <div className="mt-3 space-y-3">
+          {valor.turnos.map((t, i) => {
+            const horas = horasTurno(t);
+            return (
+              <div key={i} className="rounded-xl border border-borde p-3">
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="block text-sm">
+                    Nombre
+                    <input
+                      value={t.nombre}
+                      maxLength={30}
+                      onChange={(e) => setTurno(i, { nombre: e.target.value })}
+                      className="campo mt-1 w-36 py-2"
+                      placeholder="Almuerzo"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    Desde
+                    <input
+                      type="time"
+                      value={t.desde}
+                      onChange={(e) => e.target.value && setTurno(i, { desde: e.target.value })}
+                      className="campo mt-1 w-28 py-2"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    Hasta
+                    <input
+                      type="time"
+                      value={t.hasta}
+                      onChange={(e) => e.target.value && setTurno(i, { hasta: e.target.value })}
+                      className="campo mt-1 w-28 py-2"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    Cada
+                    <select
+                      value={t.cada}
+                      onChange={(e) => setTurno(i, { cada: Number(e.target.value) })}
+                      className="campo mt-1 w-28 py-2"
+                    >
+                      <option value={15}>15 min</option>
+                      <option value={30}>30 min</option>
+                      <option value={60}>1 hora</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm">
+                    Cupo <span className="text-suave">(personas)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={999}
+                      value={t.cupo || ""}
+                      placeholder="Sin tope"
+                      onChange={(e) => setTurno(i, { cupo: Math.max(0, Math.min(999, Number(e.target.value) || 0)) })}
+                      className="campo mt-1 w-28 py-2"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => set({ turnos: valor.turnos.filter((_, j) => j !== i) })}
+                    className="ml-auto rounded-lg px-2 py-2 text-sm text-suave hover:text-red-600"
+                  >
+                    Quitar
+                  </button>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-1.5 text-sm">
+                  <span className="mr-1 text-suave">Días:</span>
+                  {ORDEN_DIAS.map((d) => {
+                    const activo = t.dias.length === 0 || t.dias.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        aria-pressed={activo}
+                        onClick={() => {
+                          const base = t.dias.length === 0 ? [0, 1, 2, 3, 4, 5, 6] : t.dias;
+                          const dias = activo ? base.filter((x) => x !== d) : [...base, d].sort();
+                          // Todos marcados = vacío (todos los días); ninguno no se permite.
+                          if (dias.length === 0) return;
+                          setTurno(i, { dias: dias.length === 7 ? [] : dias });
+                        }}
+                        className={`h-8 w-9 rounded-lg text-xs font-semibold ${activo ? "bg-tinta text-superficie" : "bg-stone-100 text-suave"}`}
+                      >
+                        {DIAS_CORTOS[d]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-suave">
+                  {horas.length
+                    ? `El cliente ve: ${horas.slice(0, 8).join(" · ")}${horas.length > 8 ? ` … ${horas[horas.length - 1]}` : ""}`
+                    : "“Desde” tiene que ser antes que “Hasta”."}
+                  {t.cupo > 0 ? ` · Se cierra al llegar a ${t.cupo} personas reservadas.` : ""}
+                </p>
+              </div>
+            );
+          })}
+          {valor.turnos.length < 8 && (
+            <button type="button" className="boton-secundario text-sm" onClick={agregarTurno}>
+              + Agregar turno
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-semibold">Ubicación</h3>
+        <p className="text-sm text-suave">
+          Si agregas opciones (Salón interior, Terraza…), el cliente elige dónde prefiere sentarse.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {valor.ubicaciones.map((u) => (
+            <span key={u} className="inline-flex items-center gap-1 rounded-full bg-stone-100 py-1 pl-3 pr-1 text-sm">
+              {u}
+              <button
+                type="button"
+                onClick={() => set({ ubicaciones: valor.ubicaciones.filter((x) => x !== u) })}
+                className="flex h-6 w-6 items-center justify-center rounded-full text-suave hover:bg-stone-200 hover:text-tinta"
+                aria-label={`Quitar ${u}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+        {valor.ubicaciones.length < 6 && (
+          <div className="mt-2 flex gap-2">
+            <input
+              value={nuevaUbicacion}
+              onChange={(e) => setNuevaUbicacion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                const u = nuevaUbicacion.trim().slice(0, 40);
+                if (u && !valor.ubicaciones.includes(u)) set({ ubicaciones: [...valor.ubicaciones, u] });
+                setNuevaUbicacion("");
+              }}
+              placeholder="Terraza exterior"
+              maxLength={40}
+              className="campo max-w-xs py-2"
+            />
+            <button
+              type="button"
+              className="boton-secundario"
+              onClick={() => {
+                const u = nuevaUbicacion.trim().slice(0, 40);
+                if (u && !valor.ubicaciones.includes(u)) set({ ubicaciones: [...valor.ubicaciones, u] });
+                setNuevaUbicacion("");
+              }}
+            >
+              Agregar
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex items-center gap-3 text-sm">
+          <Interruptor activo={valor.ninos} onChange={(ninos) => set({ ninos })} etiqueta="Adultos y niños" />
+          Preguntar adultos y niños por separado
+        </div>
+        <div className="flex items-center gap-3 text-sm">
+          <Interruptor
+            activo={valor.mostrar_tolerancia}
+            onChange={(mostrar_tolerancia) => set({ mostrar_tolerancia })}
+            etiqueta="Mostrar tolerancia"
+          />
+          Avisar al cliente que la mesa se guarda {valor.tolerancia} minutos
+        </div>
+        <label className="block text-sm">
+          Correo del cliente
+          <select
+            value={valor.correo}
+            onChange={(e) => set({ correo: e.target.value as Ajustes["reservas"]["correo"] })}
+            className="campo mt-1"
+          >
+            <option value="no">No pedir</option>
+            <option value="opcional">Pedir (opcional)</option>
+            <option value="obligatorio">Pedir (obligatorio)</option>
+          </select>
+        </label>
+      </div>
+    </div>
   );
 }
 

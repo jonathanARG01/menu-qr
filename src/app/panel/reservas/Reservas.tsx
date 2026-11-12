@@ -32,7 +32,14 @@ export type Reserva = {
   recordatorio_at?: string | null;
   recordatorio_medio?: "push" | "whatsapp" | null;
   asistencia?: "si" | "no" | null;
+  // Migración 0034.
+  ninos?: number;
+  ubicacion?: string | null;
+  correo?: string | null;
 };
+
+const textoPersonas = (r: Pick<Reserva, "personas" | "ninos">) =>
+  `${r.personas} ${r.personas === 1 ? "persona" : "personas"}${r.ninos ? ` (${r.ninos} ${r.ninos === 1 ? "niño" : "niños"})` : ""}`;
 
 type Historial = { visitas: number; no_vino: number };
 
@@ -154,7 +161,7 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
     if (r.fecha)
       whatsapp(
         r,
-        `Hola ${r.nombre}, te confirmamos la reserva en ${restaurante.nombre} para ${r.personas} ${r.personas === 1 ? "persona" : "personas"} el ${dia(r.fecha, region)} a las ${hora(r.fecha, region)}. ¡Te esperamos! Si no puedes venir, avísanos aquí: ${enlace(r)}`,
+        `Hola ${r.nombre}, te confirmamos la reserva en ${restaurante.nombre} para ${textoPersonas(r)} el ${dia(r.fecha, region)} a las ${hora(r.fecha, region)}${r.ubicacion ? ` (${r.ubicacion})` : ""}. ¡Te esperamos! Si no puedes venir, avísanos aquí: ${enlace(r)}`,
       );
   }
 
@@ -365,6 +372,7 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
       {nueva && (
         <FormularioReserva
           tipo={nueva}
+          ubicaciones={ajustes.reservas.ubicaciones}
           onCerrar={() => setNueva(null)}
           onGuardar={async (datos) => {
             const { error } = await supabase.from("reservas").insert({ ...datos, restaurante_id: restaurante.id, tipo: nueva });
@@ -451,8 +459,11 @@ function ListaReservas({
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-semibold">
-                {r.nombre} · {r.personas} {r.personas === 1 ? "persona" : "personas"}
+                {r.nombre} · {textoPersonas(r)}
                 {mesa && <span className="font-normal text-suave"> · {nombreMesa(mesa.numero)}</span>}
+                {r.ubicacion && (
+                  <span className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-900">{r.ubicacion}</span>
+                )}
                 {h && h.visitas > 0 && (
                   <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
                     ★ {h.visitas} {h.visitas === 1 ? "visita" : "visitas"}
@@ -466,6 +477,7 @@ function ListaReservas({
               </p>
               <p className="text-sm text-suave">
                 {r.telefono ?? "Sin teléfono"}
+                {r.correo ? ` · ${r.correo}` : ""}
                 {r.origen === "cliente" ? " · reservó desde la carta" : ""}
                 {r.nota ? ` · “${r.nota}”` : ""}
               </p>
@@ -529,14 +541,23 @@ function ListaReservas({
   );
 }
 
-type DatosNueva = { nombre: string; telefono: string | null; personas: number; fecha: string | null; nota: string | null };
+type DatosNueva = {
+  nombre: string;
+  telefono: string | null;
+  personas: number;
+  fecha: string | null;
+  nota: string | null;
+  ubicacion?: string | null;
+};
 
 function FormularioReserva({
   tipo,
+  ubicaciones,
   onGuardar,
   onCerrar,
 }: {
   tipo: "espera" | "reserva";
+  ubicaciones: string[];
   onGuardar: (d: DatosNueva) => Promise<unknown>;
   onCerrar: () => void;
 }) {
@@ -549,6 +570,7 @@ function FormularioReserva({
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   });
   const [nota, setNota] = useState("");
+  const [ubicacion, setUbicacion] = useState("");
   const [guardando, setGuardando] = useState(false);
 
   return (
@@ -567,6 +589,7 @@ function FormularioReserva({
             personas,
             fecha: tipo === "reserva" ? new Date(fecha).toISOString() : null,
             nota: nota.trim() || null,
+            ...(ubicacion ? { ubicacion } : {}),
           });
           setGuardando(false);
         }}
@@ -618,6 +641,19 @@ function FormularioReserva({
               onChange={(e) => setFecha(e.target.value)}
               className="campo mt-1"
             />
+          </label>
+        )}
+        {tipo === "reserva" && ubicaciones.length > 0 && (
+          <label className="block text-sm">
+            Ubicación
+            <select value={ubicacion} onChange={(e) => setUbicacion(e.target.value)} className="campo mt-1">
+              <option value="">Sin preferencia</option>
+              {ubicaciones.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
           </label>
         )}
         <label className="block text-sm">

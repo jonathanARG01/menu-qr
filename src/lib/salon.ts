@@ -117,6 +117,15 @@ export type Ajustes = {
     // Aviso al celular del cliente unas horas antes (si lo activó al reservar); si no, el panel ofrece WhatsApp.
     recordatorio: boolean;
     horas_antes: number;
+    // Horarios fijos (almuerzo, cena…). Vacío = el cliente elige cualquier hora cada 15 minutos (migración 0034).
+    turnos: TurnoReserva[];
+    // Pedir adultos y niños por separado.
+    ninos: boolean;
+    // Dónde quiere sentarse el cliente (Salón interior, Terraza…). Vacío = no se pregunta.
+    ubicaciones: string[];
+    correo: "no" | "opcional" | "obligatorio";
+    // Mostrar al cliente cuántos minutos se le guarda la mesa.
+    mostrar_tolerancia: boolean;
   };
   // Pedidos para llevar y delivery (sección Para llevar).
   llevar: {
@@ -178,6 +187,37 @@ export type OtraMoneda = { codigo: string; tasa: number };
 export const SONIDOS_HOJA = ["papel", "hojas", "diario", "ninguno"] as const;
 export type SonidoHoja = (typeof SONIDOS_HOJA)[number];
 
+// Un turno de reservas: horas en formato 24 h ("12:30"), cada = minutos entre horarios, dias 0 = domingo … 6 = sábado
+// (vacío = todos), cupo = personas como máximo en el turno (0 = sin tope).
+export type TurnoReserva = { nombre: string; desde: string; hasta: string; cada: number; dias: number[]; cupo: number };
+
+const HORA_VALIDA = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export function leerTurnos(v: unknown): TurnoReserva[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((t) => ({
+      nombre: String(t?.nombre ?? "").slice(0, 30),
+      desde: String(t?.desde ?? ""),
+      hasta: String(t?.hasta ?? ""),
+      cada: [15, 30, 60].includes(Number(t?.cada)) ? Number(t.cada) : 30,
+      dias: Array.isArray(t?.dias) ? [...new Set<number>(t.dias.map(Number).filter((d: number) => d >= 0 && d <= 6))].sort() : [],
+      cupo: Math.max(0, Math.min(999, Math.round(Number(t?.cupo) || 0))),
+    }))
+    .filter((t) => HORA_VALIDA.test(t.desde) && HORA_VALIDA.test(t.hasta))
+    .slice(0, 8);
+}
+
+// Horas que se ofrecen en un turno: desde, desde + cada, … hasta (incluida).
+export function horasTurno(t: Pick<TurnoReserva, "desde" | "hasta" | "cada">) {
+  const min = (h: string) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
+  const horas: string[] = [];
+  for (let m = min(t.desde); m <= min(t.hasta); m += t.cada) {
+    horas.push(`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`);
+  }
+  return horas;
+}
+
 export const AJUSTES_BASE: Ajustes = {
   modulos: {
     salon: true,
@@ -200,7 +240,17 @@ export const AJUSTES_BASE: Ajustes = {
   sonido_hoja: "papel",
   pais: PAIS_BASE.codigo,
   zona_horaria: PAIS_BASE.zona,
-  reservas: { online: false, tolerancia: 15, recordatorio: true, horas_antes: 3 },
+  reservas: {
+    online: false,
+    tolerancia: 15,
+    recordatorio: true,
+    horas_antes: 3,
+    turnos: [],
+    ninos: false,
+    ubicaciones: [],
+    correo: "no",
+    mostrar_tolerancia: false,
+  },
   llevar: { online: false, delivery: false, envio: 0, minutos: 30, confirmar: true, pago_obligatorio: false },
   resenas: { pedir: true, google_url: "" },
   cobro_online: { activo: false },
@@ -264,7 +314,19 @@ export function leerAjustes(guardado?: Partial<Ajustes> | null): Ajustes {
     sonido_hoja: SONIDOS_HOJA.includes(g.sonido_hoja as SonidoHoja) ? (g.sonido_hoja as SonidoHoja) : AJUSTES_BASE.sonido_hoja,
     pais: paisDe(g.pais).codigo,
     zona_horaria: typeof g.zona_horaria === "string" && g.zona_horaria ? g.zona_horaria : paisDe(g.pais).zona,
-    reservas: { ...AJUSTES_BASE.reservas, ...(g.reservas ?? {}) },
+    reservas: {
+      ...AJUSTES_BASE.reservas,
+      ...(g.reservas ?? {}),
+      turnos: leerTurnos(g.reservas?.turnos),
+      ninos: g.reservas?.ninos === true,
+      ubicaciones: listaTextos(g.reservas?.ubicaciones, [])
+        .map((u) => u.trim().slice(0, 40))
+        .slice(0, 6),
+      correo: (["no", "opcional", "obligatorio"] as const).includes(g.reservas?.correo as "no")
+        ? (g.reservas!.correo as "no" | "opcional" | "obligatorio")
+        : "no",
+      mostrar_tolerancia: g.reservas?.mostrar_tolerancia === true,
+    },
     llevar: { ...AJUSTES_BASE.llevar, ...(g.llevar ?? {}) },
     resenas: { ...AJUSTES_BASE.resenas, ...(g.resenas ?? {}) },
     cobro_online: { ...AJUSTES_BASE.cobro_online, ...(g.cobro_online ?? {}) },
