@@ -222,6 +222,13 @@ export const TEMA_INFO: Record<Tema, { nombre: string; descripcion: string; acen
     fondo: "#17110d",
     grupo: "cafeterias",
   },
+  pintor: {
+    nombre: "Pintor",
+    descripcion: "Paredes pintadas del puerto, madera, letreros crema y pizarras",
+    acento: "#9a3d24",
+    fondo: "#f3ead9",
+    grupo: "cafeterias",
+  },
 };
 
 export const ICONOS: Record<string, string> = {

@@ -38,6 +38,7 @@ import { TemaCaramelo } from "./TemaCaramelo";
 import { TemaLibreta } from "./TemaLibreta";
 import { TemaMuro } from "./TemaMuro";
 import { TemaPorteno } from "./TemaPorteno";
+import { TemaPintor } from "./TemaPintor";
 import { useCartaViva } from "./useCartaViva";
 
 const TEMAS: Record<Tema, (props: PropsTema) => React.ReactNode> = {
@@ -70,6 +71,7 @@ const TEMAS: Record<Tema, (props: PropsTema) => React.ReactNode> = {
   libreta: TemaLibreta,
   muro: TemaMuro,
   porteno: TemaPorteno,
+  pintor: TemaPintor,
 };
 
 type Props = {
