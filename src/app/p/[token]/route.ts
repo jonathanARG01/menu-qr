@@ -62,18 +62,79 @@ const enScript = (v: unknown) =>
 async function pantallaLista() {
   const db = createAdminClient();
   if (!db) return html("<p>Falta SUPABASE_SERVICE_ROLE_KEY en el servidor.</p>", 500);
-  const [{ data: filas, error }, { data: textos }] = await Promise.all([
-    db.from("prospectos").select("nombre, orden, datos, estado_contacto, notas").order("orden").limit(5000),
-    db.from("prospectos_textos").select("clave, valor"),
-  ]);
-  if (error) return html(`<p>No se pudo leer la lista (${E(error.message)}). ¿Se ejecutó la migración 0036?</p>`, 500);
-  const datos = (filas ?? []).map((f) => ({ ...(f.datos as object), nombre: f.nombre, ec: f.estado_contacto, notas: f.notas }));
+  // Supabase entrega como máximo 1000 filas por consulta (aunque se pida más): se leen por páginas.
+  const filas: { nombre: string; orden: number; datos: unknown; estado_contacto: string; notas: string }[] = [];
+  const PAGINA = 1000;
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error } = await db
+      .from("prospectos")
+      .select("nombre, orden, datos, estado_contacto, notas")
+      .order("orden")
+      .order("nombre")
+      .range(desde, desde + PAGINA - 1);
+    if (error) return html(`<p>No se pudo leer la lista (${E(error.message)}). ¿Se ejecutó la migración 0036?</p>`, 500);
+    filas.push(...(data ?? []));
+    if (!data || data.length < PAGINA || desde > 50000) break;
+  }
+  const { data: textos } = await db.from("prospectos_textos").select("clave, valor");
+  const datos = filas.map((f) => ({ ...(f.datos as object), nombre: f.nombre, ec: f.estado_contacto, notas: f.notas }));
   const anexo = textos?.find((t) => t.clave === "anexo")?.valor ?? "";
   const pagina = PLANTILLA_PROSPECTOS.replace("__ESTADOS__", () => enScript(ESTADOS))
     .replace("__DATOS__", () => enScript(datos))
     .replace("__ANEXO__", () => anexo);
   return html(pagina);
 }
+
+
+// Aplica los campos editables de la ficha de un local sobre sus datos. Devuelve un código de error o null.
+function aplicarFicha(datos: Record<string, unknown>, ficha: Record<string, unknown>, nombre: string): string | null {
+  const txt = (k: string, max = 200) => (typeof ficha[k] === "string" ? (ficha[k] as string).trim().slice(0, max) : undefined);
+  const url = (v: string) => (v && !/^https?:\/\//i.test(v) ? `https://${v}` : v);
+  const tipo = txt("tipo", 120);
+  if (tipo !== undefined) datos.tipo = tipo;
+  const zona = txt("zona", 120);
+  if (zona !== undefined) datos.zona = zona;
+  const dir = txt("dir");
+  if (dir !== undefined && dir !== datos.dir) {
+    datos.dir = dir;
+    const q = [nombre, dir, (datos.ciudad as string) || "Valparaíso", "Chile"].filter(Boolean).join(", ");
+    datos.maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  }
+  const tel = txt("tel", 40);
+  if (tel !== undefined) {
+    if (tel && !/^[+\d][\d\s().-]{5,}$/.test(tel)) return "telefono";
+    const digitos = tel.replace(/\D/g, "");
+    datos.tel = tel;
+    datos.telhref = tel ? (tel.startsWith("+") ? `+${digitos}` : digitos) : "";
+    datos.wa = tel && ficha.whatsapp === true ? digitos : "";
+  }
+  const web = txt("web", 300);
+  if (web !== undefined) {
+    if (web && !/^(https?:\/\/)?[^\s.]+\.[^\s]+$/i.test(web)) return "web";
+    datos.web = url(web);
+  }
+  // Redes: se reemplazan Instagram y Facebook; las demás se conservan.
+  const red = (k: string, base: string) => {
+    const v = txt(k, 200);
+    if (v === undefined) return undefined;
+    if (!v) return "";
+    if (/^https?:\/\//i.test(v) || v.includes(".com")) return url(v);
+    return base + v.replace(/^@/, "").replace(/\/$/, "");
+  };
+  const ig = red("instagram", "https://www.instagram.com/");
+  const fb = red("facebook", "https://www.facebook.com/");
+  if (ig !== undefined || fb !== undefined) {
+    const soc = (Array.isArray(datos.soc) ? (datos.soc as [string, string][]) : []).filter(
+      ([t]) => !(t === "Instagram" && ig !== undefined) && !(t === "Facebook" && fb !== undefined),
+    );
+    if (ig) soc.unshift(["Instagram", ig]);
+    if (fb) soc.push(["Facebook", fb]);
+    datos.soc = soc;
+  }
+  return null;
+}
+
+const REGIONES = ["Arica y Parinacota", "Tarapacá", "Antofagasta", "Atacama", "Coquimbo", "Valparaíso", "Metropolitana", "O’Higgins", "Maule", "Ñuble", "Biobío", "La Araucanía", "Los Ríos", "Los Lagos", "Aysén", "Magallanes"];
 
 type Ctx = { params: Promise<{ token: string }> };
 
@@ -96,9 +157,38 @@ export async function POST(req: Request, { params }: Ctx) {
     if (!sesionValida(jar.get(COOKIE_PROSPECTOS)?.value)) return json({ error: "sesion" }, 401);
     const cuerpo = (await req.json().catch(() => null)) as Record<string, unknown> | null;
     const nombre = typeof cuerpo?.nombre === "string" ? cuerpo.nombre : "";
-    if (cuerpo?.accion !== "guardar" || !nombre) return json({ error: "datos" }, 400);
     const db = createAdminClient();
     if (!db) return json({ error: "servidor" }, 500);
+
+    // Agregar un local nuevo a mano (botón "Agregar local").
+    if (cuerpo?.accion === "crear") {
+      const nuevo = nombre.trim().replace(/\s+/g, " ").slice(0, 120);
+      const ciudad = typeof cuerpo.ciudad === "string" ? cuerpo.ciudad.trim().slice(0, 80) : "";
+      const region = typeof cuerpo.region === "string" && REGIONES.includes(cuerpo.region) ? cuerpo.region : "";
+      if (nuevo.length < 2) return json({ error: "nombre" }, 400);
+      if (!ciudad || !region) return json({ error: "ciudad" }, 400);
+      const { data: existe } = await db.from("prospectos").select("nombre").eq("nombre", nuevo).maybeSingle();
+      if (existe) return json({ error: "existe" }, 409);
+      const { data: ultimo } = await db.from("prospectos").select("orden").order("orden", { ascending: false }).limit(1).maybeSingle();
+      const datos: Record<string, unknown> = {
+        prio: "1 · Alta", tipo: "", zona: "", dir: "", ciudad, region, tel: "", telhref: "", wa: "", correo: "", web: "",
+        redes: "", sis: "No detectado", ev: "", pitch: "", fuente: "", estado: "", falta: "", demo: "",
+        badge: "Sin sistema", bk: "none", soc: [], manual: true,
+        maps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([nuevo, ciudad, "Chile"].join(", "))}`,
+      };
+      const ficha = cuerpo.ficha && typeof cuerpo.ficha === "object" ? (cuerpo.ficha as Record<string, unknown>) : {};
+      const err = aplicarFicha(datos, ficha, nuevo);
+      if (err) return json({ error: err }, 400);
+      if (typeof cuerpo.demo === "string" && /^https?:\/\/\S+$/.test(cuerpo.demo.trim())) datos.demo = cuerpo.demo.trim();
+      if (typeof cuerpo.correo === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cuerpo.correo.trim())) datos.correo = cuerpo.correo.trim().toLowerCase();
+      const estado = typeof cuerpo.estado === "string" && ESTADOS.includes(cuerpo.estado) ? cuerpo.estado : "Sin contactar";
+      const notas = typeof cuerpo.notas === "string" ? cuerpo.notas.slice(0, 4000) : "";
+      const orden = ((ultimo?.orden as number | undefined) ?? 0) + 1;
+      const { error } = await db.from("prospectos").insert({ nombre: nuevo, orden, datos, estado_contacto: estado, notas });
+      return error ? json({ error: error.message }, 500) : json({ ok: true, nombre: nuevo, orden, datos });
+    }
+
+    if (cuerpo?.accion !== "guardar" || !nombre) return json({ error: "datos" }, 400);
     const { data: fila } = await db.from("prospectos").select("datos").eq("nombre", nombre).maybeSingle();
     if (!fila) return json({ error: "no existe" }, 404);
     const cambios: Record<string, unknown> = { actualizado: new Date().toISOString() };
@@ -118,9 +208,15 @@ export async function POST(req: Request, { params }: Ctx) {
       datos.correo = correo;
       cambiaDatos = true;
     }
+    // Ficha completa desde el lápiz de la tarjeta: tipo, dirección, zona, teléfono, WhatsApp, web, redes.
+    if (cuerpo.ficha && typeof cuerpo.ficha === "object") {
+      const err = aplicarFicha(datos, cuerpo.ficha as Record<string, unknown>, nombre);
+      if (err) return json({ error: err }, 400);
+      cambiaDatos = true;
+    }
     if (cambiaDatos) cambios.datos = datos;
     const { error } = await db.from("prospectos").update(cambios).eq("nombre", nombre);
-    return error ? json({ error: error.message }, 500) : json({ ok: true });
+    return error ? json({ error: error.message }, 500) : json({ ok: true, datos });
   }
 
   // Formularios: entrar o salir.
