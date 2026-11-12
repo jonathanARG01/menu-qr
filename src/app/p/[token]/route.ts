@@ -11,7 +11,7 @@ import {
 } from "@/lib/prospectos/acceso";
 
 // Lista privada de prospectos de Jonathan: /p/<PROSPECTOS_RUTA>, protegida con PROSPECTOS_CLAVE.
-// GET muestra la clave o la lista; POST entra, sale o guarda cambios (demo, estado del contacto, notas).
+// GET muestra la clave o la lista; POST entra, sale o guarda cambios (demo, correo, estado del contacto, notas).
 
 export const dynamic = "force-dynamic";
 
@@ -104,11 +104,21 @@ export async function POST(req: Request, { params }: Ctx) {
     const cambios: Record<string, unknown> = { actualizado: new Date().toISOString() };
     if (typeof cuerpo.estado === "string" && ESTADOS.includes(cuerpo.estado)) cambios.estado_contacto = cuerpo.estado;
     if (typeof cuerpo.notas === "string") cambios.notas = cuerpo.notas.slice(0, 4000);
+    const datos: Record<string, unknown> = { ...(fila.datos as object) };
+    let cambiaDatos = false;
     if (typeof cuerpo.demo === "string") {
       const demo = cuerpo.demo.trim();
       if (demo && !/^https?:\/\/\S+$/.test(demo)) return json({ error: "link" }, 400);
-      cambios.datos = { ...(fila.datos as object), demo };
+      datos.demo = demo;
+      cambiaDatos = true;
     }
+    if (typeof cuerpo.correo === "string") {
+      const correo = cuerpo.correo.trim().toLowerCase().slice(0, 200);
+      if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return json({ error: "correo" }, 400);
+      datos.correo = correo;
+      cambiaDatos = true;
+    }
+    if (cambiaDatos) cambios.datos = datos;
     const { error } = await db.from("prospectos").update(cambios).eq("nombre", nombre);
     return error ? json({ error: error.message }, 500) : json({ ok: true });
   }
