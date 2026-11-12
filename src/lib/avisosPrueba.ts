@@ -140,3 +140,11 @@ export async function procesarPruebas(db: SupabaseClient, sitio: string) {
   }
   return { avisos, pausados: filas.filter((f) => f.vencida).length };
 }
+
+// Aviso al celular o computador de los superadmins (los que activaron los avisos en /admin).
+// Lo usa la campanita para lo importante: alguien quiere un plan o Loyalty.
+export async function avisarSuperadmins(db: SupabaseClient, mensaje: Mensaje) {
+  const { data: admins } = await db.from("superadmins").select("user_id");
+  const ids = (admins ?? []).map((a: { user_id: string }) => a.user_id);
+  return enviarPush(db, ids, () => mensaje);
+}

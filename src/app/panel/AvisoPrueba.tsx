@@ -6,8 +6,9 @@ import { BotonAvisos } from "@/components/BotonAvisos";
 import { Icono } from "@/components/Icono";
 import { enlaceContratar, estadoPrueba, type EstadoPrueba } from "@/lib/planes";
 import type { Restaurante } from "@/lib/types";
+import { EnlaceAvisado } from "@/components/EnlaceAvisado";
 
-type Props = { restaurante: Pick<Restaurante, "nombre" | "plan" | "prueba_inicio" | "prueba_fin"> };
+type Props = { restaurante: Pick<Restaurante, "id" | "nombre" | "plan" | "prueba_inicio" | "prueba_fin"> };
 
 // Días de prueba arriba del panel (solo administradores). Se calcula en el navegador para no desfasarse con la caché.
 export function AvisoPrueba({ restaurante }: Props) {
@@ -55,9 +56,20 @@ export function AvisoPrueba({ restaurante }: Props) {
         Ver planes
       </Link>
       {urgente && contratar && (
-        <a href={contratar} target="_blank" className="boton py-1.5 text-xs">
+        <EnlaceAvisado
+          href={contratar}
+          target="_blank"
+          className="boton py-1.5 text-xs"
+          restaurante={restaurante.id}
+          tipo="plan"
+          detalle={
+            prueba.vencida
+              ? "Tocó «Quiero contratar» con la prueba vencida"
+              : `Tocó «Quiero contratar» (le quedan ${prueba.quedan} días de prueba)`
+          }
+        >
           Quiero contratar
-        </a>
+        </EnlaceAvisado>
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import { Inclinable } from "@/components/sellos/Inclinable";
 import { WHATSAPP_VENTAS } from "@/lib/planes";
 import { NOMBRE_SELLOS, PRECIO_SELLOS, PROGRAMA_BASE } from "@/lib/sellos/tipos";
 import { formatoPrecio } from "@/lib/utils";
+import { EnlaceAvisado } from "@/components/EnlaceAvisado";
 
 export const enlaceContratarSellos = (restaurante: string) =>
   WHATSAPP_VENTAS
@@ -25,7 +26,7 @@ export function OfertaSellos({
   restaurante,
   grupo,
 }: {
-  restaurante: { nombre: string; logo_url: string | null };
+  restaurante: { id: string; nombre: string; logo_url: string | null };
   grupo: boolean;
 }) {
   const contratar = enlaceContratarSellos(restaurante.nombre);
@@ -54,9 +55,17 @@ export function OfertaSellos({
             <span className="text-sm font-normal text-suave"> /mes + IVA{grupo ? " · todas tus sucursales" : ""}</span>
           </p>
           {contratar ? (
-            <a href={contratar} target="_blank" rel="noopener noreferrer" className="boton">
+            <EnlaceAvisado
+              href={contratar}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="boton"
+              restaurante={restaurante.id}
+              tipo="loyalty"
+              detalle={`Tocó «Quiero ${NOMBRE_SELLOS}»${grupo ? " (plan Grupo)" : ""}`}
+            >
               <Icono nombre="whatsapp" className="h-4 w-4" /> Quiero {NOMBRE_SELLOS}
-            </a>
+            </EnlaceAvisado>
           ) : (
             <p className="text-sm text-suave">Escríbenos para activarlo.</p>
           )}

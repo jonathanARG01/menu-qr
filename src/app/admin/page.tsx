@@ -5,7 +5,8 @@ export const metadata = { title: "Restaurantes · Administración" };
 export const dynamic = "force-dynamic";
 
 // El acceso (solo superadmin) lo controla el layout; la función de la base lo vuelve a comprobar.
-export default async function Admin() {
+export default async function Admin({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const { q } = await searchParams;
   const supabase = await createClient();
   const [{ data, error }, complementos] = await Promise.all([
     supabase.rpc("admin_restaurantes"),
@@ -28,5 +29,5 @@ export default async function Admin() {
     );
   }
   const filas = ((data ?? []) as FilaAdmin[]).map((f) => ({ ...f, sellos: sellos.has(f.id) }));
-  return <ListaAdmin filas={filas} complementos={!complementos.error} />;
+  return <ListaAdmin key={q ?? ""} filas={filas} complementos={!complementos.error} buscar={q ?? ""} />;
 }
