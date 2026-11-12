@@ -243,7 +243,7 @@ export function ListaAdmin({ filas: iniciales, complementos = true }: { filas: F
           titulo="Ingreso al mes"
           valor={formatoPrecio(resumen.ingreso, "CLP")}
           icono="caja"
-          ayuda="Precio de lista, sin descuentos"
+          ayuda="Precio de lista neto, sin IVA ni descuentos"
         />
         <Dato titulo="Visitas 30 días" valor={numero(resumen.visitas)} icono="ojo" />
         <Dato titulo="Pedidos 30 días" valor={numero(resumen.pedidos)} icono="carta" />
@@ -547,7 +547,7 @@ function BloquePlan({ f, ahora, acciones: a }: { f: FilaAdmin; ahora: number | n
           {p.futuro ? "Empieza pronto" : `Cliente hace ${plural(p.dias, "día", "días")}`}
           <span className="font-normal text-suave"> · paga {PAGA_CADA[f.ciclo] ?? PAGA_CADA.mensual}</span>
         </span>
-        <span className="text-xs font-semibold text-suave">{formatoPrecio(PRECIO[f.plan] ?? 0, "CLP")}/mes</span>
+        <span className="text-xs font-semibold text-suave">{formatoPrecio(PRECIO[f.plan] ?? 0, "CLP")}/mes + IVA</span>
       </div>
       {!p.futuro && (
         <>

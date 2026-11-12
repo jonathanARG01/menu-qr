@@ -555,10 +555,10 @@ function Loyalty() {
               <p className="text-xs uppercase tracking-[0.18em] text-sitio-suave">Complemento de tu plan</p>
               <p className="mt-1 font-marca text-3xl font-bold tabular-nums">
                 {clp(PRECIO_SELLOS.local)}
-                <span className="text-base font-normal text-sitio-suave"> /mes por local</span>
+                <span className="text-base font-normal text-sitio-suave"> /mes por local + IVA</span>
               </p>
               <p className="mt-0.5 text-sm text-sitio-suave">
-                Plan Grupo: {clp(PRECIO_SELLOS.grupo)} /mes para todas tus sucursales.
+                Plan Grupo: {clp(PRECIO_SELLOS.grupo)} /mes + IVA para todas tus sucursales.
               </p>
             </div>
             <a href="#contacto" className="boton-oro px-6 py-3.5 text-base sm:ml-auto">
@@ -659,7 +659,7 @@ function Precios() {
           etiqueta="Precios"
           titulo="Un precio fijo,"
           acento="sin comisiones."
-          texto={`Precios en pesos chilenos (CLP), IVA incluido. Prueba gratis ${DIAS_PRUEBA} días con todo incluido.`}
+          texto={`Precios en pesos chilenos (CLP) + IVA. Prueba gratis ${DIAS_PRUEBA} días con todo incluido.`}
           centrado
         />
         <PreciosPlanes />
@@ -680,7 +680,10 @@ function Precios() {
                 >
                   <p className="flex items-baseline justify-between gap-3">
                     <span className="font-marca font-bold">Armado {a.nombre}</span>
-                    <span className="font-marca text-xl font-bold tabular-nums texto-oro">{clp(a.precio)}</span>
+                    <span className="font-marca text-xl font-bold tabular-nums texto-oro">
+                      {clp(a.precio)}
+                      <span className="text-sm font-normal text-sitio-suave"> + IVA</span>
+                    </span>
                   </p>
                   <p className="mt-1 text-sm text-sitio-suave">{a.para}</p>
                   <ul className="mt-4 space-y-2 border-t border-sitio-borde pt-4 text-sm">
@@ -1029,11 +1032,19 @@ function Pie({ sitio }: { sitio: AjustesSitio }) {
       </Contenedor>
       <Contenedor className="relative flex flex-wrap items-center justify-between gap-4 border-t border-sitio-borde py-6 text-xs text-sitio-suave">
         <span>
-          © {anio} Platovi · por Brote Digital. Precios en pesos chilenos (CLP), IVA incluido.
+          © {anio} Platovi · por Brote Digital. Precios en pesos chilenos (CLP) + IVA.
         </span>
-        <a href="#contacto" className="transition hover:text-sitio-tinta">
-          ¿Dudas? Escríbenos, respondemos 24/7
-        </a>
+        <span className="flex flex-wrap gap-x-5 gap-y-2">
+          <Link href="/terminos" className="transition hover:text-sitio-tinta">
+            Términos y condiciones
+          </Link>
+          <Link href="/privacidad" className="transition hover:text-sitio-tinta">
+            Privacidad
+          </Link>
+          <a href="#contacto" className="transition hover:text-sitio-tinta">
+            ¿Dudas? Escríbenos, respondemos 24/7
+          </a>
+        </span>
       </Contenedor>
     </footer>
   );

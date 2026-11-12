@@ -2,7 +2,7 @@
 
 export const MONEDA = "CLP";
 
-// Precios mensuales en pesos chilenos (IVA incluido). Los períodos más largos aplican el descuento de PERIODOS.
+// Precios mensuales en pesos chilenos (más IVA: el IVA del 19 % se suma al cobrar). Los períodos más largos aplican el descuento de PERIODOS.
 export const PLANES = [
   {
     id: "carta",
@@ -164,7 +164,7 @@ export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; punto
 ];
 
 export const SERVICIOS: [string, string][] = [
-  ["Armado de la carta", "Cargamos platos, precios, fotos y traducciones por ti, en dos niveles desde $19.990."],
+  ["Armado de la carta", "Cargamos platos, precios, fotos y traducciones por ti, en dos niveles desde $19.990 + IVA."],
   ["QR impresos", "Te entregamos el PDF con un QR por mesa, listo para la imprenta."],
   ["Capacitación del equipo", "Una sesión para meseros, cocina y caja, en tu local o por videollamada."],
   ["Soporte por WhatsApp 24/7", "Hablas con una persona, no con un bot. Escríbenos a la hora que quieras, todos los días: siempre te respondemos."],

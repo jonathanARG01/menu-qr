@@ -51,7 +51,7 @@ export function OfertaSellos({
         <div className="flex flex-wrap items-center gap-4">
           <p className="text-2xl font-semibold tabular-nums">
             {formatoPrecio(grupo ? PRECIO_SELLOS.grupo : PRECIO_SELLOS.local, "CLP")}
-            <span className="text-sm font-normal text-suave"> /mes{grupo ? " · todas tus sucursales" : ""}</span>
+            <span className="text-sm font-normal text-suave"> /mes + IVA{grupo ? " · todas tus sucursales" : ""}</span>
           </p>
           {contratar ? (
             <a href={contratar} target="_blank" rel="noopener noreferrer" className="boton">
