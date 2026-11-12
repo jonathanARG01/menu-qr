@@ -12,7 +12,7 @@ Stack: Next.js 15 (App Router) + Supabase (Postgres, Auth, Storage, RLS) + Verce
 - **Códigos QR** `/panel/qr`: QR general (PNG y SVG), QR por mesa (PNG) y hoja PDF A4 con 6 tarjetas para imprimir.
 - **Cuentas**: registro, login, recuperar contraseña. Las fotos se comprimen en el navegador a WebP de 1200 px antes de subirlas.
 - **Diseños de carta**: Clásico, Noche, Esmeralda, Comida rápida y Retro, elegibles en Marca con vista previa.
-- **Idiomas**: la carta se escribe en español y se puede ofrecer en inglés, portugués, francés, italiano y alemán. Se abre sola en el idioma del teléfono y tiene un botón para cambiarlo. Las traducciones de platos y categorías se cargan en el panel.
+- **Idiomas**: la carta se escribe en español y se puede ofrecer en inglés, portugués, francés, italiano, alemán, holandés y chino (se pueden sumar más idiomas a pedido). Se abre sola en el idioma del teléfono y tiene un botón para cambiarlo. Las traducciones de platos y categorías se cargan en el panel.
 - **Pedidos por WhatsApp**: el cliente arma su pedido en la carta y lo envía al WhatsApp del local (o de la sucursal) con mesa, total y notas.
 - **Sucursales** `/panel/sucursales`: misma carta, con dirección, horario, WhatsApp y QR de mesa propios (`/<slug>?s=centro&mesa=4`).
 - **Estadísticas** `/panel/estadisticas`: visitas por día, hora, mesa e idioma, pedidos y lo más pedido.

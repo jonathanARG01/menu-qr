@@ -298,9 +298,9 @@ function Telefono() {
 }
 
 function Cifras() {
-  const cifras: { n: number; antes?: string; despues?: string; texto: string }[] = [
-    { n: 21, texto: "diseños de carta" },
-    { n: 7, texto: "idiomas" },
+  const cifras: { n?: number; valor?: string; despues?: string; texto: string }[] = [
+    { valor: "Decenas", texto: "de diseños, nuevos cada mes" },
+    { valor: "+ Idiomas", texto: "pide el que falte y lo sumamos" },
     { n: 0, despues: " %", texto: "comisión por pedido" },
     { n: DIAS_PRUEBA, despues: " días", texto: "de prueba gratis" },
   ];
@@ -311,7 +311,7 @@ function Cifras() {
           <div key={c.texto} data-revelar="" style={retraso(i * 90)} className="tarjeta-sitio px-4 py-6 text-center">
             <p className="font-marca text-4xl font-bold tracking-tight tabular-nums">
               <span className="texto-oro">
-                <span data-contar={c.n}>{c.n}</span>
+                {c.n === undefined ? c.valor : <span data-contar={c.n}>{c.n}</span>}
                 {c.despues}
               </span>
             </p>
@@ -602,7 +602,7 @@ function Demo() {
             etiqueta="Demo"
             titulo="Mira cartas reales"
             acento="funcionando."
-            texto="Ábrelas en tu celular como lo haría un cliente. Cada una usa uno de los 21 diseños."
+            texto="Ábrelas en tu celular como lo haría un cliente. Cada una usa uno de nuestros diseños, y sumamos nuevos cada mes."
           />
           <Link href={CARTA_EJEMPLO} target="_blank" className="boton-vidrio" data-revelar="">
             Abrir Aroma Café <Icono nombre="externo" className="h-4 w-4" />

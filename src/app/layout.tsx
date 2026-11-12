@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     default: "Platovi · Carta digital y gestión para restaurantes",
     template: "%s",
   },
-  description: "Platovi: carta digital con QR, pedidos desde la mesa y gestión del salón para restaurantes.",
+  description: "Platovi: carta digital con QR en el idioma de cada turista, decenas de diseños, pedidos desde la mesa y gestión del salón para restaurantes.",
   applicationName: "Platovi",
 };
 

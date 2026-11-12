@@ -11,8 +11,8 @@ export const PLANES = [
     para: "Para mostrar la carta con QR y olvidarte de reimprimir.",
     incluye: [
       "Carta QR ilimitada con fotos",
-      "21 diseños, tu logo y tus colores",
-      "7 idiomas para turistas",
+      "Decenas de diseños (y nuevos cada mes), tu logo y tus colores",
+      "Idiomas para turistas, y sumamos el que pidas",
       "QR por mesa listos para imprimir",
       "Platos destacados, agotados y promos por horario",
     ],
@@ -88,8 +88,8 @@ export const ARMADOS = [
 export const DIAS_PRUEBA = 14;
 
 export const MODULOS: { icono: string; titulo: string; texto: string }[] = [
-  { icono: "carta", titulo: "Carta QR con 21 diseños", texto: "Del café de barrio al bar de cócteles. Cambias precios y fotos desde el celular y se actualiza al instante." },
-  { icono: "externo", titulo: "7 idiomas", texto: "Español, inglés, portugués, francés, italiano, alemán y chino. El turista elige el suyo con un toque." },
+  { icono: "carta", titulo: "Carta QR con decenas de diseños", texto: "Del café de barrio al bar de cócteles, con diseños nuevos cada mes. Cambias precios y fotos desde el celular y se actualiza al instante." },
+  { icono: "externo", titulo: "La carta en el idioma de cada turista", texto: "Español, inglés, portugués, francés, italiano, alemán, holandés y chino. ¿Necesitas otro? Pídelo y lo agregamos. El turista elige el suyo con un toque." },
   { icono: "whatsapp", titulo: "Pedidos por WhatsApp", texto: "El cliente arma su pedido y te llega con la mesa y el total. Sin comisiones por pedido." },
   { icono: "salon", titulo: "Salón y mapa de mesas", texto: "Dibuja tu local por pisos, ve qué mesa está libre, ocupada o pidiendo la cuenta." },
   { icono: "cocina", titulo: "Pantalla de cocina", texto: "Las comandas llegan en vivo por estación, se ordenan y avisan al mesero cuando están listas." },
@@ -209,6 +209,8 @@ export const PREGUNTAS: [string, string][] = [
   ["¿El cliente tiene que bajar una app?", "No. Escanea el QR con la cámara y la carta se abre en el navegador."],
   ["¿Cobran comisión por pedido?", "No. Pagas el plan mensual y nada más. En el cobro online, Mercado Pago cobra su comisión habitual."],
   ["¿Hay permanencia?", "No. Es mes a mes y puedes cancelar cuando quieras. Si pagas cada 3, 6 o 12 meses, tienes descuento."],
+  ["¿Cuántos diseños de carta hay?", "Decenas, para cafés, restaurantes, bares y más, y sumamos diseños nuevos cada mes. Todos llevan tu logo y tus colores, y puedes cambiar de diseño cuando quieras."],
+  ["¿En qué idiomas se puede ver la carta?", "Hoy en español, inglés, portugués, francés, italiano, alemán, holandés y chino. Si tu local necesita otro idioma, solo pídelo y lo agregamos al sistema."],
   ["¿Sirve fuera de Chile?", "Sí. Cada local elige su país, moneda, zona horaria e idiomas."],
   ["¿Qué pasa si se cae internet en el local?", "La carta la ven tus clientes con sus propios datos móviles, así que sigue funcionando."],
 ];
