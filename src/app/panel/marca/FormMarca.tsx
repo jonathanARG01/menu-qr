@@ -63,6 +63,7 @@ const MUESTRA_FUENTE: Record<Tema, string> = {
   libreta: "f-kaushan text-2xl",
   muro: "uppercase tracking-[0.3em]",
   porteno: "f-marker uppercase",
+  pintor: "f-vibes text-2xl",
 };
 
 const NOMBRE_SONIDO: Record<SonidoHoja, string> = {
@@ -78,8 +79,10 @@ const SQL_TEMA = (t: Tema) =>
     ? "0002_temas.sql"
     : ["bistro", "veggie", "forno", "oriente", "neon"].includes(t)
       ? "0006_temas_nuevos.sql"
-      : TEMA_INFO[t].grupo === "cafeterias"
-        ? "0033_temas_cafeteria.sql"
+      : t === "pintor"
+        ? "0037_tema_pintor.sql"
+        : TEMA_INFO[t].grupo === "cafeterias"
+          ? "0033_temas_cafeteria.sql"
         : "0007_destacados_y_temas.sql";
 
 export function FormMarca({
