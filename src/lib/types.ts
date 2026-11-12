@@ -25,6 +25,14 @@ export const TEMAS = [
   "madera",
   "coctel",
   "revista",
+  "barista",
+  "latte",
+  "origen",
+  "grano",
+  "caramelo",
+  "libreta",
+  "muro",
+  "porteno",
 ] as const;
 export type Tema = (typeof TEMAS)[number];
 

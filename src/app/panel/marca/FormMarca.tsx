@@ -55,6 +55,14 @@ const MUESTRA_FUENTE: Record<Tema, string> = {
   madera: "font-semibold",
   coctel: "f-dirt uppercase",
   revista: "f-playfair italic font-bold",
+  barista: "f-cinzel uppercase font-bold tracking-widest",
+  latte: "font-bold",
+  origen: "f-playfair font-semibold",
+  grano: "font-semibold",
+  caramelo: "f-playfair font-bold",
+  libreta: "f-kaushan text-2xl",
+  muro: "uppercase tracking-[0.3em]",
+  porteno: "f-marker uppercase",
 };
 
 const NOMBRE_SONIDO: Record<SonidoHoja, string> = {
@@ -70,7 +78,9 @@ const SQL_TEMA = (t: Tema) =>
     ? "0002_temas.sql"
     : ["bistro", "veggie", "forno", "oriente", "neon"].includes(t)
       ? "0006_temas_nuevos.sql"
-      : "0007_destacados_y_temas.sql";
+      : TEMA_INFO[t].grupo === "cafeterias"
+        ? "0033_temas_cafeteria.sql"
+        : "0007_destacados_y_temas.sql";
 
 export function FormMarca({
   restaurante,

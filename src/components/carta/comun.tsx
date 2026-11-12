@@ -15,6 +15,7 @@ export type PropsTema = {
 // Pestañas del selector de diseños en el panel.
 export const GRUPOS_TEMA = [
   { id: "sencillos", nombre: "Sencillos" },
+  { id: "cafeterias", nombre: "Cafeterías" },
   { id: "elegantes", nombre: "Elegantes" },
   { id: "casuales", nombre: "Casuales" },
   { id: "bebidas", nombre: "Bares y bebidas" },
@@ -165,6 +166,62 @@ export const TEMA_INFO: Record<Tema, { nombre: string; descripcion: string; acen
     fondo: "#f5efe6",
     grupo: "premium",
   },
+  barista: {
+    nombre: "Barista",
+    descripcion: "Negro mate y dorado, como un empaque de café",
+    acento: "#c9a45c",
+    fondo: "#121212",
+    grupo: "cafeterias",
+  },
+  latte: {
+    nombre: "Latte",
+    descripcion: "Panel de vidrio crema y tazas vistas desde arriba",
+    acento: "#2a0f0b",
+    fondo: "#d8c6ae",
+    grupo: "cafeterias",
+  },
+  origen: {
+    nombre: "Origen",
+    descripcion: "Montaña al amanecer, crema y verde oliva",
+    acento: "#c8a15a",
+    fondo: "#3b3e33",
+    grupo: "cafeterias",
+  },
+  grano: {
+    nombre: "Grano",
+    descripcion: "Café tostado con brillo naranjo y granos",
+    acento: "#f08a3c",
+    fondo: "#1f130d",
+    grupo: "cafeterias",
+  },
+  caramelo: {
+    nombre: "Caramelo",
+    descripcion: "Crema y chocolate con botones caramelo",
+    acento: "#b8743a",
+    fondo: "#fbf1df",
+    grupo: "cafeterias",
+  },
+  libreta: {
+    nombre: "Libreta",
+    descripcion: "Papel dibujado a mano con cintas de pincel",
+    acento: "#7a4a2a",
+    fondo: "#f5ead6",
+    grupo: "cafeterias",
+  },
+  muro: {
+    nombre: "Muro",
+    descripcion: "Pared oscura con tazas de bronce por capas",
+    acento: "#d9b37c",
+    fondo: "#33241b",
+    grupo: "cafeterias",
+  },
+  porteno: {
+    nombre: "Porteño",
+    descripcion: "Casitas de colores de los cerros y el mar",
+    acento: "#e6007e",
+    fondo: "#17110d",
+    grupo: "cafeterias",
+  },
 };
 
 export const ICONOS: Record<string, string> = {
@@ -304,7 +361,7 @@ export const emojiPlato = (nombre: string, descripcion?: string | null) => {
   if (/tequila|vodka| ron[ ,]| gin[ ,]|cachaza|whisky|licor|campari|vermut|fernet/.test(desc)) {
     return TRAGOS.find(([re]) => re.test(normalizar(nombre)))?.[1] ?? "🍹";
   }
-  const porDescripcion = /masa|mozzarella|muzzarella|mussarela/.test(desc) ? "🍕" : undefined;
+  const porDescripcion = /masa(?! madre)|mozzarella|muzzarella|mussarela/.test(desc) ? "🍕" : undefined;
   return buscar(nombre) ?? porDescripcion ?? (descripcion ? buscar(descripcion) : undefined) ?? "🍽️";
 };
 

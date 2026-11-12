@@ -30,6 +30,14 @@ import { TemaKraft } from "./TemaKraft";
 import { TemaMadera } from "./TemaMadera";
 import { TemaCoctel } from "./TemaCoctel";
 import { TemaRevista } from "./TemaRevista";
+import { TemaBarista } from "./TemaBarista";
+import { TemaLatte } from "./TemaLatte";
+import { TemaOrigen } from "./TemaOrigen";
+import { TemaGrano } from "./TemaGrano";
+import { TemaCaramelo } from "./TemaCaramelo";
+import { TemaLibreta } from "./TemaLibreta";
+import { TemaMuro } from "./TemaMuro";
+import { TemaPorteno } from "./TemaPorteno";
 import { useCartaViva } from "./useCartaViva";
 
 const TEMAS: Record<Tema, (props: PropsTema) => React.ReactNode> = {
@@ -54,6 +62,14 @@ const TEMAS: Record<Tema, (props: PropsTema) => React.ReactNode> = {
   madera: TemaMadera,
   coctel: TemaCoctel,
   revista: TemaRevista,
+  barista: TemaBarista,
+  latte: TemaLatte,
+  origen: TemaOrigen,
+  grano: TemaGrano,
+  caramelo: TemaCaramelo,
+  libreta: TemaLibreta,
+  muro: TemaMuro,
+  porteno: TemaPorteno,
 };
 
 type Props = {
