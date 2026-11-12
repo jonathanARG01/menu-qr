@@ -11,6 +11,9 @@ import { BOTON, ESTILO_BOTON, Marco, useIdioma, useTextos } from "./Marco";
 type Datos = {
   nombre: string;
   personas: number;
+  // Migración 0034.
+  ninos?: number;
+  ubicacion?: string | null;
   fecha: string;
   estado: "pendiente" | "confirmada" | "avisada" | "sentada" | "cancelada" | "no_vino";
   asistencia: "si" | "no" | null;
@@ -94,7 +97,9 @@ export function MiReserva({ restaurante, id }: { restaurante: Restaurante; id: s
         </p>
         <p className="mt-1 text-stone-600">
           {datos.nombre} · {datos.personas} {t("personas").toLowerCase()}
+          {datos.ninos ? ` (${datos.ninos} ${t("ninos").toLowerCase()})` : ""}
         </p>
+        {datos.ubicacion && <p className="mt-1 text-sm font-medium text-stone-600">{datos.ubicacion}</p>}
         {(datos.sucursal || datos.direccion) && (
           <p className="mt-1 text-sm text-stone-500">{[datos.sucursal, datos.direccion].filter(Boolean).join(" · ")}</p>
         )}
