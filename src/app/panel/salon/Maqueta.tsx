@@ -65,9 +65,58 @@ type Mundo = {
   manijas: Map<string, Manija>;
   etiquetas: Etiqueta[];
   paredes: Pared[];
+  // Cuerdas verdes entre mesas unidas: se rearman cada vez que cambia el estado (no la forma del piso).
+  cuerdas: THREE.Group;
   tamano: { ancho: number; fondo: number };
   liberar: () => void;
 };
+
+// Cuerda verde entre una mesa unida y la principal, como en las otras vistas: franja punteada en el piso y una
+// cuerda colgando entre las dos mesas.
+const VERDE = "#22c55e";
+const VERDE_OSCURO = "#14532d";
+function armarCuerdas(grupo: THREE.Group, manijas: Map<string, Manija>, estados: Map<string, EstadoMesa>) {
+  for (const hijo of [...grupo.children]) {
+    grupo.remove(hijo);
+    (hijo as THREE.Mesh).geometry?.dispose();
+  }
+  const oscuro = grupo.userData.oscuro as THREE.Material;
+  const claro = grupo.userData.claro as THREE.Material;
+  for (const [id, h] of manijas) {
+    const principal = manijas.get(estados.get(id)?.principal ?? "");
+    if (!principal || principal === h) continue;
+    const a = h.grupo.position;
+    const b = principal.grupo.position;
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const largo = Math.hypot(dx, dz);
+    if (largo < 0.01) continue;
+    const angulo = Math.atan2(dx, dz);
+    // Franja oscura en el piso con trazos verdes encima.
+    const franja = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.01, largo), oscuro);
+    franja.position.set((a.x + b.x) / 2, 0.035, (a.z + b.z) / 2);
+    franja.rotation.y = angulo;
+    grupo.add(franja);
+    const trazos = Math.max(1, Math.floor(largo / 0.55));
+    for (let i = 0; i < trazos; i++) {
+      const t = (i + 0.5) / trazos;
+      const trazo = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.012, 0.3), claro);
+      trazo.position.set(a.x + dx * t, 0.042, a.z + dz * t);
+      trazo.rotation.y = angulo;
+      grupo.add(trazo);
+    }
+    // Cuerda colgando de mesa a mesa, a la altura del tablero.
+    const y = ALTO_MESA + 0.1;
+    const curva = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(a.x, y, a.z),
+      new THREE.Vector3((a.x + b.x) / 2, y - Math.min(0.35, largo * 0.08), (a.z + b.z) / 2),
+      new THREE.Vector3(b.x, y, b.z),
+    );
+    const cuerda = new THREE.Mesh(new THREE.TubeGeometry(curva, 24, 0.045, 8, false), claro);
+    cuerda.castShadow = true;
+    grupo.add(cuerda);
+  }
+}
 
 // ── Texturas dibujadas en un canvas (sin archivos) ──────────────
 function texturaCanvas(ancho: number, alto: number, dibujar: (c: CanvasRenderingContext2D) => void) {
@@ -796,13 +845,22 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
     etiquetas.push({ id: m.id, pos: new THREE.Vector3(g.position.x, ALTO_MESA + 0.55, g.position.z) });
   }
 
+  const cuerdas = new THREE.Group();
+  cuerdas.userData.oscuro = mat(VERDE_OSCURO);
+  cuerdas.userData.claro = mat(VERDE, { emissive: VERDE, emissiveIntensity: 0.35 });
+  grupo.add(cuerdas);
+
   return {
     grupo,
     manijas,
     etiquetas,
     paredes,
+    cuerdas,
     tamano: { ancho: C, fondo: F },
-    liberar: () => liberables.forEach((l) => l.dispose()),
+    liberar: () => {
+      cuerdas.children.forEach((c) => (c as THREE.Mesh).geometry.dispose());
+      liberables.forEach((l) => l.dispose());
+    },
   };
 }
 
@@ -1164,6 +1222,7 @@ export default function Maqueta({
         nuevos.push({ id: Date.now() + Math.random(), mesaId: id, clave: vis.clave, mesa: nombreMesa(h.mesa.numero) });
     }
     anteriores.current = vistas;
+    armarCuerdas(m.mundo.cuerdas, m.mundo.manijas, estados);
     m.sucio = true;
     if (nuevos.length) setToasts((t) => [...nuevos, ...t].slice(0, 3));
   }, [estados, seleccion, forma]);
