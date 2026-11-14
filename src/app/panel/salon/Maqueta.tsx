@@ -806,6 +806,14 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
   };
 }
 
+// Minutos abiertos, corto: "40′", "3 h 5′", "9 d".
+function tiempo(min?: number) {
+  const m = Math.max(0, Math.round(min ?? 0));
+  if (m < 60) return `${m}′`;
+  if (m < 60 * 24) return `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60}′` : ""}`;
+  return `${Math.floor(m / 1440)} d`;
+}
+
 // ── Componente ─────────────────────────────────────────────────
 type Toast = { id: number; mesaId: string; clave: string; mesa: string };
 
@@ -1192,7 +1200,8 @@ export default function Maqueta({
   return (
     <div
       ref={marco}
-      className="relative w-full overflow-hidden rounded-2xl border border-slate-700 [color-scheme:dark]"
+      // tema-fijo: con el tema oscuro del panel, las etiquetas y botones blancos no se invierten.
+      className="tema-fijo relative w-full overflow-hidden rounded-2xl border border-slate-700"
       style={{
         height: `calc(${alto ?? "100vh - 16rem"})`,
         minHeight: 380,
@@ -1237,12 +1246,15 @@ export default function Maqueta({
                 className="relative flex flex-col items-center rounded-xl border-2 bg-white/95 px-2 py-0.5 leading-tight text-stone-900 shadow-lg"
                 style={{ borderColor: vis.nivel ? vis.color : "#d6d3d1" }}
               >
-                <span className="text-sm font-extrabold">{mesa.numero}</span>
+                <span className="text-base font-extrabold" style={{ color: "#1c1917" }}>
+                  {mesa.numero}
+                </span>
                 {est?.unida ? (
                   <span className="maqueta-sub text-[9px] font-semibold text-stone-500">unida</span>
                 ) : est?.ocupada ? (
                   <span className="maqueta-sub text-[9px] tabular-nums text-stone-600" suppressHydrationWarning>
-                    {est.comensales}/{mesa.capacidad ?? 4} · {est.minutos}′{est.total ? ` · ${formato(est.total)}` : ""}
+                    {est.comensales}/{mesa.capacidad ?? 4} · {tiempo(est.minutos)}
+                    {est.total ? ` · ${formato(est.total)}` : ""}
                   </span>
                 ) : null}
                 {vis.clave && (
@@ -1293,7 +1305,8 @@ export default function Maqueta({
             onClick={b.f}
             title={b.a}
             aria-label={b.a}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/90 text-lg font-bold text-stone-800 shadow-md hover:bg-white"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-lg font-bold shadow-md ring-1 ring-black/10"
+            style={{ color: "#1c1917", background: "#ffffff" }}
           >
             {b.t}
           </button>
