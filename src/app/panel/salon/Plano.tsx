@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { Avatar } from "@/components/Avatar";
 import {
   ELEMENTOS,
@@ -168,12 +169,23 @@ function colorMesa(e?: EstadoMesa) {
 
 // Cómo se dibuja el plano: "simple" (esquema), "color" (ambientado: piso, madera, sillas) o "3d" (el ambientado
 // visto en perspectiva). Se elige por pantalla: el mesero puede usar el simple y la pantalla del salón el 3D.
-export type EstiloPlano = "simple" | "color" | "3d";
+// "maqueta" es una maqueta 3D de verdad (WebGL) que se puede girar y acercar; se carga solo cuando se elige.
+export type EstiloPlano = "simple" | "color" | "3d" | "maqueta";
 export const ESTILOS_PLANO: { id: EstiloPlano; texto: string }[] = [
   { id: "simple", texto: "Simple" },
   { id: "color", texto: "Color" },
   { id: "3d", texto: "3D" },
+  { id: "maqueta", texto: "Maqueta" },
 ];
+
+const Maqueta = dynamic(() => import("./Maqueta"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[380px] items-center justify-center rounded-2xl border border-slate-700 bg-[#2b313b] text-sm text-slate-300">
+      Armando la maqueta…
+    </div>
+  ),
+});
 
 // Ambientado: superficies con textura, como una foto aérea del local.
 const AMBIENTE: Record<string, React.CSSProperties> = {
@@ -518,7 +530,9 @@ export function Plano({
   alto?: string;
 }) {
   // Al editar se usa la vista plana: arrastrar sobre una perspectiva confunde.
-  const modo: EstiloPlano = editando && estilo === "3d" ? "color" : estilo;
+  const [sinWebgl, setSinWebgl] = useState(false);
+  const modo: EstiloPlano =
+    (editando && (estilo === "3d" || estilo === "maqueta")) || (estilo === "maqueta" && sinWebgl) ? "color" : estilo;
   const ambientado = modo !== "simple";
   const tres = modo === "3d";
   const lienzo = useRef<HTMLDivElement>(null);
@@ -578,6 +592,20 @@ export function Plano({
 
   const cajaDe = (tipo: "mesa" | "elemento", id: string, original: Caja) =>
     arrastre && arrastre.tipo === tipo && arrastre.id === id ? arrastre.caja : original;
+
+  if (modo === "maqueta")
+    return (
+      <Maqueta
+        piso={piso}
+        mesas={mesas}
+        estados={estados}
+        seleccion={seleccion}
+        onAbrirMesa={onAbrirMesa}
+        formato={formato}
+        alto={alto}
+        onSinSoporte={() => setSinWebgl(true)}
+      />
+    );
 
   return (
     <div
