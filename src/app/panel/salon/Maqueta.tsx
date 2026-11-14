@@ -14,6 +14,19 @@ import { Avatar } from "@/components/Avatar";
 import { ELEMENTOS, type Lado, type LadoSillas, type Piso, nombreMesa, sillasAutomaticas, tono } from "@/lib/salon";
 import type { Mesa } from "@/lib/types";
 import type { EstadoMesa, Seleccion } from "./Plano";
+import {
+  type Asiento,
+  type GeoGente,
+  type PrefGente,
+  PREF_GENTE,
+  geometriasGente,
+  guardarPrefGente,
+  leerPrefGente,
+  mesero,
+  repartir,
+  sentar,
+  servir,
+} from "./gente3d";
 
 // ── Estado de una mesa → cómo se ve ────────────────────────────
 type Visual = { color: string; nivel: 0 | 1 | 2; clave: string | null };
@@ -55,6 +68,11 @@ type Manija = {
   visual: Visual;
   marca: boolean;
   apagada: boolean;
+  // Comensales, platos y mesero: se rearman cuando cambia el estado de la mesa o las preferencias.
+  asientos: Asiento[];
+  gente: THREE.Group;
+  lugarMesero: { x: number; z: number; giro: number };
+  mesero: THREE.Object3D | null;
 };
 
 type Etiqueta = { id: string; pos: THREE.Vector3; texto?: string };
@@ -67,6 +85,8 @@ type Mundo = {
   paredes: Pared[];
   // Cuerdas verdes entre mesas unidas: se rearman cada vez que cambia el estado (no la forma del piso).
   cuerdas: THREE.Group;
+  geoGente: GeoGente;
+  mat: (color: string, extra?: THREE.MeshStandardMaterialParameters) => THREE.MeshStandardMaterial;
   tamano: { ancho: number; fondo: number };
   liberar: () => void;
 };
@@ -741,11 +761,15 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
     g.add(malla(propia(cilindro(0.04, 0.05, 0.14, 0, ALTO_MESA + 0.06, 0, 8)), mat("#e5e7eb", { roughness: 0.3 })));
 
     const conf = m.sillas && Object.keys(m.sillas).length ? m.sillas : sillasAutomaticas(m.forma, m.capacidad ?? 4, w, d);
-    const pon = (geom: THREE.BufferGeometry, x: number, z: number, giro: number) => {
+    const asientos: Asiento[] = [];
+    // Altura del cuerpo según el asiento: taburete más alto, sillón más bajo que una silla.
+    const altoDe = (tipo?: string) => (tipo === "taburete" ? 0.2 : tipo === "sillon" ? -0.14 : 0);
+    const pon = (geom: THREE.BufferGeometry, x: number, z: number, giro: number, tipo?: string, sep = 0.28) => {
       const s = malla(geom, sillas);
       s.position.set(x, 0, z);
       s.rotation.y = giro;
       g.add(s);
+      if (tipo !== "banca" && tipo !== "sillon") asientos.push({ x, z, giro, alto: altoDe(tipo), alcance: sep + 0.22 });
     };
     if (redonda) {
       const todas: LadoSillas = conf.alrededor ?? { tipo: "silla", n: Object.values(conf).reduce((t, l) => t + (l?.n ?? 0), 0) };
@@ -754,7 +778,9 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
       const r = radio + (todas.tipo === "sillon" ? 0.42 : 0.28);
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2 - Math.PI / 2;
-        pon(geom, Math.cos(a) * r, Math.sin(a) * r, Math.atan2(Math.cos(a), Math.sin(a)));
+        pon(geom, Math.cos(a) * r, Math.sin(a) * r, Math.atan2(Math.cos(a), Math.sin(a)), todas.tipo, r - radio);
+        if (todas.tipo === "sillon")
+          asientos.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, giro: Math.atan2(Math.cos(a), Math.sin(a)), alto: altoDe("sillon"), alcance: r - radio + 0.22 });
       }
     } else {
       for (const lado of ["arriba", "abajo", "izquierda", "derecha"] as Lado[]) {
@@ -778,13 +804,25 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
               ? unir([caja(l, 0.24, 0.55, 0, 0.12, 0), caja(l, 0.55, 0.15, 0, 0.12, 0.22)])
               : unir([caja(l, 0.07, 0.4, 0, 0.42, 0), caja(l, 0.42, 0.08, 0, 0, -0.12), caja(l, 0.42, 0.08, 0, 0, 0.12)]),
           );
-          pon(geom, horizontal ? 0 : fijo, horizontal ? fijo : 0, GIRO[lado]);
+          pon(geom, horizontal ? 0 : fijo, horizontal ? fijo : 0, GIRO[lado], c.tipo, sep);
+          // En la banca o el sillón corrido se sientan tantos como diga el lado, repartidos a lo largo.
+          const n = Math.min(c.n, 24);
+          for (let i = 0; i < n; i++) {
+            const t = -l / 2 + (i + 0.5) * (l / n);
+            asientos.push({
+              x: horizontal ? t : fijo,
+              z: horizontal ? fijo : t,
+              giro: GIRO[lado],
+              alto: altoDe(c.tipo),
+              alcance: sep + 0.22,
+            });
+          }
         } else {
           const geom = c.tipo === "taburete" ? geo.taburete : geo.silla;
           const n = Math.min(c.n, 24);
           for (let i = 0; i < n; i++) {
             const t = -largo / 2 + (i + 0.5) * (largo / n);
-            pon(geom, horizontal ? t : fijo, horizontal ? fijo : t, GIRO[lado]);
+            pon(geom, horizontal ? t : fijo, horizontal ? fijo : t, GIRO[lado], c.tipo, sep);
           }
         }
       }
@@ -827,6 +865,22 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
     g.add(haz);
     liberables.push(haz.material);
 
+    const gente = new THREE.Group();
+    g.add(gente);
+    // El mesero se para en una esquina libre (entre dos sillas en las mesas redondas), mirando la mesa.
+    const lugar = (() => {
+      if (redonda) {
+        // Las sillas van en ángulos -90° + i·(360°/n): se elige el hueco entre dos más cercano a 55° (adelante a la
+        // derecha en la vista inicial).
+        const n = Math.max(1, asientos.length);
+        const paso = (Math.PI * 2) / n;
+        const j = Math.round((THREE.MathUtils.degToRad(55) + Math.PI / 2) / paso - 0.5);
+        const a = -Math.PI / 2 + paso * (j + 0.5);
+        const r = radio + 0.85;
+        return { x: Math.cos(a) * r, z: Math.sin(a) * r };
+      }
+      return { x: tw / 2 + 0.38, z: td / 2 + 0.38 };
+    })();
     grupo.add(g);
     manijas.set(m.id, {
       mesa: m,
@@ -841,6 +895,10 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
       visual: { color: "#6b7280", nivel: 0, clave: null },
       marca: false,
       apagada: false,
+      asientos,
+      gente,
+      lugarMesero: { ...lugar, giro: Math.atan2(lugar.x, lugar.z) },
+      mesero: null,
     });
     etiquetas.push({ id: m.id, pos: new THREE.Vector3(g.position.x, ALTO_MESA + 0.55, g.position.z) });
   }
@@ -849,6 +907,8 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
   cuerdas.userData.oscuro = mat(VERDE_OSCURO);
   cuerdas.userData.claro = mat(VERDE, { emissive: VERDE, emissiveIntensity: 0.35 });
   grupo.add(cuerdas);
+  const geoGente = geometriasGente();
+  liberables.push({ dispose: geoGente.liberar });
 
   return {
     grupo,
@@ -856,6 +916,8 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
     etiquetas,
     paredes,
     cuerdas,
+    geoGente,
+    mat,
     tamano: { ancho: C, fondo: F },
     liberar: () => {
       cuerdas.children.forEach((c) => (c as THREE.Mesh).geometry.dispose());
@@ -913,6 +975,16 @@ export default function Maqueta({
   const [etiquetas, setEtiquetas] = useState<Etiqueta[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [ayuda, setAyuda] = useState(true);
+  // Comensales, mesero y platos: se guardan en este dispositivo (cada mesero elige cómo lo quiere ver).
+  const [gente, setGente] = useState<PrefGente>(PREF_GENTE);
+  const [menuGente, setMenuGente] = useState(false);
+  useEffect(() => setGente(leerPrefGente()), []);
+  const cambiarGente = (c: Partial<PrefGente>) =>
+    setGente((g) => {
+      const n = { ...g, ...c };
+      guardarPrefGente(n);
+      return n;
+    });
   const anteriores = useRef<Map<string, string | null> | null>(null);
 
   // Clave de lo que cambia la forma del piso (no el estado de las mesas): si no cambia, no se rearma la escena.
@@ -1087,6 +1159,8 @@ export default function Maqueta({
       let animado = false;
       if (mundo) {
         for (const h of mundo.manijas.values()) {
+          // El mesero que acude se balancea un poquito, como esperando el pedido.
+          if (h.mesero) h.mesero.position.y = 0.03 * Math.abs(Math.sin(t * 3 + h.fase * 6));
           const { nivel } = h.visual;
           if (nivel === 0 && !h.marca) {
             h.anillo.material.opacity = 0;
@@ -1226,6 +1300,46 @@ export default function Maqueta({
     m.sucio = true;
     if (nuevos.length) setToasts((t) => [...nuevos, ...t].slice(0, 3));
   }, [estados, seleccion, forma]);
+
+  // Gente en las mesas: comensales sentados (tantos como la cuenta), platos si ya pidieron y el mesero de pie
+  // junto a la mesa que lo llama.
+  useEffect(() => {
+    const m = motor.current;
+    const mundo = m?.mundo;
+    if (!m || !mundo) return;
+    const { geoGente: geo, mat } = mundo;
+    // Mesas unidas: los comensales de la cuenta se reparten entre la principal y sus unidas.
+    const grupos = new Map<string, Manija[]>();
+    for (const [id, h] of mundo.manijas) {
+      h.gente.clear();
+      h.mesero = null;
+      const est = estados.get(id);
+      const jefe = est?.unida ? est.principal : id;
+      if (jefe) grupos.set(jefe, [...(grupos.get(jefe) ?? []), h]);
+      const clave = visualDe(est).clave;
+      if (gente.mesero && (clave === "mozo" || clave === "cuenta")) {
+        const p = mesero(geo, mat, gente.estilo, est?.mesero?.color);
+        p.position.set(h.lugarMesero.x, 0, h.lugarMesero.z);
+        p.rotation.y = h.lugarMesero.giro;
+        h.gente.add(p);
+        h.mesero = p;
+      }
+    }
+    const tablero = ALTO_MESA + 0.06;
+    for (const [id, hs] of grupos) {
+      const est = estados.get(id);
+      if (!est?.ocupada || est.unida) continue;
+      const conPlatos = gente.platos && (est.total ?? 0) > 0;
+      if (!gente.comensales && !conPlatos) continue;
+      const lugares = hs.flatMap((h) => h.asientos.map((a, i) => ({ h, a, clave: `${h.mesa.id}:${i}` })));
+      const k = Math.min(Math.max(1, est.comensales ?? 1), lugares.length);
+      for (const { h, a, clave } of repartir(lugares, k)) {
+        if (gente.comensales) h.gente.add(sentar(geo, mat, a, gente.estilo, clave));
+        if (conPlatos) h.gente.add(servir(geo, mat, a, tablero, clave));
+      }
+    }
+    m.sucio = true;
+  }, [estados, forma, gente]);
 
   // Cada aviso se va solo a los 8 segundos.
   useEffect(() => {
@@ -1370,7 +1484,86 @@ export default function Maqueta({
             {b.t}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setMenuGente((v) => !v)}
+          title="Comensales y mesero"
+          aria-label="Comensales y mesero"
+          aria-expanded={menuGente}
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-lg shadow-md ring-1 ring-black/10"
+          style={{ color: "#1c1917", background: menuGente ? "#fde68a" : "#ffffff" }}
+        >
+          👥
+        </button>
       </div>
+
+      {/* Opciones de gente: comensales sentados, estilo, mesero y platos. */}
+      {menuGente && (
+        <div
+          className="absolute right-12 top-2 z-10 w-56 rounded-2xl p-3 text-sm shadow-2xl ring-1 ring-black/10"
+          style={{ background: "#ffffff", color: "#1c1917" }}
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <span className="font-bold">Gente en las mesas</span>
+            <button
+              type="button"
+              onClick={() => setMenuGente(false)}
+              aria-label="Cerrar"
+              className="-mr-1 h-7 w-7 rounded-lg text-base"
+              style={{ color: "#57534e" }}
+            >
+              ✕
+            </button>
+          </div>
+          <Interruptor
+            texto="Comensales sentados"
+            detalle="Uno por cada persona de la mesa"
+            activo={gente.comensales}
+            onCambiar={(v) => cambiarGente({ comensales: v })}
+          />
+          <div className="my-2">
+            <span className="mb-1 block text-xs font-semibold" style={{ color: "#57534e" }}>
+              Estilo
+            </span>
+            <div className="grid grid-cols-2 gap-1 rounded-xl p-1" style={{ background: "#f5f5f4" }}>
+              {(
+                [
+                  { id: "silueta", t: "Silueta" },
+                  { id: "colores", t: "Colores" },
+                ] as const
+              ).map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => cambiarGente({ estilo: o.id })}
+                  aria-pressed={gente.estilo === o.id}
+                  className="flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold"
+                  style={
+                    gente.estilo === o.id
+                      ? { background: "#ffffff", color: "#1c1917", boxShadow: "0 1px 3px rgb(0 0 0 / 0.15)" }
+                      : { color: "#57534e" }
+                  }
+                >
+                  <MiniPersona colores={o.id === "colores"} />
+                  {o.t}
+                </button>
+              ))}
+            </div>
+          </div>
+          <Interruptor
+            texto="Mesero"
+            detalle="De pie junto a la mesa que lo llama"
+            activo={gente.mesero}
+            onCambiar={(v) => cambiarGente({ mesero: v })}
+          />
+          <Interruptor
+            texto="Platos y copas"
+            detalle="Cuando la mesa ya pidió"
+            activo={gente.platos}
+            onCambiar={(v) => cambiarGente({ platos: v })}
+          />
+        </div>
+      )}
 
       {ayuda && (
         <p className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] text-white">
@@ -1415,6 +1608,57 @@ export default function Maqueta({
         @media (prefers-reduced-motion: reduce) { .maqueta-aviso { animation: none; } }
       `}</style>
     </div>
+  );
+}
+
+// Interruptor con colores fijos (la maqueta no cambia con el tema del panel).
+function Interruptor({
+  texto,
+  detalle,
+  activo,
+  onCambiar,
+}: {
+  texto: string;
+  detalle: string;
+  activo: boolean;
+  onCambiar: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={activo}
+      onClick={() => onCambiar(!activo)}
+      className="flex w-full items-center gap-2 rounded-xl py-1.5 text-left"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-semibold">{texto}</span>
+        <span className="block text-[11px] leading-tight" style={{ color: "#78716c" }}>
+          {detalle}
+        </span>
+      </span>
+      <span
+        className="relative h-6 w-10 shrink-0 rounded-full transition-colors"
+        style={{ background: activo ? "#16a34a" : "#d6d3d1" }}
+      >
+        <span
+          className="absolute top-0.5 h-5 w-5 rounded-full shadow transition-all"
+          style={{ background: "#ffffff", left: activo ? 18 : 2 }}
+        />
+      </span>
+    </button>
+  );
+}
+
+// Muñequito para el selector de estilo.
+function MiniPersona({ colores }: { colores: boolean }) {
+  return (
+    <svg width="12" height="16" viewBox="0 0 12 16" aria-hidden>
+      <circle cx="6" cy="3" r="2.6" fill={colores ? "#e0ac69" : "#15171c"} />
+      <rect x="2" y="6.2" width="8" height="5.6" rx="2.4" fill={colores ? "#ef4444" : "#15171c"} />
+      <rect x="3" y="10.5" width="2.4" height="5" rx="1.2" fill={colores ? "#1e3a8a" : "#15171c"} />
+      <rect x="6.6" y="10.5" width="2.4" height="5" rx="1.2" fill={colores ? "#1e3a8a" : "#15171c"} />
+    </svg>
   );
 }
 
