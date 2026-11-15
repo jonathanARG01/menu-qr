@@ -1,6 +1,6 @@
 import { MARCA } from "@/lib/marca";
 
-// Logo de Sellito: un sello con un ticket al centro.
+// Logo: un sello con un visto al centro.
 export function Logo({ className = "", claro = false }: { className?: string; claro?: boolean }) {
   return (
     <span className={`inline-flex items-center gap-2 font-extrabold tracking-tight ${className}`}>

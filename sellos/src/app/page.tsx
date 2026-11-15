@@ -2,12 +2,12 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { Inclinable } from "@/components/Inclinable";
 import { TarjetaVisual } from "@/components/TarjetaVisual";
-import { DIAS_PRUEBA, EMPRESA, MARCA, PLANES, enlaceWhatsapp } from "@/lib/marca";
+import { DESCUENTOS, DIAS_PRUEBA, EMPRESA, EN_TODOS, MARCA, PLANES, enlaceWhatsapp, type Plan } from "@/lib/marca";
 import { RUBROS, type IdRubro } from "@/lib/rubros";
 import { PROGRAMA_BASE, emojiSello, type DisenoSello, type ProgramaSellos } from "@/lib/tipos";
 import { formatoPrecio } from "@/lib/utils";
 
-// Página de venta de Sellito.
+// Página de venta.
 
 const ejemplo = (rubro: IdRubro, diseno: DisenoSello, extra: Partial<ProgramaSellos> = {}): ProgramaSellos => ({
   ...PROGRAMA_BASE,
@@ -20,32 +20,40 @@ const ejemplo = (rubro: IdRubro, diseno: DisenoSello, extra: Partial<ProgramaSel
 });
 
 const MUESTRAS: { rubro: IdRubro; local: string; diseno: DisenoSello; sellos: number; nombre: string }[] = [
-  { rubro: "barberia", local: "Barbería Don Pepe", diseno: "premium", sellos: 4, nombre: "Matías" },
-  { rubro: "cafe", local: "Café del Cerro", diseno: "clasica", sellos: 7, nombre: "Camila" },
-  { rubro: "unas", local: "Nails Studio", diseno: "aurora", sellos: 3, nombre: "Fernanda" },
+  { rubro: "barberia", local: "Barbería Don Pepe", diseno: "dorada", sellos: 4, nombre: "Matías" },
+  { rubro: "padel", local: "Pádel Club Viña", diseno: "holografica", sellos: 7, nombre: "Camila" },
+  { rubro: "unas", local: "Nails Studio", diseno: "cristal", sellos: 3, nombre: "Fernanda" },
 ];
 
 const PASOS: [string, string, string][] = [
-  ["1", "Arma tu tarjeta en 2 minutos", "Elige cuántos sellos, el premio y uno de los 12 diseños. Sube tu logo."],
+  ["1", "Arma tu tarjeta en 2 minutos", "Sellos, puntos o cashback, el premio y tu diseño. Sube tu logo o pídenos uno a tu medida."],
   ["2", "Tu cliente escanea y se une", "Pone su nombre y teléfono. La tarjeta queda en su celular, sin bajar ninguna app."],
   ["3", "Sumas sellos al cobrar", "Escaneas su tarjeta y tocas “+1 sello”, o le muestras un QR que sirve una sola vez."],
 ];
 
 const FUNCIONES: [string, string, string][] = [
+  ["⭐", "Sellos, puntos o cashback", "Tarjeta de sellos, de puntos por compra o de cashback, con catálogo de premios con fotos."],
+  ["🎀", "Premios en el camino", "Un premio chico a mitad de tarjeta para que no la abandonen."],
+  ["👑", "Niveles y retos", "Bronce, Plata, Oro según las visitas, y retos con insignias."],
+  ["🤝", "Trae a un amigo", "Cada cliente comparte su enlace y los dos ganan."],
+  ["📣", "Campañas por grupo", "VIP, frecuentes, dormidos o cerca del premio: un mensaje con un toque."],
+  ["🎟️", "Cupones y promociones", "Doble puntos el fin de semana, cupones de cumpleaños y regalos."],
+  ["🏪", "Varios locales", "Una tarjeta para toda tu cadena, con métricas y equipo por local."],
+  ["🤖", "Conectado a tu IA", "API para tu caja y conexión con Claude o ChatGPT: “¿quién no viene hace un mes?”."],
   ["📲", "En el celular del cliente", "Tarjeta web y Google Wallet. Nada de cartoncitos que se pierden."],
   ["🔒", "Sin trampas", "QR de un solo uso, máximo de sellos por día y PIN del dueño para canjear."],
-  ["🔥", "Días de sello doble", "Llena los días flojos: ese día cada sello vale 2."],
+  ["🔥", "Días dobles", "Llena los días flojos: ese día cada visita vale el doble."],
   ["🎂", "Regalo de cumpleaños", "Sellos de regalo y un saludo automático el día de su cumpleaños."],
   ["👋", "“Te extrañamos”", "Si alguien deja de venir, le llega un aviso (con regalo si quieres)."],
   ["⭐", "Más reseñas en Google", "Después de cada sello, la tarjeta invita a dejar reseña."],
-  ["👥", "Todo tu equipo", "Invita a tus empleados con un enlace. Cada uno con su cuenta."],
-  ["📊", "Conoce a tus clientes", "Quién viene más, quién tiene premio listo y quién dejó de venir."],
+  ["👥", "Usuarios ilimitados", "Dueño, encargados y equipo, cada uno con su cuenta y sus permisos."],
+  ["📊", "Métricas en vivo", "Visitas, clientes que vuelven, costo de premios y exportar a Excel."],
 ];
 
 const PREGUNTAS: [string, string][] = [
   ["¿Mis clientes tienen que bajar una app?", "No. Escanean un QR con la cámara, ponen su nombre y teléfono, y listo. Pueden guardarla en Google Wallet o en la pantalla de inicio del iPhone."],
   ["¿Y si el cliente cambia de celular?", "Vuelve a escanear el QR y pone el mismo teléfono: recupera su tarjeta con todos sus sellos."],
-  ["¿Sirve para mi rubro?", "Sirve para cualquier negocio donde los clientes vuelven: cafés, peluquerías, barberías, uñas, lavados de autos, tiendas, panaderías, gimnasios, veterinarias…"],
+  ["¿Sirve para mi rubro?", "Sirve para cualquier negocio donde los clientes vuelven, chico o grande: cafés, bares, restaurantes, picadas de barrio, canchas de pádel, fútbol y tenis, peluquerías, estilistas, barberías, hoteles, tiendas, gimnasios…"],
   ["¿Necesito un computador?", "No. Todo funciona desde el celular: tu panel, el escáner y el QR para sumar sellos."],
   ["¿Puedo pasar los sellos de mis tarjetas de papel?", "Sí. Creas la tarjeta del cliente desde el panel y le sumas los sellos que ya tenía."],
   ["¿Qué pasa si dejo de pagar?", "Tus clientes y sus sellos quedan guardados. Solo se pausa la suma de sellos nuevos hasta que vuelvas."],
@@ -86,14 +94,14 @@ export default function Inicio() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:py-20 lg:grid-cols-[1.1fr_1fr]">
           <div>
             <p className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-marca ring-1 ring-marca/20">
-              Tarjeta de sellos digital · {DIAS_PRUEBA} días gratis
+              Sellos, puntos y cashback · {DIAS_PRUEBA} días gratis
             </p>
             <h1 className="mt-4 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
               Clientes que vuelven, <span className="text-marca">sello a sello.</span>
             </h1>
             <p className="mt-5 max-w-xl text-lg text-suave">
-              Cambia la tarjeta de cartón por una en el celular de tu cliente. Junta sellos, gana su premio y vuelve. Para cafés,
-              peluquerías, barberías, tiendas y cualquier negocio.
+              Cambia la tarjeta de cartón por una en el celular de tu cliente: sellos, puntos o cashback, premios, niveles y
+              campañas. Para cafés, bares, canchas, peluquerías, hoteles y cualquier negocio, chico o grande.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href="/registro" className="boton px-6 py-3 text-base">
@@ -180,17 +188,22 @@ export default function Inicio() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16">
-        <h2 className="text-center text-3xl font-bold tracking-tight">12 diseños para que se vea como tu marca</h2>
-        <p className="mt-2 text-center text-suave">Con tu logo, tu color y el dibujo de tu rubro en cada sello.</p>
+        <h2 className="text-center text-3xl font-bold tracking-tight">Diseños premium, o uno a tu medida</h2>
+        <p className="mt-2 text-center text-suave">
+          Decenas de diseños con tu logo y tu color, todos incluidos.{" "}
+          <Link href="/disenos" className="font-semibold text-marca hover:underline">
+            Ver todos
+          </Link>
+        </p>
         <div className="mt-10 grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {(
             [
-              ["peluqueria", "Salón Bella", "clasica", 4],
-              ["lavado", "AutoSpa Viña", "neon", 6],
-              ["panaderia", "Pan de Casa", "pizarra", 8],
-              ["gimnasio", "Box Fuerte", "pop", 9],
-              ["floreria", "Flores del Puerto", "editorial", 5],
-              ["mascotas", "Patitas Vet", "camino", 3],
+              ["cafe", "Café del Cerro", "billetera", 6],
+              ["futbol", "Fútbol 7 El Arco", "isometrica", 6],
+              ["bar", "Bar La Ola", "coleccion", 5],
+              ["hotel", "Hostal Mirador", "premium", 3],
+              ["picada", "La Picá de la Tía", "pizarra", 5],
+              ["peluqueria", "Salón Bella", "neon", 4],
             ] as [IdRubro, string, DisenoSello, number][]
           ).map(([r, local, d, s]) => (
             <div key={local} className="w-full max-w-[340px]">
@@ -206,30 +219,42 @@ export default function Inicio() {
           <p className="mt-2 text-center text-suave">
             {DIAS_PRUEBA} días gratis para probar con tus clientes reales. Sin contrato: cancelas cuando quieras.
           </p>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2">
-            {(Object.keys(PLANES) as (keyof typeof PLANES)[]).map((id, i) => {
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {(Object.keys(PLANES) as Plan[]).map((id) => {
               const p = PLANES[id];
               return (
-                <div key={id} className={`tarjeta flex flex-col p-6 ${i === 0 ? "ring-2 ring-marca" : ""}`}>
-                  <p className="font-semibold">{p.nombre}</p>
+                <div key={id} className={`tarjeta flex flex-col p-6 ${id === "pro" ? "ring-2 ring-marca" : ""}`}>
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold">{p.nombre}</p>
+                    {id === "pro" && <span className="rounded-full bg-marca/10 px-2 py-0.5 text-xs font-semibold text-marca">El más elegido</span>}
+                  </div>
                   <p className="mt-2 text-4xl font-extrabold">
                     {formatoPrecio(p.precio, "CLP")}
                     <span className="text-base font-normal text-suave"> + IVA / mes</span>
                   </p>
                   <p className="mt-1 text-sm text-suave">{p.detalle}</p>
-                  <ul className="mt-4 space-y-1.5 text-sm">
-                    <li>✓ Clientes y sellos ilimitados</li>
-                    <li>✓ 12 diseños y tu logo</li>
-                    <li>✓ Cumpleaños, sello doble y “te extrañamos”</li>
-                    <li>✓ Equipo sin límite</li>
-                    <li>✓ Soporte por WhatsApp</li>
+                  <ul className="mt-4 flex-1 space-y-1.5 text-sm">
+                    {p.incluye.map((x) => (
+                      <li key={x}>✓ {x}</li>
+                    ))}
                   </ul>
-                  <Link href="/registro" className={`${i === 0 ? "boton" : "boton-secundario"} mt-6 py-3`}>
+                  <Link href="/registro" className={`${id === "pro" ? "boton" : "boton-secundario"} mt-6 py-3`}>
                     Empezar gratis
                   </Link>
                 </div>
               );
             })}
+          </div>
+          <div className="mt-6 rounded-2xl bg-fondo p-6">
+            <p className="font-semibold">En todos los planes</p>
+            <ul className="mt-2 grid gap-1.5 text-sm sm:grid-cols-2">
+              {EN_TODOS.map((x) => (
+                <li key={x}>✓ {x}</li>
+              ))}
+            </ul>
+            <p className="mt-3 text-xs text-suave">
+              Pagando por adelantado: {DESCUENTOS.map((d) => `${d.meses} meses −${d.descuento} %`).join(" · ")}.
+            </p>
           </div>
         </div>
       </section>

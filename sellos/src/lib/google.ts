@@ -1,7 +1,7 @@
 import { createSign } from "node:crypto";
 import { emojiSello, type ProgramaSellos } from "@/lib/tipos";
 
-// Google Wallet para Sellito: el botón "Guardar en Google Wallet" y la actualización de la tarjeta guardada
+// Google Wallet: el botón "Guardar en Google Wallet" y la actualización de la tarjeta guardada
 // cuando suma un sello o canjea un premio.
 //
 // Se activa con tres variables en Vercel (Google Pay & Wallet Console → cuenta de emisor + cuenta de servicio):
@@ -27,15 +27,19 @@ function firmar(payload: Record<string, unknown>) {
 }
 
 const sinGuiones = (id: string) => id.replace(/-/g, "");
-export const idClase = (negocioId: string) => `${ISSUER}.sellito_${sinGuiones(negocioId)}`;
-export const idObjeto = (codigo: string) => `${ISSUER}.sellito_t_${codigo}`;
+export const idClase = (negocioId: string) => `${ISSUER}.club_${sinGuiones(negocioId)}`;
+export const idObjeto = (codigo: string) => `${ISSUER}.club_t_${codigo}`;
 
 export type DatosWallet = {
   sitio: string;
   negocio: { id: string; nombre: string; logo_url: string | null; pais: string };
   programa: ProgramaSellos;
-  tarjeta: { codigo: string; nombre: string; sellos: number; premios: number };
+  tarjeta: { codigo: string; nombre: string; sellos: number; premios: number; puntos?: number; nivel?: string | null };
+  // Ubicaciones del local o los locales: Google Wallet muestra la tarjeta cuando el cliente pasa cerca (Android).
+  ubicaciones?: { latitud: number; longitud: number }[];
 };
+
+const puntosDe = (d: DatosWallet) => d.programa.tipo === "puntos";
 
 const texto = (es: string) => ({ defaultValue: { language: "es", value: es } });
 
@@ -44,11 +48,12 @@ function clase(d: DatosWallet) {
   return {
     id: idClase(d.negocio.id),
     issuerName: d.negocio.nombre.slice(0, 40),
-    programName: "Tarjeta de sellos",
+    programName: puntosDe(d) ? `Club de ${d.programa.nombre_puntos}` : "Tarjeta de sellos",
     programLogo: { sourceUri: { uri: logo }, contentDescription: texto(d.negocio.nombre) },
     hexBackgroundColor: d.programa.color,
     reviewStatus: "UNDER_REVIEW",
     countryCode: d.negocio.pais || "CL",
+    ...(d.ubicaciones?.length ? { locations: d.ubicaciones.slice(0, 20).map((u) => ({ latitude: u.latitud, longitude: u.longitud })) } : {}),
   };
 }
 
@@ -65,13 +70,20 @@ function objeto(d: DatosWallet) {
     state: "ACTIVE",
     accountId: d.tarjeta.codigo,
     accountName: d.tarjeta.nombre,
-    loyaltyPoints: { label: "Sellos", balance: { string: `${d.tarjeta.sellos}/${d.programa.meta}` } },
-    secondaryLoyaltyPoints: { label: "Premios", balance: { int: d.tarjeta.premios } },
+    loyaltyPoints: puntosDe(d)
+      ? { label: d.programa.nombre_puntos.slice(0, 20), balance: { int: d.tarjeta.puntos ?? 0 } }
+      : { label: "Sellos", balance: { string: `${d.tarjeta.sellos}/${d.programa.meta}` } },
+    secondaryLoyaltyPoints: d.tarjeta.nivel
+      ? { label: "Nivel", balance: { string: d.tarjeta.nivel } }
+      : { label: "Premios", balance: { int: d.tarjeta.premios } },
     barcode: { type: "QR_CODE", value: url, alternateText: d.tarjeta.codigo },
     hexBackgroundColor: d.programa.color,
+    ...(d.ubicaciones?.length ? { locations: d.ubicaciones.slice(0, 20).map((u) => ({ latitude: u.latitud, longitude: u.longitud })) } : {}),
     textModulesData: [
-      { id: "sellos", header: "Tus sellos", body: lineaSellos(d) },
-      { id: "premio", header: "Premio", body: d.programa.premio },
+      puntosDe(d)
+        ? { id: "sellos", header: `Tus ${d.programa.nombre_puntos}`, body: String(d.tarjeta.puntos ?? 0) }
+        : { id: "sellos", header: "Tus sellos", body: lineaSellos(d) },
+      { id: "premio", header: puntosDe(d) ? "Premios" : "Premio", body: puntosDe(d) ? "Canjéalos en tu tarjeta" : d.programa.premio },
       ...(d.programa.condiciones ? [{ id: "condiciones", header: "Condiciones", body: d.programa.condiciones }] : []),
     ],
     linksModuleData: { uris: [{ id: "tarjeta", uri: url, description: "Ver mi tarjeta" }] },
@@ -128,6 +140,7 @@ export async function actualizarEnWallet(d: DatosWallet, mensaje?: { titulo: str
       loyaltyPoints: o.loyaltyPoints,
       secondaryLoyaltyPoints: o.secondaryLoyaltyPoints,
       textModulesData: o.textModulesData,
+      ...("locations" in o ? { locations: o.locations } : {}),
       hexBackgroundColor: o.hexBackgroundColor,
     }),
   });

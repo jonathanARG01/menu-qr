@@ -22,14 +22,56 @@ import {
   type ProgramaSellos,
 } from "@/lib/tipos";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
+import { enlaceWhatsapp, type Funcion } from "@/lib/marca";
+import { subirImagen } from "@/lib/imagenes";
+import type { Cupon, Hito, Nivel } from "@/lib/tipos";
+
+type Puede = Partial<Record<Funcion, boolean>>;
+
+function Bloqueado({ plan }: { plan: string }) {
+  return (
+    <a href="/panel/plan" className="rounded-full bg-marca/10 px-2 py-0.5 text-xs font-semibold text-marca">
+      Plan {plan}
+    </a>
+  );
+}
 
 // ── La tarjeta del negocio ─────────────────────────
-export function Configurar({ negocio, programa }: { negocio: Negocio; programa: ProgramaSellos }) {
+export function Configurar({
+  negocio,
+  programa,
+  puede,
+  cupones,
+}: {
+  negocio: Negocio;
+  programa: ProgramaSellos;
+  puede: Puede;
+  cupones: Pick<Cupon, "id" | "titulo">[];
+}) {
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
   const router = useRouter();
   const [p, setP] = useState<ProgramaSellos>(programa);
   const [guardando, setGuardando] = useState(false);
+  const [subiendo, setSubiendo] = useState(false);
+  const puntos = p.tipo === "puntos";
+  const cashback = puntos && p.nombre_puntos === "pesos";
+  const textoRegalo = (n: number) =>
+    n === 0 ? "Ninguno" : puntos ? `${(n * p.puntos_regalo).toLocaleString("es-CL")} ${p.nombre_puntos}` : n === 1 ? "1 sello" : `${n} sellos`;
+
+  async function subirFondo(archivo: File | undefined) {
+    if (!archivo) return;
+    setSubiendo(true);
+    try {
+      const url = await subirImagen(supabase, negocio.id, archivo, "fondo", 1400);
+      cambiar({ fondo_url: url, diseno: "medida" });
+      avisar("Imagen lista. Guarda los cambios para usarla.");
+    } catch (e) {
+      avisar(mensajeError(e), "error");
+    } finally {
+      setSubiendo(false);
+    }
+  }
   const cambiar = (c: Partial<ProgramaSellos>) => setP((x) => ({ ...x, ...c }));
   const formato = (n: number) => formatoPrecio(n, negocio.moneda);
 
@@ -60,7 +102,112 @@ export function Configurar({ negocio, programa }: { negocio: Negocio; programa: 
         </section>
 
         <section className="tarjeta space-y-4 p-5">
-          <h2 className="font-semibold">Sellos y premio</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-semibold">Tipo de tarjeta</h2>
+            {!puede.puntos && <Bloqueado plan="Pro" />}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {(
+              [
+                ["sellos", "🎟️ Sellos", "Junta sellos y gana el premio. La más simple."],
+                ["puntos", "⭐ Puntos", "Suma puntos por compra y canjéalos en tu catálogo de premios."],
+                ["cashback", "💸 Cashback", "Devuelve un % de cada compra en “pesos” para canjear."],
+              ] as const
+            ).map(([id, titulo, texto]) => {
+              const activo = id === "sellos" ? !puntos : id === "cashback" ? cashback : puntos && !cashback;
+              const bloqueado = id !== "sellos" && !puede.puntos;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  disabled={bloqueado}
+                  aria-pressed={activo}
+                  onClick={() =>
+                    cambiar(
+                      id === "sellos"
+                        ? { tipo: "sellos" }
+                        : id === "cashback"
+                          ? { tipo: "puntos", nombre_puntos: "pesos", puntos_cada: 20, puntos_regalo: 500 }
+                          : { tipo: "puntos", nombre_puntos: p.nombre_puntos === "pesos" ? "puntos" : p.nombre_puntos },
+                    )
+                  }
+                  className={`rounded-xl border p-3 text-left text-sm disabled:opacity-50 ${
+                    activo ? "border-marca ring-2 ring-marca/30" : "border-borde hover:border-marca/50"
+                  }`}
+                >
+                  <span className="block font-semibold">{titulo}</span>
+                  <span className="block text-xs text-suave">{texto}</span>
+                </button>
+              );
+            })}
+          </div>
+          {puntos && (
+            <div className="grid gap-4 sm:grid-cols-3">
+              {cashback ? (
+                <label className="block text-sm">
+                  <span className="etiqueta-campo">Cashback</span>
+                  <select
+                    value={Math.round(100 / p.puntos_cada)}
+                    onChange={(e) => cambiar({ puntos_cada: Math.round(10000 / Number(e.target.value)) / 100 })}
+                    className="campo"
+                  >
+                    {[1, 2, 3, 5, 7, 10, 15, 20].map((n) => (
+                      <option key={n} value={n}>
+                        {n} % de cada compra
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <>
+                  <label className="block text-sm">
+                    <span className="etiqueta-campo">1 punto por cada</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={p.puntos_cada}
+                      onChange={(e) => cambiar({ puntos_cada: Math.max(1, Number(e.target.value) || 1) })}
+                      className="campo"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="etiqueta-campo">Se llaman</span>
+                    <input
+                      maxLength={20}
+                      value={p.nombre_puntos}
+                      onChange={(e) => cambiar({ nombre_puntos: e.target.value.toLowerCase() })}
+                      placeholder="puntos, granos, estrellas…"
+                      className="campo"
+                    />
+                  </label>
+                </>
+              )}
+              <label className="block text-sm">
+                <span className="etiqueta-campo">Valor de cada regalo</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={p.puntos_regalo}
+                  onChange={(e) => cambiar({ puntos_regalo: Math.max(1, Math.round(Number(e.target.value) || 1)) })}
+                  className="campo"
+                />
+              </label>
+              <p className="text-xs text-suave sm:col-span-3">
+                {textoRegla(p, formato)}. El “valor de cada regalo” es lo que suman la bienvenida, el cumpleaños, el “te extrañamos”,
+                los retos y los amigos invitados. Los premios para canjear se arman en{" "}
+                <a href="/panel/premios" className="text-marca underline">
+                  Premios y cupones
+                </a>
+                , con foto, stock y fechas.
+              </p>
+            </div>
+          )}
+        </section>
+
+        <section className="tarjeta space-y-4 p-5">
+          <h2 className="font-semibold">{puntos ? "Reglas" : "Sellos y premio"}</h2>
+          {!puntos && (
+          <>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="etiqueta-campo">Sellos para el premio</span>
@@ -108,19 +255,23 @@ export function Configurar({ negocio, programa }: { negocio: Negocio; programa: 
               de compra (el equipo anota el monto)
             </label>
           </fieldset>
+          </>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="etiqueta-campo">Sellos de regalo al unirse</span>
+              <span className="etiqueta-campo">Regalo al unirse</span>
               <select
                 id="bienvenida"
                 value={p.bienvenida}
                 onChange={(e) => cambiar({ bienvenida: Number(e.target.value) })}
                 className="campo"
               >
-                <option value={0}>Ninguno</option>
-                <option value={1}>1 sello (recomendado)</option>
-                <option value={2}>2 sellos</option>
-                <option value={3}>3 sellos</option>
+                {[0, 1, 2, 3].map((n) => (
+                  <option key={n} value={n}>
+                    {textoRegalo(n)}
+                    {n === 1 ? " (recomendado)" : ""}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="block text-sm">
@@ -139,9 +290,87 @@ export function Configurar({ negocio, programa }: { negocio: Negocio; programa: 
               </select>
             </label>
           </div>
+          <label className="block text-sm sm:max-w-xs">
+            <span className="etiqueta-campo">Cuánto te cuesta el premio (opcional)</span>
+            <input
+              type="number"
+              min={0}
+              value={p.costo_premio ?? ""}
+              onChange={(e) => cambiar({ costo_premio: e.target.value === "" ? null : Math.max(0, Number(e.target.value)) })}
+              placeholder="Ej: 1500"
+              className="campo"
+            />
+            <span className="mt-1 block text-xs text-suave">Para ver en Métricas cuánto inviertes en premios.</span>
+          </label>
+          {puntos && (
+            <label className="block text-sm">
+              <span className="etiqueta-campo">Texto de la tarjeta</span>
+              <input
+                maxLength={60}
+                value={p.premio}
+                onChange={(e) => cambiar({ premio: e.target.value })}
+                placeholder="Canjea tus puntos por premios"
+                className="campo"
+              />
+            </label>
+          )}
           <p className="text-xs text-suave">
-            {textoRegla(p, formato)}. Con la tarjeta llena el cliente gana {p.premio || "el premio"} y empieza una nueva.
+            {textoRegla(p, formato)}.{" "}
+            {puntos
+              ? "El cliente ve sus puntos, el catálogo y cuánto le falta para cada premio."
+              : `Con la tarjeta llena el cliente gana ${p.premio || "el premio"} y empieza una nueva.`}
           </p>
+        </section>
+
+        {!puntos && (
+          <section className="tarjeta space-y-3 p-5">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h2 className="font-semibold">Premios en el camino</h2>
+                <p className="text-sm text-suave">Un premio chico antes del grande, para que no abandonen la tarjeta. Hasta 5.</p>
+              </div>
+              {!puede.premios && <Bloqueado plan="Pro" />}
+            </div>
+            <ListaHitos hitos={p.hitos} meta={p.meta} onChange={(hitos) => cambiar({ hitos })} deshabilitado={!puede.premios} />
+          </section>
+        )}
+
+        <section className="tarjeta space-y-3 p-5">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h2 className="font-semibold">Niveles</h2>
+              <p className="text-sm text-suave">
+                Bronce, Plata, Oro… según las visitas. Cada nivel puede tener un beneficio y sumar el doble. Hasta 4.
+              </p>
+            </div>
+            {!puede.niveles && <Bloqueado plan="Pro" />}
+          </div>
+          <ListaNiveles niveles={p.niveles} onChange={(niveles) => cambiar({ niveles })} deshabilitado={!puede.niveles} />
+        </section>
+
+        <section className="tarjeta space-y-3 p-5">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h2 className="font-semibold">Trae a un amigo</h2>
+              <p className="text-sm text-suave">
+                Cada cliente comparte su enlace. Cuando el amigo viene por primera vez, los dos ganan el regalo.
+              </p>
+            </div>
+            {!puede.referidos && <Bloqueado plan="Pro" />}
+          </div>
+          <select
+            value={p.referido_regalo}
+            disabled={!puede.referidos}
+            onChange={(e) => cambiar({ referido_regalo: Number(e.target.value) })}
+            className="campo sm:max-w-xs"
+            aria-label="Regalo por traer a un amigo"
+          >
+            {[0, 1, 2, 3].map((n) => (
+              <option key={n} value={n}>
+                {n === 0 ? "Apagado" : `${textoRegalo(n)} para cada uno`}
+              </option>
+            ))}
+          </select>
         </section>
 
         <section className="tarjeta space-y-5 p-5">
@@ -153,7 +382,7 @@ export function Configurar({ negocio, programa }: { negocio: Negocio; programa: 
           </div>
 
           <div>
-            <p className="etiqueta-campo">Días de sello doble</p>
+            <p className="etiqueta-campo">Días dobles</p>
             <div className="flex flex-wrap gap-1.5">
               {ORDEN_DIAS.map((d) => {
                 const activo = p.dias_dobles.includes(d);
@@ -176,8 +405,8 @@ export function Configurar({ negocio, programa }: { negocio: Negocio; programa: 
             </div>
             <p className="mt-1.5 text-xs text-suave">
               {p.dias_dobles.length
-                ? `${textoDias(p.dias_dobles)}: cada sello vale 2 . Úsalo en los días flojos.`
-                : "Elige los días más flojos: ese día cada sello vale 2."}
+                ? `${textoDias(p.dias_dobles)}: cada visita vale el doble. Úsalo en los días flojos.`
+                : "Elige los días más flojos: ese día cada visita vale el doble."}
             </p>
           </div>
 
@@ -223,9 +452,11 @@ export function Configurar({ negocio, programa }: { negocio: Negocio; programa: 
                 onChange={(e) => cambiar({ extranamos_sellos: Number(e.target.value) })}
                 className="campo"
               >
-                <option value={0}>Solo el aviso</option>
-                <option value={1}>1 sello de regalo</option>
-                <option value={2}>2 sellos de regalo</option>
+                {[0, 1, 2].map((n) => (
+                  <option key={n} value={n}>
+                    {n === 0 ? "Solo el aviso" : `${textoRegalo(n)} de regalo`}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="block text-sm">
@@ -236,10 +467,27 @@ export function Configurar({ negocio, programa }: { negocio: Negocio; programa: 
                 onChange={(e) => cambiar({ cumple_sellos: Number(e.target.value) })}
                 className="campo"
               >
-                <option value={0}>Solo el saludo</option>
-                <option value={1}>1 sello de regalo</option>
-                <option value={2}>2 sellos de regalo</option>
-                <option value={3}>3 sellos de regalo</option>
+                {[0, 1, 2, 3].map((n) => (
+                  <option key={n} value={n}>
+                    {n === 0 ? "Solo el saludo" : `${textoRegalo(n)} de regalo`}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm">
+              <span className="etiqueta-campo">Cupón de cumpleaños {!puede.cupones && <Bloqueado plan="Pro" />}</span>
+              <select
+                value={p.cumple_cupon ?? ""}
+                disabled={!puede.cupones || !cupones.length}
+                onChange={(e) => cambiar({ cumple_cupon: e.target.value || null })}
+                className="campo"
+              >
+                <option value="">{cupones.length ? "Sin cupón" : "Primero crea un cupón en Premios"}</option>
+                {cupones.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.titulo}
+                  </option>
+                ))}
               </select>
             </label>
           </div>
@@ -253,10 +501,43 @@ export function Configurar({ negocio, programa }: { negocio: Negocio; programa: 
         <section className="tarjeta space-y-4 p-5">
           <div>
             <h2 className="font-semibold">Diseño</h2>
-            <p className="text-sm text-suave">Elige el estilo. Todos usan tu logo, tu color y el dibujo de los sellos.</p>
+            <p className="text-sm text-suave">
+              Elige el estilo. Todos usan tu logo, tu color y tu dibujo, y todos vienen en todos los planes.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-marca/30 bg-marca/5 p-4 text-sm">
+            <p className="font-semibold">Diseño a medida de tu negocio</p>
+            <p className="mt-1 text-suave">
+              Sube una foto de tu local o tu arte, o pídenos que la diseñemos por ti (incluido en tu plan, sin costo extra).
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <label className="boton-secundario cursor-pointer py-1.5">
+                {subiendo ? "Subiendo…" : p.fondo_url ? "Cambiar imagen" : "Subir imagen de fondo"}
+                <input type="file" accept="image/*" className="sr-only" disabled={subiendo} onChange={(e) => subirFondo(e.target.files?.[0])} />
+              </label>
+              <a
+                href={enlaceWhatsapp(`Hola, quiero que me diseñen la tarjeta a medida para ${negocio.nombre} (${negocio.slug}).`)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="boton py-1.5"
+              >
+                Pide tu diseño a medida
+              </a>
+              {p.fondo_url && (
+                <>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={p.texto_claro} onChange={(e) => cambiar({ texto_claro: e.target.checked })} />
+                    Letras blancas
+                  </label>
+                  <button type="button" className="text-sm text-suave hover:text-tinta" onClick={() => cambiar({ fondo_url: null, diseno: p.diseno === "medida" ? "clasica" : p.diseno })}>
+                    Quitar imagen
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {(Object.keys(DISENOS_SELLO) as DisenoSello[]).map((dis) => (
+            {(Object.keys(DISENOS_SELLO) as DisenoSello[]).filter((dis) => dis !== "medida" || p.fondo_url).map((dis) => (
               <button
                 key={dis}
                 type="button"
@@ -276,6 +557,8 @@ export function Configurar({ negocio, programa }: { negocio: Negocio; programa: 
                       logo={negocio.logo_url}
                       programa={{ ...p, meta: Math.min(p.meta, 10), diseno: dis }}
                       sellos={Math.min(p.meta, 10) - 3}
+                      puntos={1250}
+                      proximo={{ titulo: "Tu premio", puntos: 2000 }}
                       nombre="Camila"
                     />
                   </span>
@@ -349,11 +632,138 @@ export function Configurar({ negocio, programa }: { negocio: Negocio; programa: 
               logo={negocio.logo_url}
               programa={p}
               sellos={Math.min(p.meta - 1, Math.max(p.bienvenida, Math.round(p.meta * 0.6)))}
+              puntos={1250}
+              proximo={{ titulo: "Un café de regalo", puntos: 2000 }}
+              nivel={p.niveles[0]?.nombre}
               nombre="Camila"
             />
           </Inclinable>
         </div>
       </div>
     </form>
+  );
+}
+
+// ── Premios intermedios ─────────────────────────
+function ListaHitos({ hitos, meta, onChange, deshabilitado }: { hitos: Hito[]; meta: number; onChange: (h: Hito[]) => void; deshabilitado: boolean }) {
+  const poner = (i: number, c: Partial<Hito>) => onChange(hitos.map((h, j) => (j === i ? { ...h, ...c } : h)));
+  return (
+    <div className="space-y-2">
+      {hitos.map((h, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-2 text-sm">
+          <span>A los</span>
+          <input
+            type="number"
+            min={1}
+            max={meta - 1}
+            value={h.sellos}
+            disabled={deshabilitado}
+            onChange={(e) => poner(i, { sellos: Math.min(meta - 1, Math.max(1, Math.round(Number(e.target.value) || 1))) })}
+            className="campo w-20 py-1.5"
+            aria-label="Sellos"
+          />
+          <span>sellos:</span>
+          <input
+            maxLength={60}
+            value={h.premio}
+            disabled={deshabilitado}
+            onChange={(e) => poner(i, { premio: e.target.value })}
+            placeholder="Un café chico"
+            className="campo min-w-0 flex-1 py-1.5"
+            aria-label="Premio intermedio"
+          />
+          <button type="button" className="text-suave hover:text-red-700" onClick={() => onChange(hitos.filter((_, j) => j !== i))} aria-label="Quitar">
+            ✕
+          </button>
+        </div>
+      ))}
+      {hitos.length < 5 && meta > 2 && (
+        <button
+          type="button"
+          disabled={deshabilitado}
+          className="text-sm font-medium text-marca hover:underline disabled:opacity-50"
+          onClick={() => onChange([...hitos, { sellos: Math.max(1, Math.floor(meta / 2)), premio: "" }])}
+        >
+          + Agregar premio intermedio
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── Niveles ─────────────────────────
+const NIVELES_SUGERIDOS: Nivel[] = [
+  { nombre: "Bronce", visitas: 5, beneficio: "", doble: false },
+  { nombre: "Plata", visitas: 15, beneficio: "Bebida de regalo en tu cumpleaños", doble: false },
+  { nombre: "Oro", visitas: 30, beneficio: "Suma el doble siempre", doble: true },
+];
+function ListaNiveles({ niveles, onChange, deshabilitado }: { niveles: Nivel[]; onChange: (n: Nivel[]) => void; deshabilitado: boolean }) {
+  const poner = (i: number, c: Partial<Nivel>) => onChange(niveles.map((h, j) => (j === i ? { ...h, ...c } : h)));
+  return (
+    <div className="space-y-2">
+      {niveles.map((n, i) => (
+        <div key={i} className="grid gap-2 rounded-xl border border-borde p-3 text-sm sm:grid-cols-[1fr_6rem_2fr_auto_auto] sm:items-center">
+          <input
+            maxLength={30}
+            value={n.nombre}
+            disabled={deshabilitado}
+            onChange={(e) => poner(i, { nombre: e.target.value })}
+            placeholder="Oro"
+            className="campo py-1.5"
+            aria-label="Nombre del nivel"
+          />
+          <label className="flex items-center gap-1">
+            <input
+              type="number"
+              min={1}
+              value={n.visitas}
+              disabled={deshabilitado}
+              onChange={(e) => poner(i, { visitas: Math.max(1, Math.round(Number(e.target.value) || 1)) })}
+              className="campo py-1.5"
+              aria-label="Visitas"
+            />
+            <span className="text-xs text-suave">visitas</span>
+          </label>
+          <input
+            maxLength={80}
+            value={n.beneficio}
+            disabled={deshabilitado}
+            onChange={(e) => poner(i, { beneficio: e.target.value })}
+            placeholder="Beneficio (opcional)"
+            className="campo py-1.5"
+            aria-label="Beneficio"
+          />
+          <label className="flex items-center gap-1.5 whitespace-nowrap">
+            <input type="checkbox" checked={n.doble} disabled={deshabilitado} onChange={(e) => poner(i, { doble: e.target.checked })} />
+            Suma el doble
+          </label>
+          <button type="button" className="text-suave hover:text-red-700" onClick={() => onChange(niveles.filter((_, j) => j !== i))} aria-label="Quitar">
+            ✕
+          </button>
+        </div>
+      ))}
+      <div className="flex flex-wrap gap-3">
+        {niveles.length < 4 && (
+          <button
+            type="button"
+            disabled={deshabilitado}
+            className="text-sm font-medium text-marca hover:underline disabled:opacity-50"
+            onClick={() => onChange([...niveles, { nombre: "", visitas: (niveles.at(-1)?.visitas ?? 0) + 10, beneficio: "", doble: false }])}
+          >
+            + Agregar nivel
+          </button>
+        )}
+        {!niveles.length && (
+          <button
+            type="button"
+            disabled={deshabilitado}
+            className="text-sm text-suave hover:text-tinta disabled:opacity-50"
+            onClick={() => onChange(NIVELES_SUGERIDOS)}
+          >
+            Usar Bronce, Plata y Oro
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

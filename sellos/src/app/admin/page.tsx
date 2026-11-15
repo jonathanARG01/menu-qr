@@ -3,7 +3,7 @@ import { Logo } from "@/components/Logo";
 import { createClient } from "@/lib/supabase/server";
 import { Admin, type FilaAdmin } from "./Admin";
 
-export const metadata = { title: "Admin · Sellito", robots: { index: false } };
+export const metadata = { title: "Admin", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
 // Solo para ti (superadmin): todos los negocios, su prueba, activar o pausar.

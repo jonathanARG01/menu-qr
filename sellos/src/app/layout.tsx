@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
-  title: { default: `${MARCA} · ${LEMA}`, template: "%s" },
+  title: { default: `${MARCA} · ${LEMA}`, template: `%s · ${MARCA}` },
   description: `${MARCA}: tarjeta digital de sellos para cafés, peluquerías, barberías, tiendas y cualquier negocio. Tus clientes la guardan en el celular y vuelven por su premio.`,
   applicationName: MARCA,
 };

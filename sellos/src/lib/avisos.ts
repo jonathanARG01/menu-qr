@@ -44,7 +44,7 @@ export async function avisarCliente(
             titulo: mensaje.titulo,
             cuerpo: mensaje.cuerpo,
             icono: t.negocio.logo_url || "/icono-192.png",
-            etiqueta: `sellito-${t.codigo}`,
+            etiqueta: `club-${t.codigo}`,
             url: `${sitio}/t/${t.codigo}`,
           }),
         );

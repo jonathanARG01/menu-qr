@@ -10,8 +10,13 @@ import { textoSobre } from "@/lib/utils";
 type Props = {
   local: string;
   logo?: string | null;
-  programa: Pick<ProgramaSellos, "meta" | "premio" | "color" | "icono"> & { diseno?: string };
+  programa: Pick<ProgramaSellos, "meta" | "premio" | "color" | "icono"> &
+    Partial<Pick<ProgramaSellos, "hitos" | "fondo_url" | "texto_claro" | "tipo" | "nombre_puntos">> & { diseno?: string };
   sellos: number;
+  // Tarjeta de puntos: los puntos que tiene y el próximo premio del catálogo.
+  puntos?: number;
+  proximo?: { titulo: string; puntos: number } | null;
+  nivel?: string | null;
   premios?: number;
   nombre?: string;
   pie?: ReactNode;
@@ -19,7 +24,7 @@ type Props = {
   animarUltimos?: number;
 };
 
-type Celda = { i: number; lleno: boolean; ultimo: boolean; anim: { className: string; style?: CSSProperties } };
+type Celda = { i: number; lleno: boolean; ultimo: boolean; hito: string | null; anim: { className: string; style?: CSSProperties } };
 
 type Datos = {
   local: string;
@@ -34,9 +39,14 @@ type Datos = {
   pie?: ReactNode;
   celdas: Celda[];
   columnas: number;
+  fondo: string | null;
+  textoClaro: boolean;
+  nivel: string | null;
 };
 
 export function TarjetaVisual(props: Props) {
+  if (props.programa.tipo === "puntos") return <TarjetaPuntos {...props} />;
+  const hitos = new Map((props.programa.hitos ?? []).map((h) => [h.sellos, h.premio]));
   const meta = Math.max(1, props.programa.meta);
   const sellos = Math.min(meta, Math.max(0, props.sellos));
   const animar = props.animarUltimos ?? 0;
@@ -52,6 +62,9 @@ export function TarjetaVisual(props: Props) {
     premios: props.premios ?? 0,
     nombre: props.nombre,
     pie: props.pie,
+    fondo: props.programa.fondo_url ?? null,
+    textoClaro: props.programa.texto_claro ?? true,
+    nivel: props.nivel ?? null,
     columnas: meta <= 6 ? meta : meta <= 8 ? 4 : meta <= 10 ? 5 : 6,
     celdas: Array.from({ length: meta }, (_, i) => {
       const lleno = i < sellos;
@@ -60,13 +73,15 @@ export function TarjetaVisual(props: Props) {
         i,
         lleno,
         ultimo: i === meta - 1,
+        hito: hitos.get(i + 1) ?? null,
         anim: nuevo
           ? { className: "animate-[sello_0.5s_ease-out_both]", style: { animationDelay: `${(i - (sellos - animar)) * 120}ms` } }
           : { className: "" },
       };
     }),
   };
-  const Diseno = DISENOS[disenoSello(props.programa.diseno)];
+  const elegido = disenoSello(props.programa.diseno);
+  const Diseno = DISENOS[elegido === "medida" && !d.fondo ? "clasica" : elegido];
   return (
     <>
       <Diseno {...d} />
@@ -133,6 +148,7 @@ function Grilla({ d, className, style, children }: { d: Datos; className?: strin
 function Contenido({ c, d, vacio }: { c: Celda; d: Datos; vacio?: ReactNode }) {
   if (c.lleno) return <>{d.emoji}</>;
   if (c.ultimo) return <>🎁</>;
+  if (c.hito) return <span title={c.hito}>🎀</span>;
   return <>{vacio ?? <span className="text-xs opacity-60">{c.i + 1}</span>}</>;
 }
 
@@ -955,6 +971,525 @@ function Premium(d: Datos) {
   );
 }
 
+// ---------- 13. A medida (foto o arte propio del negocio) ----------
+
+function Medida(d: Datos) {
+  const tinta = d.textoClaro ? "#ffffff" : "#1c1917";
+  const vidrio = d.textoClaro ? "rgba(0,0,0,0.28)" : "rgba(255,255,255,0.55)";
+  return (
+    <div
+      className="relative w-full max-w-sm overflow-hidden rounded-3xl p-5 shadow-xl"
+      style={{ color: tinta, backgroundColor: d.color, backgroundImage: `url(${d.fondo})`, backgroundSize: "cover", backgroundPosition: "center" }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: d.textoClaro
+            ? "linear-gradient(180deg, rgba(0,0,0,.45) 0%, rgba(0,0,0,.05) 45%, rgba(0,0,0,.55) 100%)"
+            : "linear-gradient(180deg, rgba(255,255,255,.6) 0%, rgba(255,255,255,.1) 45%, rgba(255,255,255,.65) 100%)",
+        }}
+        aria-hidden
+      />
+      <div className="relative">
+        <div className="flex items-start gap-3">
+          <Logo d={d} className={`h-11 w-11 rounded-xl text-lg ${d.logo ? "bg-white p-1" : "bg-white/25"}`} />
+          <div className="min-w-0 flex-1" style={{ textShadow: d.textoClaro ? "0 1px 6px rgba(0,0,0,.45)" : undefined }}>
+            <p className="truncate font-bold leading-tight">{d.local}</p>
+            <p className="text-xs opacity-85">{d.nivel ? `Nivel ${d.nivel}` : "Tarjeta de sellos"}</p>
+          </div>
+          <p className="rounded-full px-2.5 py-1 text-sm font-extrabold tabular-nums" style={{ background: vidrio, backdropFilter: "blur(8px)" }}>
+            {d.sellos}/{d.meta}
+          </p>
+        </div>
+        <Grilla d={d} className="mt-16 gap-2 rounded-2xl p-3" style={{ background: vidrio, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" }}>
+          {(c) => (
+            <span
+              key={c.i}
+              className={`flex aspect-square items-center justify-center rounded-full text-lg ${c.anim.className}`}
+              style={
+                c.lleno
+                  ? { background: "#ffffff", boxShadow: "0 2px 8px rgba(0,0,0,.25)", ...c.anim.style }
+                  : { border: `1.5px dashed ${d.textoClaro ? "rgba(255,255,255,.7)" : "rgba(0,0,0,.35)"}` }
+              }
+            >
+              <Contenido c={c} d={d} />
+            </span>
+          )}
+        </Grilla>
+        <div className="mt-3 flex items-end justify-between gap-3 text-sm" style={{ textShadow: d.textoClaro ? "0 1px 6px rgba(0,0,0,.5)" : undefined }}>
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wider opacity-80">Premio</p>
+            <p className="font-semibold leading-snug">{d.premio}</p>
+          </div>
+          {d.nombre && <p className="truncate font-semibold">{d.nombre}</p>}
+        </div>
+        <Listo d={d} />
+        {d.pie}
+      </div>
+    </div>
+  );
+}
+
+// ---------- 14. Billetera de cristal (carpeta de vidrio con las tarjetas saliendo en abanico, animada) ----------
+
+function Billetera(d: Datos) {
+  const tinta = textoSobre(d.color);
+  const claro = mezclar(d.color, "#ffffff", 0.35);
+  const mini = (extra: CSSProperties, anim: string, contenido: ReactNode) => (
+    <div
+      className={`absolute bottom-0 left-1/2 h-44 w-36 -ml-18 overflow-hidden rounded-2xl border border-white/30 p-3 shadow-xl ${anim}`}
+      style={{ background: `linear-gradient(160deg, ${claro}, ${d.color})`, color: tinta, transformOrigin: "bottom center", ...extra }}
+    >
+      {contenido}
+    </div>
+  );
+  return (
+    <div
+      className="relative w-full max-w-sm overflow-hidden rounded-3xl px-5 pb-5 pt-6"
+      style={{ background: `radial-gradient(90% 70% at 50% 20%, ${alfa(d.color, 0.55)}, #07070a 75%)`, color: "#ffffff" }}
+    >
+      {/* Tarjetas que salen de la carpeta */}
+      <div className="relative mx-auto h-56 w-full">
+        {mini({ marginLeft: "-8.5rem" }, "animate-[carpeta-izq_0.9s_cubic-bezier(.2,.9,.3,1.2)_0.15s_both]", (
+<span className="text-2xl">🎁</span>
+        ))}
+        {mini({ marginLeft: "-0.5rem" }, "animate-[carpeta-der_0.9s_cubic-bezier(.2,.9,.3,1.2)_0.3s_both]", (
+<span className="block text-right text-2xl">{d.emoji}</span>
+        ))}
+        <div
+          className="absolute bottom-10 left-1/2 z-[1] w-44 -translate-x-1/2 animate-[carpeta-centro_0.9s_cubic-bezier(.2,.9,.3,1.2)_both]"
+        >
+          <div className="overflow-hidden rounded-2xl border border-white/40 bg-white p-2.5 text-[#1c1917] shadow-2xl">
+            <div className="flex items-center gap-2">
+              <Logo d={d} className="h-7 w-7 rounded-lg text-xs" style={{ background: d.color, color: tinta }} />
+              <p className="truncate text-xs font-bold">{d.local}</p>
+            </div>
+            <Grilla d={d} className="mt-2 gap-1">
+              {(c) => (
+                <span
+                  key={c.i}
+                  className={`flex aspect-square items-center justify-center rounded-full text-[11px] ${c.anim.className}`}
+                  style={c.lleno ? { background: alfa(d.color, 0.18), ...c.anim.style } : { border: "1px dashed rgba(0,0,0,.25)" }}
+                >
+                  <Contenido c={c} d={d} vacio={<span />} />
+                </span>
+              )}
+            </Grilla>
+          </div>
+        </div>
+      </div>
+      {/* Frente de cristal */}
+      <div
+        className="relative z-10 -mt-12 rounded-[22px] border p-4 pt-6"
+        style={{
+          background: `linear-gradient(170deg, ${alfa(claro, 0.7)}, ${alfa(mezclar(d.color, "#000000", 0.2), 0.85)})`,
+          borderColor: alfa(claro, 0.8),
+          backdropFilter: "blur(14px) saturate(140%)",
+          WebkitBackdropFilter: "blur(14px) saturate(140%)",
+          boxShadow: `0 20px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.45), 0 0 40px ${alfa(d.color, 0.35)}`,
+        }}
+      >
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-white/70">{d.nivel ? `Nivel ${d.nivel}` : "Tu billetera"}</p>
+            <p className="truncate text-lg font-bold leading-tight">{d.local}</p>
+          </div>
+          <p className="text-3xl font-extrabold tabular-nums leading-none">
+            {d.sellos}
+            <span className="text-base text-white/60">/{d.meta}</span>
+          </p>
+        </div>
+        <Listo d={d} />
+        {d.pie}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Holográfica (carta de colección: marco de vidrio y arcoíris que se mueve) ----------
+
+const ARCOIRIS =
+  "linear-gradient(115deg, #ff7ad9 0%, #7a8bff 18%, #5ef2ff 34%, #b6ff8a 50%, #ffe36e 66%, #ff8a7a 82%, #ff7ad9 100%)";
+
+function Holografica(d: Datos) {
+  const acento = brilloSobreOscuro(d.color);
+  return (
+    <div className="w-full max-w-sm">
+      <div
+        className="relative overflow-hidden rounded-[22px] p-[1.5px]"
+        style={{ backgroundImage: ARCOIRIS, backgroundSize: "200% 100%", boxShadow: `0 0 38px ${alfa(acento, 0.45)}, 0 20px 40px rgba(0,0,0,.5)` }}
+      >
+        <div className="relative overflow-hidden rounded-[21px] p-4 text-white" style={{ background: `linear-gradient(180deg, #121225, #07070d)` }}>
+          <span
+            className="pointer-events-none absolute inset-0 animate-[holo_6s_linear_infinite] opacity-15 mix-blend-color-dodge"
+            style={{ backgroundImage: ARCOIRIS, backgroundSize: "200% 100%", backgroundPosition: "var(--gx, 0%) 50%" }}
+            aria-hidden
+          />
+          <div className="relative flex items-center justify-between">
+            <p className="text-[11px] uppercase tracking-[0.35em] text-white/75">{d.local.slice(0, 18)}</p>
+            <Logo d={d} className="h-7 w-7 rounded-md text-xs" style={{ background: alfa(acento, 0.25) }} />
+          </div>
+          <div
+            className="relative mt-3 rounded-2xl border border-white/25 p-3"
+            style={{ background: `radial-gradient(80% 70% at 50% 30%, ${alfa(acento, 0.35)}, rgba(0,0,0,.2) 70%)` }}
+          >
+            <Grilla d={d} className="gap-2">
+              {(c) => (
+                <span
+                  key={c.i}
+                  className={`flex aspect-square items-center justify-center rounded-xl text-lg ${c.anim.className}`}
+                  style={
+                    c.lleno
+                      ? {
+                          backgroundImage: ARCOIRIS,
+                          backgroundSize: "300% 100%",
+                          backgroundPosition: `${(c.i * 23) % 100}% 50%`,
+                          boxShadow: `0 0 12px ${alfa(acento, 0.6)}`,
+                          ...c.anim.style,
+                        }
+                      : { border: "1px solid rgba(255,255,255,.18)", background: "rgba(255,255,255,.04)", color: "rgba(255,255,255,.35)" }
+                  }
+                >
+                  <Contenido c={c} d={d} />
+                </span>
+              )}
+            </Grilla>
+          </div>
+          <div className="relative mt-3 flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate font-bold">{d.nombre ?? d.local}</p>
+              <p className="text-[10px] tracking-widest text-white/50">{d.nivel ? `NIVEL ${d.nivel.toUpperCase()}` : `#${String(d.sellos).padStart(5, "0")}`}</p>
+            </div>
+            <p className="shrink-0 rounded-md border border-white/40 px-2 py-0.5 text-sm font-bold tabular-nums">
+              {d.sellos}/{d.meta}
+            </p>
+          </div>
+          <p className="relative mt-2 text-xs text-white/70">🎁 {d.premio}</p>
+          <div className="relative">
+            <Listo d={d} />
+            {d.pie}
+          </div>
+        </div>
+      </div>
+      {/* Reflejo en el piso */}
+      <div className="mx-auto mt-1 h-6 w-3/4 rounded-[50%] blur-md" style={{ background: alfa(acento, 0.35) }} aria-hidden />
+    </div>
+  );
+}
+
+// ---------- Dorada (marco de oro que brilla sobre negro) ----------
+
+function Dorada(d: Datos) {
+  const oro = "linear-gradient(135deg,#fff1b8 0%,#f0b43c 30%,#a8620f 55%,#ffd36b 75%,#b8741a 100%)";
+  return (
+    <div className="w-full max-w-sm">
+      <div className="relative rounded-[22px] p-[3px]" style={{ backgroundImage: oro, boxShadow: "0 0 36px rgba(255,170,40,.45), 0 0 4px rgba(255,210,120,.9)" }}>
+        <div className="relative overflow-hidden rounded-[19px] bg-[#0a0806] p-4 text-[#f7deb0]">
+          <span
+            className="pointer-events-none absolute inset-y-0 left-0 w-1/3 animate-[brillo_4s_ease-in-out_1s_infinite] bg-gradient-to-r from-transparent via-[#ffd890]/20 to-transparent"
+            aria-hidden
+          />
+          <div className="flex items-center justify-between">
+            <p className="font-serif text-sm tracking-[0.3em]" style={{ fontFamily: fuenteSerif.style.fontFamily }}>
+              {d.local.toUpperCase().slice(0, 20)}
+            </p>
+            <Logo d={d} className="h-8 w-8 rounded-full text-sm" style={{ backgroundImage: oro, color: "#2b1a04" }} />
+          </div>
+          <div className="mt-3 rounded-xl border p-3" style={{ borderColor: "rgba(240,180,60,.55)", boxShadow: "inset 0 0 24px rgba(240,180,60,.12)" }}>
+            <Grilla d={d} className="gap-2">
+              {(c) => (
+                <span
+                  key={c.i}
+                  className={`flex aspect-square items-center justify-center rounded-full text-lg ${c.anim.className}`}
+                  style={
+                    c.lleno
+                      ? { backgroundImage: oro, boxShadow: "0 0 10px rgba(255,180,60,.55)", ...c.anim.style }
+                      : { border: "1px solid rgba(240,180,60,.35)", color: "rgba(240,180,60,.5)" }
+                  }
+                >
+                  <Contenido c={c} d={d} />
+                </span>
+              )}
+            </Grilla>
+          </div>
+          <div className="mt-3 flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-[#f0b43c]/80">Premio</p>
+              <p className="text-sm font-semibold leading-snug">{d.premio}</p>
+            </div>
+            <p className="shrink-0 rounded-md border border-[#f0b43c]/60 px-2 py-0.5 text-sm font-bold tabular-nums">
+              {d.sellos}/{d.meta}
+            </p>
+          </div>
+          {d.nombre && <p className="mt-1 text-xs tracking-widest text-[#f7deb0]/70">{d.nombre.toUpperCase()}</p>}
+          <Listo d={d} className="rounded-xl text-[#2b1a04]" style={{ backgroundImage: oro }} />
+          {d.pie}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Cristal (vidrio esmerilado sobre manchas de color) ----------
+
+function Cristal(d: Datos) {
+  const otro = mezclar(d.color, "#ffb020", 0.6);
+  return (
+    <div className="relative w-full max-w-sm overflow-hidden rounded-3xl p-6" style={{ background: "#1d2236" }}>
+      <span className="pointer-events-none absolute -left-6 bottom-2 h-28 w-16 rotate-[35deg] rounded-full animate-[flotar_5s_ease-in-out_infinite]" style={{ background: d.color }} aria-hidden />
+      <span className="pointer-events-none absolute -right-4 top-6 h-24 w-14 -rotate-[40deg] rounded-full animate-[flotar_6s_ease-in-out_0.8s_infinite]" style={{ background: otro }} aria-hidden />
+      <div
+        className="relative rounded-2xl border border-white/25 p-4 text-white"
+        style={{ background: "rgba(255,255,255,.1)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", boxShadow: "0 12px 30px rgba(0,0,0,.35)" }}
+      >
+        <div className="flex items-center gap-3">
+          <Logo d={d} className={`h-9 w-9 rounded-lg text-sm ${d.logo ? "bg-white p-0.5" : "bg-white/20"}`} />
+          <p className="min-w-0 flex-1 truncate font-semibold">{d.local}</p>
+          <span className="text-xl" aria-hidden>
+            {d.emoji}
+          </span>
+        </div>
+        <Grilla d={d} className="mt-4 gap-2">
+          {(c) => (
+            <span
+              key={c.i}
+              className={`flex aspect-square items-center justify-center rounded-full text-base ${c.anim.className}`}
+              style={c.lleno ? { background: "rgba(255,255,255,.92)", ...c.anim.style } : { border: "1.5px solid rgba(255,255,255,.35)" }}
+            >
+              <Contenido c={c} d={d} />
+            </span>
+          )}
+        </Grilla>
+        <p className="mt-4 font-mono text-lg tracking-[0.2em] tabular-nums">
+          {String(d.sellos).padStart(2, "0")} / {String(d.meta).padStart(2, "0")}
+        </p>
+        <div className="flex items-end justify-between gap-3 text-xs">
+          <p className="truncate uppercase tracking-widest text-white/75">{d.nombre ?? "Tu nombre"}</p>
+          <p className="truncate text-white/75">🎁 {d.premio}</p>
+        </div>
+        <Listo d={d} />
+        {d.pie}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Colección (carta en estuche de acrílico, como las cartas certificadas) ----------
+
+function Coleccion(d: Datos) {
+  return (
+    <div className="w-full max-w-sm">
+      <div
+        className="rounded-[18px] p-2.5"
+        style={{
+          background: "linear-gradient(135deg, rgba(255,255,255,.95), rgba(220,226,235,.85) 40%, rgba(255,255,255,.95))",
+          boxShadow: "0 18px 40px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.9), inset 0 0 0 6px rgba(200,208,220,.5)",
+        }}
+      >
+        {/* Etiqueta del estuche */}
+        <div className="flex items-center gap-2 rounded-lg border border-red-700/70 bg-white px-2.5 py-1.5 text-[#1c1917]">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[11px] font-bold uppercase">{d.local}</p>
+            <p className="truncate text-[10px] text-stone-500">{d.nombre ? d.nombre.toUpperCase() : "TARJETA DE SELLOS"}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] font-semibold uppercase text-stone-500">Sellos</p>
+            <p className="text-lg font-black leading-none tabular-nums">{d.sellos}</p>
+          </div>
+          <Logo d={d} className="h-8 w-8 rounded text-xs" style={{ background: d.color, color: textoSobre(d.color) }} />
+        </div>
+        {/* Carta holográfica */}
+        <div className="relative mt-2.5 overflow-hidden rounded-xl p-[6px]" style={{ backgroundImage: "linear-gradient(135deg,#fce38a,#d9a520 40%,#fff2b3 60%,#c48a12)" }}>
+          <div className="relative overflow-hidden rounded-lg p-3" style={{ background: `radial-gradient(100% 80% at 50% 40%, ${mezclar(d.color, "#ffffff", 0.25)}, ${d.color} 55%, ${mezclar(d.color, "#000000", 0.4)})`, color: textoSobre(d.color) }}>
+            <span
+              className="pointer-events-none absolute inset-0 animate-[holo_7s_linear_infinite] opacity-30 mix-blend-overlay"
+              style={{ backgroundImage: ARCOIRIS, backgroundSize: "200% 100%" }}
+              aria-hidden
+            />
+            <Grilla d={d} className="relative gap-2">
+              {(c) => (
+                <span
+                  key={c.i}
+                  className={`flex aspect-square items-center justify-center rounded-full text-lg ${c.anim.className}`}
+                  style={c.lleno ? { background: "#ffffff", boxShadow: "0 2px 6px rgba(0,0,0,.3)", ...c.anim.style } : { border: "1.5px dashed rgba(255,255,255,.55)" }}
+                >
+                  <Contenido c={c} d={d} />
+                </span>
+              )}
+            </Grilla>
+            <p className="relative mt-3 text-center text-sm font-bold">🎁 {d.premio}</p>
+          </div>
+        </div>
+        <Listo d={d} />
+        {d.pie}
+      </div>
+    </div>
+  );
+}
+
+// ---------- 15. Isométrica 3D (en perspectiva, con sellos en relieve) ----------
+
+function Isometrica(d: Datos) {
+  const tinta = textoSobre(d.color);
+  const canto = mezclar(d.color, "#000000", 0.45);
+  const capas = Array.from({ length: 8 }, (_, i) => `${i + 1}px ${i + 1}px 0 ${canto}`).join(", ");
+  return (
+    <div className="w-full max-w-sm py-4" style={{ perspective: "1100px" }}>
+      <div
+        className="relative rounded-3xl p-5 transition-transform duration-500"
+        style={{
+          transform: "rotateX(18deg) rotateZ(-5deg) scale(.94)",
+          transformStyle: "preserve-3d",
+          background: `linear-gradient(135deg, ${mezclar(d.color, "#ffffff", 0.18)}, ${d.color})`,
+          color: tinta,
+          boxShadow: `${capas}, 18px 26px 30px rgba(0,0,0,.28)`,
+        }}
+      >
+        <div className="flex items-start gap-3">
+          <Logo
+            d={d}
+            className={`h-11 w-11 rounded-xl text-lg ${d.logo ? "bg-white p-1" : "bg-white/25"}`}
+            style={{ boxShadow: `0 4px 0 ${canto}` }}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-extrabold leading-tight">{d.local}</p>
+            <p className="text-xs opacity-75">{d.nivel ? `Nivel ${d.nivel}` : "Tarjeta de sellos"}</p>
+          </div>
+          <p className="rounded-xl bg-white/20 px-2.5 py-1 text-lg font-extrabold tabular-nums" style={{ boxShadow: `0 3px 0 ${canto}` }}>
+            {d.sellos}/{d.meta}
+          </p>
+        </div>
+        <Grilla d={d} className="mt-5 gap-2.5">
+          {(c) => (
+            <span
+              key={c.i}
+              className={`flex aspect-square items-center justify-center rounded-2xl text-lg ${c.anim.className}`}
+              style={
+                c.lleno
+                  ? {
+                      background: "linear-gradient(180deg,#ffffff,#f1ece6)",
+                      boxShadow: `0 5px 0 ${mezclar(d.color, "#000000", 0.25)}, 0 8px 10px rgba(0,0,0,.25)`,
+                      transform: "translateY(-3px)",
+                      ...c.anim.style,
+                    }
+                  : { background: "rgba(0,0,0,.16)", boxShadow: "inset 0 3px 4px rgba(0,0,0,.25)" }
+              }
+            >
+              <Contenido c={c} d={d} />
+            </span>
+          )}
+        </Grilla>
+        <div className="mt-5 flex items-end justify-between gap-3 text-sm">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wider opacity-70">Premio</p>
+            <p className="font-semibold leading-snug">{d.premio}</p>
+          </div>
+          {d.nombre && <p className="truncate font-semibold">{d.nombre}</p>}
+        </div>
+        <Listo d={d} />
+        {d.pie}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Tarjeta de puntos (o cashback) ----------
+
+function TarjetaPuntos(props: Props) {
+  const color = /^#[0-9a-f]{6}$/i.test(props.programa.color) ? props.programa.color : "#23345c";
+  const fondo = props.programa.diseno === "medida" ? props.programa.fondo_url : null;
+  const claro = fondo ? (props.programa.texto_claro ?? true) : textoSobre(color) === "#ffffff";
+  const tinta = claro ? "#ffffff" : "#1c1917";
+  const puntos = Math.max(0, props.puntos ?? 0);
+  const nombre = props.programa.nombre_puntos || "puntos";
+  const proximo = props.proximo;
+  const avance = proximo ? Math.min(1, puntos / Math.max(1, proximo.puntos)) : 1;
+  const d = props.programa.diseno ?? "";
+  // Diseños oscuros: fondo negro con acento dorado o arcoíris.
+  const oscuro = ["premium", "dorada", "holografica", "neon", "coleccion"].includes(d);
+  const premium = oscuro;
+  const base = oscuro ? (d === "holografica" ? "#0b0b18" : "#0d0d0f") : color;
+  const oro = d === "holografica" || d === "neon" ? ARCOIRIS : "linear-gradient(135deg,#f6e7b0,#d4ab52 45%,#a8802f)";
+  return (
+    <div
+      className="relative w-full max-w-sm overflow-hidden rounded-3xl p-5 shadow-xl"
+      style={{
+        color: premium ? "#f4ead0" : tinta,
+        backgroundColor: base,
+        backgroundImage: fondo
+          ? `url(${fondo})`
+          : `radial-gradient(120% 90% at 100% 0%, ${alfa(premium ? "#d4ab52" : "#ffffff", 0.22)} 0%, transparent 55%), linear-gradient(160deg, ${base}, ${mezclar(base, "#000000", 0.35)})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      {fondo && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: claro ? "linear-gradient(180deg,rgba(0,0,0,.5),rgba(0,0,0,.15) 50%,rgba(0,0,0,.6))" : "linear-gradient(180deg,rgba(255,255,255,.65),rgba(255,255,255,.15) 50%,rgba(255,255,255,.7))" }}
+          aria-hidden
+        />
+      )}
+      <div className="relative">
+        <div className="flex items-start gap-3">
+          {props.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={props.logo} alt="" className="h-11 w-11 shrink-0 rounded-xl bg-white object-contain p-1" />
+          ) : (
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20 text-lg font-bold">
+              {props.local.charAt(0).toUpperCase()}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-bold leading-tight">{props.local}</p>
+            <p className="text-xs opacity-75">{props.nivel ? `Nivel ${props.nivel}` : "Club de clientes"}</p>
+          </div>
+          <span className="text-2xl" aria-hidden>
+            {emojiSello(props.programa.icono)}
+          </span>
+        </div>
+        <div className="mt-8">
+          <p className="text-[10px] uppercase tracking-[0.25em] opacity-75">Tus {nombre}</p>
+          <p
+            className="text-5xl font-extrabold tabular-nums leading-none"
+            style={premium ? { backgroundImage: oro, WebkitBackgroundClip: "text", color: "transparent" } : undefined}
+          >
+            {puntos.toLocaleString("es-CL")}
+          </p>
+        </div>
+        <div className="mt-6">
+          <div className="h-2.5 overflow-hidden rounded-full" style={{ background: claro || premium ? "rgba(255,255,255,.2)" : "rgba(0,0,0,.12)" }}>
+            <div
+              className="h-full rounded-full transition-[width] duration-700"
+              style={{ width: `${Math.round(avance * 100)}%`, backgroundImage: premium ? oro : undefined, background: premium ? undefined : claro ? "#ffffff" : "#1c1917" }}
+            />
+          </div>
+          <div className="mt-2 flex items-end justify-between gap-3 text-sm">
+            <p className="min-w-0 leading-snug">
+              {proximo ? (
+                puntos >= proximo.puntos ? (
+                  <>🎉 Ya puedes canjear <b>{proximo.titulo}</b></>
+                ) : (
+                  <>
+                    Te faltan <b>{(proximo.puntos - puntos).toLocaleString("es-CL")}</b> para <b>{proximo.titulo}</b>
+                  </>
+                )
+              ) : (
+                props.programa.premio
+              )}
+            </p>
+            {props.nombre && <p className="shrink-0 truncate font-semibold">{props.nombre}</p>}
+          </div>
+        </div>
+        {props.pie}
+      </div>
+      <span className="sr-only">
+        {puntos} {nombre}
+      </span>
+    </div>
+  );
+}
+
 const DISENOS = {
   clasica: Clasica,
   boleto: Boleto,
@@ -968,4 +1503,11 @@ const DISENOS = {
   circulo: Circulo,
   pop: Pop,
   premium: Premium,
+  medida: Medida,
+  billetera: Billetera,
+  isometrica: Isometrica,
+  holografica: Holografica,
+  dorada: Dorada,
+  cristal: Cristal,
+  coleccion: Coleccion,
 } satisfies Record<string, (d: Datos) => ReactNode>;

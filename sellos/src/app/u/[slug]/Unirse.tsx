@@ -19,7 +19,15 @@ export type DatosUnirse = {
 
 // El cliente se une con su nombre y teléfono. Si en este celular ya tiene la tarjeta del local, va directo a ella
 // (y si vino del QR de un solo uso, el sello se suma allá).
-export function Unirse({ datos, sello }: { datos: DatosUnirse; sello: string | null }) {
+export function Unirse({
+  datos,
+  sello,
+  referido,
+}: {
+  datos: DatosUnirse;
+  sello: string | null;
+  referido: { codigo: string; nombre: string } | null;
+}) {
   const router = useRouter();
   const { negocio: r, programa: p } = datos;
   const [revisando, setRevisando] = useState(true);
@@ -57,6 +65,7 @@ export function Unirse({ datos, sello }: { datos: DatosUnirse; sello: string | n
       p_email: null,
       p_cumpleanos: cumple || null,
       p_acepta: acepta,
+      p_ref: referido?.codigo ?? null,
     });
     if (error || !data) {
       setEnviando(false);
@@ -70,7 +79,7 @@ export function Unirse({ datos, sello }: { datos: DatosUnirse; sello: string | n
   if (!datos.activa)
     return (
       <main className="flex min-h-dvh items-center justify-center bg-stone-100 px-4 text-center">
-        <p className="max-w-xs text-sm text-suave">La tarjeta de sellos de {r.nombre} está pausada por ahora. ¡Vuelve pronto!</p>
+        <p className="max-w-xs text-sm text-suave">La tarjeta de {r.nombre} está pausada por ahora. ¡Vuelve pronto!</p>
       </main>
     );
 
@@ -78,23 +87,47 @@ export function Unirse({ datos, sello }: { datos: DatosUnirse; sello: string | n
     <main className="min-h-dvh bg-stone-100 px-4 py-8">
       <div className="mx-auto flex max-w-sm flex-col items-center gap-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Tu tarjeta de sellos</h1>
+          {referido && (
+            <p className="mb-3 rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-semibold text-emerald-900">
+              🤝 {referido.nombre} te invitó{p.referido_regalo > 0 ? ": los dos ganan un regalo en tu primera visita" : ""}
+            </p>
+          )}
+          <h1 className="text-2xl font-bold tracking-tight">{p.tipo === "puntos" ? `Tu club de ${p.nombre_puntos}` : "Tu tarjeta de sellos"}</h1>
           <p className="mt-1 text-sm text-suave">
-            Junta {p.meta} sellos en {r.nombre} y llévate <b className="text-tinta">{p.premio}</b>.
+            {p.tipo === "puntos" ? (
+              <>
+                Suma {p.nombre_puntos} con cada compra en {r.nombre} y canjéalos por premios.
+              </>
+            ) : (
+              <>
+                Junta {p.meta} sellos en {r.nombre} y llévate <b className="text-tinta">{p.premio}</b>.
+              </>
+            )}
           </p>
         </div>
 
         <Inclinable giroscopio>
-          <TarjetaVisual local={r.nombre} logo={r.logo_url} programa={p} sellos={p.bienvenida} nombre={nombre || undefined} />
+          <TarjetaVisual
+            local={r.nombre}
+            logo={r.logo_url}
+            programa={p}
+            sellos={p.bienvenida}
+            puntos={p.bienvenida * p.puntos_regalo}
+            nombre={nombre || undefined}
+          />
         </Inclinable>
         {p.dias_dobles?.length > 0 && (
           <p className="rounded-full bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-900">
-            🔥 {textoDias(p.dias_dobles)}: sello doble
+            🔥 {textoDias(p.dias_dobles)}: día doble
           </p>
         )}
         {p.bienvenida > 0 && (
           <p className="-mt-3 text-center text-sm font-medium text-emerald-700">
-            {p.bienvenida === 1 ? "Empiezas con 1 sello de regalo" : `Empiezas con ${p.bienvenida} sellos de regalo`}
+            {p.tipo === "puntos"
+              ? `Empiezas con ${(p.bienvenida * p.puntos_regalo).toLocaleString("es-CL")} ${p.nombre_puntos} de regalo`
+              : p.bienvenida === 1
+                ? "Empiezas con 1 sello de regalo"
+                : `Empiezas con ${p.bienvenida} sellos de regalo`}
           </p>
         )}
 

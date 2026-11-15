@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { avisarCliente } from "@/lib/avisos";
 import { leerTarjeta, sitioDe } from "@/lib/servidor";
+import { unidad } from "@/lib/tipos";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -28,22 +29,28 @@ export async function GET(request: Request) {
     const t = await leerTarjeta(c.codigo);
     if (!t?.programa) continue;
     const nombre = t.nombre.split(" ")[0];
-    const regalo = c.regalo === 1 ? "un sello" : `${c.regalo} sellos`;
+    const p = t.programa;
+    const regalo = `${c.regalo.toLocaleString("es-CL")} ${unidad(p, c.regalo)}`;
+    const cupon = (t.cupones ?? [])[0];
+    const estado =
+      p.tipo === "puntos"
+        ? `Ya tienes ${t.puntos.toLocaleString("es-CL")} ${p.nombre_puntos} para canjear.`
+        : `Te ${p.meta - t.sellos === 1 ? "falta 1 sello" : `faltan ${p.meta - t.sellos} sellos`} para ${p.premio}.`;
     const mensaje =
       c.tipo === "cumpleanos"
         ? {
             titulo: `¡Feliz cumpleaños, ${nombre}! 🎂`,
             cuerpo:
               c.regalo > 0
-                ? `${t.negocio.nombre} te regala ${regalo} en tu tarjeta. ¡Te esperamos para celebrar!`
+                ? `${t.negocio.nombre} te regala ${regalo} en tu tarjeta${cupon ? ` y el cupón “${cupon.titulo}”` : ""}. ¡Te esperamos para celebrar!`
                 : `Todo el equipo de ${t.negocio.nombre} te desea un gran día. ¡Te esperamos para celebrar!`,
           }
         : {
             titulo: `${nombre}, te extrañamos en ${t.negocio.nombre}`,
             cuerpo:
               c.regalo > 0
-                ? `Te dejamos ${regalo} de regalo en tu tarjeta. Te ${t.programa.meta - t.sellos === 1 ? "falta 1 sello" : `faltan ${t.programa.meta - t.sellos} sellos`} para ${t.programa.premio}.`
-                : `Llevas ${t.sellos} de ${t.programa.meta} sellos para ${t.programa.premio}. ¡Vuelve pronto!`,
+                ? `Te dejamos ${regalo} de regalo en tu tarjeta. ${estado}`
+                : `${estado} ¡Vuelve pronto!`,
           };
     const r = await avisarCliente(admin, t, mensaje, sitio);
     enviados += r.enviados;

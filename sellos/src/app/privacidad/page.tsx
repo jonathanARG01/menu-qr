@@ -1,7 +1,7 @@
 import { PaginaLegal } from "@/components/PaginaLegal";
 import { PRIVACIDAD } from "@/lib/legal";
 
-export const metadata = { title: "Privacidad · Sellito" };
+export const metadata = { title: "Privacidad" };
 
 export default function PaginaPrivacidad() {
   return (

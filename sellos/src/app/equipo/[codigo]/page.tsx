@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { limpiarCodigo } from "@/lib/tipos";
 import { Aceptar } from "./Aceptar";
 
-export const metadata = { title: "Invitación · Sellito", robots: { index: false } };
+export const metadata = { title: "Invitación", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
 type Invitacion = { negocio: string; rol: string; nombre: string; vencida: boolean; usada: boolean };

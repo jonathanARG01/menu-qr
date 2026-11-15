@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
-import { PLANES } from "@/lib/marca";
+import { LOCAL_EXTRA, PLANES, nombrePlan, type Plan } from "@/lib/marca";
 import { rubroDe } from "@/lib/rubros";
 import { emojiSello } from "@/lib/tipos";
 import { formatoFecha, formatoPrecio, mensajeError, numeroWhatsapp } from "@/lib/utils";
@@ -15,7 +15,7 @@ export type FilaAdmin = {
   nombre: string;
   rubro: string;
   telefono: string | null;
-  plan: "local" | "cadena";
+  plan: Plan;
   estado: "prueba" | "activo" | "pausado";
   prueba_hasta: string;
   notas_admin: string | null;
@@ -24,6 +24,8 @@ export type FilaAdmin = {
   tarjetas: number;
   sellos_30d: number;
   ultima_actividad: string | null;
+  max_locales: number;
+  locales: number;
 };
 
 const hoy = () => new Date().toISOString().slice(0, 10);
@@ -40,16 +42,23 @@ export function Admin({ filas }: { filas: FilaAdmin[] }) {
   const [q, setQ] = useState("");
 
   const activos = filas.filter((f) => f.estado === "activo");
-  const mensual = activos.reduce((n, f) => n + PLANES[f.plan].precio, 0);
+  const mensual = activos.reduce(
+    (n, f) => n + (PLANES[f.plan]?.precio ?? 0) + (f.plan === "cadena" ? Math.max(0, f.max_locales - 5) * LOCAL_EXTRA : 0),
+    0,
+  );
   const enPrueba = filas.filter((f) => f.estado === "prueba" && f.prueba_hasta >= hoy());
 
-  async function cambiar(f: FilaAdmin, c: { estado?: string; plan?: string; prueba_hasta?: string; notas?: string }) {
+  async function cambiar(
+    f: FilaAdmin,
+    c: { estado?: string; plan?: string; prueba_hasta?: string; notas?: string; max_locales?: number },
+  ) {
     const { error } = await supabase.rpc("admin_negocio", {
       p_id: f.id,
       p_estado: c.estado ?? null,
       p_plan: c.plan ?? null,
       p_prueba_hasta: c.prueba_hasta ?? null,
       p_notas: c.notas ?? null,
+      p_max_locales: c.max_locales ?? null,
     });
     if (error) return avisar(mensajeError(error), "error");
     avisar("Guardado");
@@ -105,7 +114,7 @@ export function Admin({ filas }: { filas: FilaAdmin[] }) {
                     · alta {formatoFecha(f.created_at, { day: "numeric", month: "short", year: "2-digit" })}
                   </p>
                   <p className="text-xs text-suave">
-                    {f.tarjetas} clientes · {f.sellos_30d} sellos en 30 días · última actividad{" "}
+                    {f.tarjetas} clientes · {f.sellos_30d} visitas en 30 días · {f.locales} de {f.max_locales} locales · última actividad{" "}
                     {f.ultima_actividad ? formatoFecha(f.ultima_actividad, { day: "numeric", month: "short" }) : "—"}
                   </p>
                 </div>
@@ -119,7 +128,7 @@ export function Admin({ filas }: { filas: FilaAdmin[] }) {
                   }`}
                 >
                   {f.estado === "activo"
-                    ? `Pagando · ${PLANES[f.plan].nombre}`
+                    ? `Pagando · ${nombrePlan(f.plan)}`
                     : f.estado === "pausado"
                       ? "Pausado"
                       : vencida
@@ -128,17 +137,29 @@ export function Admin({ filas }: { filas: FilaAdmin[] }) {
                 </span>
               </div>
               <div className="flex flex-wrap gap-2 text-sm">
-                <button className="boton py-1.5" onClick={() => cambiar(f, { estado: "activo", plan: "local" })}>
-                  Activar Local
-                </button>
-                <button className="boton-secundario py-1.5" onClick={() => cambiar(f, { estado: "activo", plan: "cadena" })}>
-                  Activar Cadena
-                </button>
+                {(Object.keys(PLANES) as Plan[]).map((id) => (
+                  <button
+                    key={id}
+                    className={f.estado === "activo" && f.plan === id ? "boton py-1.5" : "boton-secundario py-1.5"}
+                    onClick={() => cambiar(f, { estado: "activo", plan: id })}
+                  >
+                    Activar {PLANES[id].nombre}
+                  </button>
+                ))}
                 <button
                   className="boton-secundario py-1.5"
                   onClick={() => cambiar(f, { estado: "prueba", prueba_hasta: sumarDias(f.prueba_hasta, 14) })}
                 >
                   +14 días de prueba
+                </button>
+                <button
+                  className="boton-secundario py-1.5"
+                  onClick={() => {
+                    const n = Number(prompt("Locales que permite (Cadena incluye 5; cada extra se cobra aparte)", String(f.max_locales)));
+                    if (Number.isInteger(n) && n >= 1 && n <= 200) cambiar(f, { max_locales: n });
+                  }}
+                >
+                  Locales: {f.max_locales}
                 </button>
                 {f.estado !== "pausado" && (
                   <button className="boton-secundario py-1.5 text-red-700" onClick={() => cambiar(f, { estado: "pausado" })}>

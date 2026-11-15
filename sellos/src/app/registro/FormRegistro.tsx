@@ -8,8 +8,9 @@ import { crearNegocio, type DatosAlta } from "@/lib/alta";
 import { RUBROS, type IdRubro } from "@/lib/rubros";
 import { emojiSello } from "@/lib/tipos";
 import { mensajeError, slugify, urlSitio } from "@/lib/utils";
+import { DIAS_PRUEBA } from "@/lib/marca";
 
-// Alta de un negocio (14 días gratis) o, con ?invitacion=, de alguien del equipo que se suma a un negocio existente.
+// Alta de un negocio (30 días gratis) o, con ?invitacion=, de alguien del equipo que se suma a un negocio existente.
 export function FormRegistro({ invitacion, rubroInicial }: { invitacion: string | null; rubroInicial: string | null }) {
   const router = useRouter();
   const [nombre, setNombre] = useState("");
@@ -156,7 +157,7 @@ export function FormRegistro({ invitacion, rubroInicial }: { invitacion: string 
       </div>
       {error && <Aviso>{error}</Aviso>}
       <button type="submit" className="boton w-full py-3 text-base" disabled={cargando}>
-        {cargando ? "Creando…" : invitacion ? "Crear cuenta y unirme" : "Empezar 14 días gratis"}
+        {cargando ? "Creando…" : invitacion ? "Crear cuenta y unirme" : `Empezar ${DIAS_PRUEBA} días gratis`}
       </button>
       <p className="text-center text-xs text-suave">
         Sin tarjeta de crédito. Al crear la cuenta aceptas los{" "}

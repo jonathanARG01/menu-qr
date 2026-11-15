@@ -8,6 +8,7 @@ import { crearNegocio } from "@/lib/alta";
 import { RUBROS, type IdRubro } from "@/lib/rubros";
 import { emojiSello } from "@/lib/tipos";
 import { mensajeError, slugify } from "@/lib/utils";
+import { DIAS_PRUEBA } from "@/lib/marca";
 
 export function FormCrear() {
   const router = useRouter();
@@ -59,7 +60,7 @@ export function FormCrear() {
       </label>
       {error && <Aviso>{error}</Aviso>}
       <button className="boton w-full" disabled={cargando}>
-        {cargando ? "Creando…" : "Crear negocio (14 días gratis)"}
+        {cargando ? "Creando…" : `Crear negocio (${DIAS_PRUEBA} días gratis)`}
       </button>
     </form>
   );

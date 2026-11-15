@@ -2,8 +2,9 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { AuthShell } from "@/components/AuthShell";
 import { FormEntrar } from "./FormEntrar";
+import { DIAS_PRUEBA } from "@/lib/marca";
 
-export const metadata = { title: "Entrar · Sellito" };
+export const metadata = { title: "Entrar" };
 
 export default function PaginaEntrar() {
   return (
@@ -13,7 +14,7 @@ export default function PaginaEntrar() {
         <>
           ¿Aún no tienes cuenta?{" "}
           <Link href="/registro" className="font-medium text-marca">
-            Prueba gratis 14 días
+            Prueba gratis {DIAS_PRUEBA} días
           </Link>
         </>
       }
