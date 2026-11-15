@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AuthShell } from "@/components/AuthShell";
 import { FormRegistro } from "./FormRegistro";
 
-export const metadata = { title: "Prueba gratis · Sellito" };
+export const metadata = { title: "Prueba gratis" };
 
 type Props = { searchParams: Promise<{ invitacion?: string; rubro?: string }> };
 

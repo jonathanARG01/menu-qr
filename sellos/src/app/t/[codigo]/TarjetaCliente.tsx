@@ -8,21 +8,26 @@ import { useAutorizar } from "@/components/Autorizar";
 import { TarjetaVisual } from "@/components/TarjetaVisual";
 import { Inclinable } from "@/components/Inclinable";
 import { avisarTarjeta, guardarTarjeta, suscribirTarjeta } from "@/lib/cliente";
-import { PROGRAMA_BASE, faltan, textoDias, type TarjetaPublica } from "@/lib/tipos";
+import { PROGRAMA_BASE, faltan, hitosDe, textoDias, unidad, type TarjetaPublica } from "@/lib/tipos";
 import { iphoneSinInstalar, soportaPush } from "@/lib/push";
 import { qrSvg } from "@/lib/qr";
 import { MARCA } from "@/lib/marca";
 import { mensajeError, urlSitio } from "@/lib/utils";
 
 const TEXTO_ORIGEN: Record<string, string> = {
-  qr: "Sello por tu visita",
-  equipo: "Sello por tu visita",
-  manual: "Sellos del equipo",
-  bienvenida: "Sello de bienvenida",
+  qr: "Por tu visita",
+  equipo: "Por tu visita",
+  manual: "Sumados por el equipo",
+  bienvenida: "Regalo de bienvenida",
   migracion: "Sellos anteriores",
   anulada: "Sello quitado",
   cumpleanos: "Regalo de cumpleaños 🎂",
   regreso: "Regalo por volver",
+  referido: "Regalo por invitar a un amigo 🤝",
+  api: "Por tu compra",
+  premio: "Canjeaste un premio",
+  cupon: "Usaste un cupón",
+  reto: "Reto logrado 🏅",
 };
 
 export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPublica; googleWallet: boolean }) {
@@ -45,7 +50,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
   const [resenaVista, setResenaVista] = useState(true);
   useEffect(() => {
     try {
-      const vista = Number(localStorage.getItem(`sellito-resena:${t.negocio.slug}`) || 0);
+      const vista = Number(localStorage.getItem(`club-resena:${t.negocio.slug}`) || 0);
       setResenaVista(Date.now() - vista < 60 * 86400000);
     } catch {
       setResenaVista(false);
@@ -54,7 +59,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
   function marcarResena() {
     setResenaVista(true);
     try {
-      localStorage.setItem(`sellito-resena:${t.negocio.slug}`, String(Date.now()));
+      localStorage.setItem(`club-resena:${t.negocio.slug}`, String(Date.now()));
     } catch {}
   }
 
@@ -76,16 +81,16 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
     router.replace(ruta, { scroll: false });
     supabase.rpc("sumar_qr", { p_tarjeta: t.codigo, p_codigo: sello }).then(async ({ data, error }) => {
       if (error) return setAviso({ tipo: "error", texto: mensajeError(error) });
-      const r = (data ?? {}) as { sumados?: number; doble?: boolean };
+      const r = (data ?? {}) as { sumados?: number; doble?: boolean; retos?: string[] | null; referido?: boolean };
       const n = Number(r.sumados ?? 1);
-      setNuevos(n);
+      const u = unidad(p, n);
+      setNuevos(p.tipo === "puntos" ? 0 : n);
       setAviso({
         tipo: "ok",
-        texto: r.doble
-          ? `¡Día de sello doble! Sumaste ${n} sellos por tu visita.`
-          : n === 1
-            ? "¡Sumaste un sello por tu visita!"
-            : `¡Sumaste ${n} sellos por tu visita!`,
+        texto:
+          (r.doble ? `¡Día doble! Sumaste ${n} ${u} por tu visita.` : `¡Sumaste ${n} ${u} por tu visita!`) +
+          (r.retos?.length ? ` Y lograste el reto “${r.retos.join("”, “")}” 🏅` : "") +
+          (r.referido ? " ¡Y tu amigo que te invitó también ganó!" : ""),
       });
       setPedirResena(true);
       await recargar();
@@ -137,7 +142,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
       motivo = ok.motivo || null;
     }
     let monto: number | null = null;
-    if (cantidad > 0 && p.regla === "monto") {
+    if (cantidad > 0 && (p.regla === "monto" || p.tipo === "puntos")) {
       const v = Number((prompt("Monto de la compra") ?? "").replace(/[^\d.,]/g, "").replace(",", "."));
       if (!(v > 0)) return;
       monto = v;
@@ -156,8 +161,8 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
       tipo: "ok",
       texto:
         sumados > 0
-          ? `${r.doble ? "Día de sello doble: " : ""}${sumados === 1 ? "sello sumado" : `${sumados} sellos sumados`}`
-          : "Sello quitado",
+          ? `${r.doble ? "Día doble: " : ""}${sumados} ${unidad(p, sumados)} sumados`
+          : `${unidad(p, 1)} quitado`,
     });
     await recargar();
     avisarTarjeta(t.codigo);
@@ -184,6 +189,27 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
   const url = `${urlSitio()}/t/${t.codigo}`;
   const qr = useMemo(() => qrSvg(url), [url]);
   const restan = faltan(t, p);
+  const puntos = p.tipo === "puntos";
+  const u = unidad(p);
+  const catalogo = t.catalogo ?? [];
+  const proximo =
+    catalogo.filter((r) => !r.agotado && r.puntos > t.puntos).sort((a, b) => a.puntos - b.puntos)[0] ??
+    catalogo.filter((r) => !r.agotado).sort((a, b) => b.puntos - a.puntos)[0] ??
+    null;
+  const niveles = [...(p.niveles ?? [])].sort((a, b) => a.visitas - b.visitas);
+  const siguienteNivel = niveles.find((n) => n.visitas > t.visitas) ?? null;
+  const [categoria, setCategoria] = useState("");
+  const categorias = [...new Set(catalogo.map((r) => r.categoria).filter(Boolean))];
+  const enlaceAmigo = `${urlSitio()}/u/${t.negocio.slug}?ref=${t.codigo}`;
+  const textoAmigo = `Únete a la tarjeta de ${t.negocio.nombre} con mi enlace y los dos ganamos un regalo: ${enlaceAmigo}`;
+  async function invitar() {
+    try {
+      if (navigator.share) return await navigator.share({ title: t.negocio.nombre, text: textoAmigo });
+    } catch {
+      return;
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(textoAmigo)}`, "_blank");
+  }
 
   return (
     <main className="min-h-dvh bg-stone-100 px-4 py-6">
@@ -198,7 +224,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
         )}
         {!t.activa && (
           <p className="w-full rounded-xl bg-amber-100 px-4 py-3 text-sm text-amber-900">
-            La tarjeta de sellos de {t.negocio.nombre} está pausada. Tus sellos siguen guardados.
+            La tarjeta de {t.negocio.nombre} está pausada. Lo que juntaste sigue guardado.
           </p>
         )}
 
@@ -225,11 +251,27 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
             </div>
           </section>
         )}
-        {t.dia_doble && t.activa && (
-          <p className="w-full rounded-xl bg-amber-100 px-4 py-3 text-center text-sm font-semibold text-amber-900">
-            🔥 Hoy es día de sello doble: cada sello vale 2.
+        {t.promocion && t.activa ? (
+          <p className="w-full rounded-xl bg-gradient-to-r from-fuchsia-600 to-orange-500 px-4 py-3 text-center text-sm font-semibold text-white shadow">
+            🎉 {t.promocion.titulo}: cada visita vale ×{t.promocion.multiplicador}
           </p>
+        ) : (
+          t.dia_doble &&
+          t.activa && (
+            <p className="w-full rounded-xl bg-amber-100 px-4 py-3 text-center text-sm font-semibold text-amber-900">
+              🔥 Hoy es día doble: cada visita vale el doble.
+            </p>
+          )
         )}
+        {(t.cupones ?? []).map((c, i) => (
+          <div key={i} className="w-full rounded-2xl border-2 border-dashed border-violet-400 bg-violet-50 px-4 py-3 text-sm text-violet-950">
+            <p className="font-bold">🎟️ {c.titulo}</p>
+            {c.detalle && <p>{c.detalle}</p>}
+            <p className="text-xs opacity-75">
+              Muéstralo al pagar{c.vence_at ? ` · vence el ${new Date(c.vence_at).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}` : ""}
+            </p>
+          </div>
+        ))}
 
         <Inclinable giroscopio>
           <TarjetaVisual
@@ -238,6 +280,9 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
             programa={p}
             sellos={t.sellos}
             premios={t.premios}
+            puntos={t.puntos}
+            proximo={proximo}
+            nivel={t.nivel?.nombre}
             nombre={t.nombre}
             animarUltimos={nuevos}
             pie={
@@ -250,22 +295,176 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
         </Inclinable>
 
         <p className="text-center text-sm text-suave">
-          {t.premios > 0
-            ? "Muéstrale esta tarjeta al equipo para canjear tu premio."
-            : restan === 1
-              ? `¡Te falta 1 sello para ${p.premio}!`
-              : `Te faltan ${restan} sellos para ${p.premio}.`}{" "}
-          {p.regla === "monto" ? "Sumas sellos según tu compra." : "Sumas un sello en cada visita."} Muestra esta tarjeta al
-          pagar o escanea el QR que te muestre el equipo.
-          {p.dias_dobles.length > 0 && ` ${textoDias(p.dias_dobles)}: sello doble.`}
+          {puntos
+            ? `Sumas ${u} con cada compra y los canjeas por premios del catálogo.`
+            : t.premios > 0
+              ? "Muéstrale esta tarjeta al equipo para canjear tu premio."
+              : restan === 1
+                ? `¡Te falta 1 sello para ${p.premio}!`
+                : `Te faltan ${restan} sellos para ${p.premio}.`}{" "}
+          {!puntos && (p.regla === "monto" ? "Sumas sellos según tu compra." : "Sumas un sello en cada visita.")} Muestra esta
+          tarjeta al pagar o escanea el QR que te muestre el equipo.
+          {p.dias_dobles.length > 0 && ` ${textoDias(p.dias_dobles)}: día doble.`}
         </p>
+
+        {!puntos && hitosDe(p).length > 0 && (
+          <section className="w-full">
+            <h2 className="mb-2 text-sm font-semibold">Premios en el camino</h2>
+            <ol className="tarjeta divide-y divide-borde text-sm">
+              {[...hitosDe(p), { sellos: p.meta, premio: p.premio }].map((h) => {
+                const usado = t.hitos_canjeados?.includes(h.sellos);
+                const listo = t.sellos >= h.sellos && !usado;
+                return (
+                  <li key={h.sellos} className="flex items-center gap-3 px-4 py-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-100 text-xs font-bold">{h.sellos}</span>
+                    <span className="flex-1">{h.premio}</span>
+                    <span className={`text-xs font-semibold ${listo ? "text-emerald-700" : "text-suave"}`}>
+                      {usado ? "✓ Canjeado" : listo ? "¡Listo! 🎉" : `Faltan ${h.sellos - t.sellos}`}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        )}
+
+        {niveles.length > 0 && (
+          <section className="tarjeta w-full p-4 text-sm">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold">{t.nivel ? `Nivel ${t.nivel.nombre}` : "Tu nivel"}</p>
+              <p className="text-xs text-suave">{t.visitas === 1 ? "1 visita" : `${t.visitas} visitas`}</p>
+            </div>
+            {t.nivel?.beneficio && <p className="mt-1">✨ {t.nivel.beneficio}</p>}
+            {siguienteNivel && (
+              <>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-stone-100">
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, (t.visitas / siguienteNivel.visitas) * 100)}%`, background: p.color }} />
+                </div>
+                <p className="mt-1 text-xs text-suave">
+                  Te faltan {siguienteNivel.visitas - t.visitas} visitas para {siguienteNivel.nombre}
+                  {siguienteNivel.beneficio ? `: ${siguienteNivel.beneficio}` : ""}.
+                </p>
+              </>
+            )}
+            <div className="mt-3 flex gap-1.5">
+              {niveles.map((n) => (
+                <span
+                  key={n.nombre}
+                  className={`flex-1 rounded-lg px-1 py-1 text-center text-xs font-semibold ${t.visitas >= n.visitas ? "text-white" : "bg-stone-100 text-suave"}`}
+                  style={t.visitas >= n.visitas ? { background: p.color } : undefined}
+                >
+                  {n.nombre}
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {puntos && catalogo.length > 0 && (
+          <section className="w-full">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Canjea tus {u}</h2>
+              <p className="text-xs text-suave">
+                Tienes {t.puntos.toLocaleString("es-CL")} {u}
+              </p>
+            </div>
+            {categorias.length > 1 && (
+              <div className="sin-barra mb-2 flex gap-1.5 overflow-x-auto">
+                {["", ...categorias].map((c) => (
+                  <button
+                    key={c || "todas"}
+                    type="button"
+                    onClick={() => setCategoria(c)}
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${categoria === c ? "bg-tinta text-white" : "bg-white text-suave"}`}
+                  >
+                    {c || "Todos"}
+                  </button>
+                ))}
+              </div>
+            )}
+            <ul className="grid grid-cols-2 gap-2">
+              {catalogo
+                .filter((r) => !categoria || r.categoria === categoria)
+                .map((r) => {
+                  const alcanza = t.puntos >= r.puntos;
+                  return (
+                    <li key={r.id} className={`overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 ${r.agotado ? "opacity-50" : ""}`}>
+                      <div className="relative aspect-square bg-stone-50">
+                        {r.imagen_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={r.imagen_url} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-4xl">🎁</div>
+                        )}
+                        {r.destacado && <span className="absolute left-2 top-2 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold">Destacado</span>}
+                      </div>
+                      <div className="p-2.5">
+                        <p className="text-sm font-semibold leading-tight">{r.titulo}</p>
+                        <p className="mt-0.5 text-xs font-bold" style={{ color: p.color }}>
+                          {r.puntos.toLocaleString("es-CL")} {u}
+                        </p>
+                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-100">
+                          <div className="h-full rounded-full" style={{ width: `${Math.min(100, (t.puntos / r.puntos) * 100)}%`, background: alcanza ? "#059669" : p.color }} />
+                        </div>
+                        <p className="mt-1 text-[11px] text-suave">
+                          {r.agotado ? "Agotado" : alcanza ? "¡Ya te alcanza! Pídelo al pagar" : `Te faltan ${(r.puntos - t.puntos).toLocaleString("es-CL")}`}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+            </ul>
+          </section>
+        )}
+
+        {(t.retos ?? []).length > 0 && (
+          <section className="w-full">
+            <h2 className="mb-2 text-sm font-semibold">Retos e insignias</h2>
+            <ul className="space-y-2">
+              {(t.retos ?? []).map((r) => (
+                <li key={r.titulo} className="tarjeta flex items-center gap-3 p-3 text-sm">
+                  <span className={`text-3xl ${r.logrados ? "" : "opacity-40 grayscale"}`} aria-hidden>
+                    {r.insignia}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold">
+                      {r.titulo} {r.logrados > 0 && <span className="text-xs text-emerald-700">×{r.logrados}</span>}
+                    </p>
+                    <p className="text-xs text-suave">
+                      Ven {r.visitas} veces en {r.dias} días{r.regalo ? ` y gana ${r.regalo} ${unidad(p, r.regalo)}` : ""}
+                    </p>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-stone-100">
+                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, (r.avance / r.visitas) * 100)}%` }} />
+                    </div>
+                  </div>
+                  <span className="text-xs font-semibold tabular-nums text-suave">
+                    {Math.min(r.avance, r.visitas)}/{r.visitas}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {p.referido_regalo > 0 && t.activa && (
+          <section className="w-full rounded-2xl p-4 text-white shadow" style={{ background: `linear-gradient(135deg, ${p.color}, #111827)` }}>
+            <p className="font-semibold">🤝 Invita a un amigo</p>
+            <p className="text-sm opacity-90">
+              Cuando venga por primera vez, los dos ganan {p.referido_regalo * (puntos ? p.puntos_regalo : 1)}{" "}
+              {unidad(p, p.referido_regalo * (puntos ? p.puntos_regalo : 1))}.
+            </p>
+            <button type="button" onClick={invitar} className="mt-3 w-full rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-tinta">
+              Compartir mi enlace
+            </button>
+          </section>
+        )}
 
         {equipo && (
           <section className="tarjeta w-full space-y-3 p-4">
             <p className="text-sm font-semibold">Equipo de {t.negocio.nombre}</p>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" className="boton" disabled={trabajando} onClick={() => sumar(1)}>
-                + 1 sello
+                {puntos ? `+ ${u}` : "+ 1 sello"}
               </button>
               <button type="button" className="boton-secundario" disabled={trabajando || t.premios < 1} onClick={canjear}>
                 Canjear premio
@@ -277,7 +476,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
               disabled={trabajando || (t.sellos < 1 && t.premios < 1)}
               onClick={() => sumar(-1)}
             >
-              Quitar un sello
+              Quitar {puntos ? "1 punto" : "un sello"}
             </button>
           </section>
         )}
@@ -293,7 +492,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
           )}
           {avisos === "puede" && (
             <button type="button" className="boton-secundario w-full" onClick={activarAvisos}>
-              Avisarme de mis sellos y premios
+              Avisarme de mis {u} y premios
             </button>
           )}
           {avisos === "si" && <p className="text-center text-xs text-emerald-700">Avisos activados en este celular.</p>}
@@ -322,7 +521,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
                 <li key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
                   <span>
                     {m.tipo === "canje"
-                      ? `Canjeaste ${p.premio}`
+                      ? `Canjeaste ${m.nota || p.premio}`
                       : m.cantidad < 0
                         ? TEXTO_ORIGEN.anulada
                         : TEXTO_ORIGEN[m.origen]}
@@ -340,8 +539,11 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
             </ul>
           </section>
         )}
+        {(t.locales ?? []).length > 0 && (
+          <p className="text-center text-xs text-suave">Válida en: {(t.locales ?? []).map((l) => l.nombre).join(", ")}</p>
+        )}
         {p.condiciones && <p className="text-center text-xs text-suave">{p.condiciones}</p>}
-        <Link href="/" className="text-xs text-suave">{t.total_sellos === 1 ? "1 sello" : `${t.total_sellos} sellos`} en total · Tarjeta digital por {MARCA}</Link>
+        <Link href="/" className="text-xs text-suave">{puntos ? `${t.total_puntos.toLocaleString("es-CL")} ${u}` : t.total_sellos === 1 ? "1 sello" : `${t.total_sellos} sellos`} en total · Tarjeta digital por {MARCA}</Link>
       </div>
       {dialogo}
     </main>

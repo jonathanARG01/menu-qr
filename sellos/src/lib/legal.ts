@@ -1,6 +1,6 @@
-import { CORREO_CONTACTO, DOMINIO } from "./marca";
+import { CORREO_CONTACTO, DIAS_PRUEBA, DOMINIO, MARCA } from "./marca";
 
-// Textos legales públicos de Sellito (/terminos y /privacidad). Se editan aquí, sin tocar el diseño.
+// Textos legales públicos (/terminos y /privacidad). Se editan aquí, sin tocar el diseño.
 
 export type SeccionLegal = { titulo: string; parrafos: string[]; lista?: [string, string][]; nota?: string };
 
@@ -17,13 +17,13 @@ export const TERMINOS: SeccionLegal[] = [
   {
     titulo: "Quiénes somos",
     parrafos: [
-      `Sellito es un servicio de ${EMPRESA.razon}, RUT ${EMPRESA.rut}, con domicilio en ${EMPRESA.domicilio}. Contacto: ${EMPRESA.correo}. Al crear una cuenta o usar ${DOMINIO} aceptas estos términos.`,
+      `${MARCA} es un servicio de ${EMPRESA.razon}, RUT ${EMPRESA.rut}, con domicilio en ${EMPRESA.domicilio}. Contacto: ${EMPRESA.correo}. Al crear una cuenta o usar ${DOMINIO} aceptas estos términos.`,
     ],
   },
   {
     titulo: "El servicio",
     parrafos: [
-      `Sellito es una plataforma web de tarjetas digitales de sellos (programa de fidelización) para negocios de cualquier rubro. Permite crear la tarjeta del negocio, que sus clientes se unan con un código QR, sumar sellos, canjear premios y enviar avisos automáticos. Las funciones de cada plan se describen en ${DOMINIO}.`,
+      `${MARCA} es una plataforma web de tarjetas digitales de sellos y puntos (programa de fidelización) para negocios de cualquier rubro. Permite crear la tarjeta del negocio, que sus clientes se unan con un código QR, sumar sellos, canjear premios y enviar avisos automáticos. Las funciones de cada plan se describen en ${DOMINIO}.`,
     ],
   },
   {
@@ -35,7 +35,7 @@ export const TERMINOS: SeccionLegal[] = [
   {
     titulo: "Prueba gratuita",
     parrafos: [
-      "Las cuentas nuevas tienen 14 días de prueba sin costo. Al terminar, la cuenta se pausa hasta que contrates un plan; no se cobra nada automáticamente sin tu autorización.",
+      `Las cuentas nuevas tienen ${DIAS_PRUEBA} días de prueba sin costo. Al terminar, la cuenta se pausa hasta que contrates un plan; no se cobra nada automáticamente sin tu autorización.`,
     ],
   },
   {
@@ -53,13 +53,13 @@ export const TERMINOS: SeccionLegal[] = [
   {
     titulo: "Uso aceptable",
     parrafos: [
-      "No puedes usar Sellito para actividades ilegales, para enviar spam, para vender productos prohibidos, ni para intentar acceder a cuentas o datos de otros, copiar la plataforma o afectar su funcionamiento. Podemos suspender cuentas que incumplan esta regla.",
+      `No puedes usar ${MARCA} para actividades ilegales, para enviar spam, para vender productos prohibidos, ni para intentar acceder a cuentas o datos de otros, copiar la plataforma o afectar su funcionamiento. Podemos suspender cuentas que incumplan esta regla.`,
     ],
   },
   {
     titulo: "Clientes del negocio",
     parrafos: [
-      "Quienes escanean el QR pueden unirse a la tarjeta de sellos del negocio. Los premios, sus condiciones y la atención son responsabilidad del negocio. Sellito no vende los productos o servicios del negocio ni responde por la entrega de sus premios.",
+      `Quienes escanean el QR pueden unirse a la tarjeta de sellos del negocio. Los premios, sus condiciones y la atención son responsabilidad del negocio. ${MARCA} no vende los productos o servicios del negocio ni responde por la entrega de sus premios.`,
     ],
   },
   {
@@ -71,7 +71,7 @@ export const TERMINOS: SeccionLegal[] = [
   {
     titulo: "Propiedad intelectual",
     parrafos: [
-      `La plataforma, su código, diseños, marca Sellito y logos pertenecen a ${EMPRESA.razon}. Tu suscripción te da derecho a usarla, no a copiarla ni revenderla.`,
+      `La plataforma, su código, diseños, marca ${MARCA} y logos pertenecen a ${EMPRESA.razon}. Tu suscripción te da derecho a usarla, no a copiarla ni revenderla.`,
     ],
   },
   {
@@ -100,7 +100,7 @@ export const PRIVACIDAD: SeccionLegal[] = [
   {
     titulo: "Quién es responsable",
     parrafos: [
-      `${EMPRESA.razon}, RUT ${EMPRESA.rut}, domicilio ${EMPRESA.domicilio}, dueña del servicio Sellito. Contacto para temas de datos personales: ${EMPRESA.correo}.`,
+      `${EMPRESA.razon}, RUT ${EMPRESA.rut}, domicilio ${EMPRESA.domicilio}, dueña del servicio ${MARCA}. Contacto para temas de datos personales: ${EMPRESA.correo}.`,
     ],
   },
   {
@@ -131,13 +131,13 @@ export const PRIVACIDAD: SeccionLegal[] = [
   {
     titulo: "Para qué los usamos",
     parrafos: [
-      "Para prestar el servicio (la tarjeta de sellos, sus premios y sus avisos), crear y proteger cuentas, cobrar y emitir documentos tributarios, dar soporte, generar estadísticas para el negocio y mejorar Sellito. No vendemos datos personales ni los usamos para publicidad de terceros.",
+      `Para prestar el servicio (la tarjeta de sellos, sus premios y sus avisos), crear y proteger cuentas, cobrar y emitir documentos tributarios, dar soporte, generar estadísticas para el negocio y mejorar ${MARCA}. No vendemos datos personales ni los usamos para publicidad de terceros.`,
     ],
   },
   {
     titulo: "Quién decide sobre los datos de los clientes",
     parrafos: [
-      "Cada negocio es el responsable de los datos de sus clientes y decide para qué los usa (por ejemplo, avisos de su tarjeta de sellos). Sellito actúa como encargado: los trata solo por cuenta del negocio y según sus instrucciones. Si eres cliente y quieres ejercer tus derechos, puedes escribir al negocio o a nosotros, y lo coordinaremos. Para los datos de las cuentas de los negocios, Sellito es el responsable.",
+      `Cada negocio es el responsable de los datos de sus clientes y decide para qué los usa (por ejemplo, avisos de su tarjeta de sellos). ${MARCA} actúa como encargado: los trata solo por cuenta del negocio y según sus instrucciones. Si eres cliente y quieres ejercer tus derechos, puedes escribir al negocio o a nosotros, y lo coordinaremos. Para los datos de las cuentas de los negocios, ${MARCA} es el responsable.`,
     ],
   },
   {
@@ -173,7 +173,7 @@ export const PRIVACIDAD: SeccionLegal[] = [
   {
     titulo: "Menores de edad",
     parrafos: [
-      "Sellito no está dirigido a menores de 14 años. Si un menor nos entregó datos sin autorización de sus padres, escríbenos y los borraremos.",
+      `${MARCA} no está dirigido a menores de 14 años. Si un menor nos entregó datos sin autorización de sus padres, escríbenos y los borraremos.`,
     ],
   },
   {

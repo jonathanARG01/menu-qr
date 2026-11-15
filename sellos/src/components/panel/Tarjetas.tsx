@@ -16,10 +16,22 @@ import {
   rutaTarjeta,
   textoRegla,
   vigente,
+  hitosDe,
+  unidad,
+  type Cupon,
   type FilaTarjeta,
   type Negocio,
+  type Nivel,
+  type Premio,
   type ProgramaSellos,
 } from "@/lib/tipos";
+
+// Lo que la ficha necesita además de la tarjeta: local en que se trabaja, catálogo y cupones para regalar.
+export type ExtrasFicha = { sucursal: string | null; gestor: boolean; catalogo: Premio[]; cupones: Cupon[] };
+
+const mayus = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+const nivelDe = (p: ProgramaSellos, visitas: number): Nivel | null =>
+  [...(p.niveles ?? [])].sort((a, b) => b.visitas - a.visitas).find((n) => visitas >= n.visitas) ?? null;
 import { formatoFecha, formatoPrecio, mensajeError, numeroWhatsapp, urlSitio } from "@/lib/utils";
 
 type Filtro = "todas" | "premio" | "cerca" | "nuevas" | "dormidas";
@@ -31,13 +43,17 @@ export function Tarjetas({
   dueno,
   pidePin,
   iniciales,
+  extras,
 }: {
   negocio: Negocio;
   programa: ProgramaSellos;
   dueno: boolean;
   pidePin: boolean;
   iniciales: FilaTarjeta[];
+  extras: ExtrasFicha;
 }) {
+  const puntos = programa.tipo === "puntos";
+  const minimoCatalogo = Math.min(...extras.catalogo.filter((r) => r.activo).map((r) => r.puntos), Infinity);
   const supabase = useMemo(() => createClient(), []);
   const avisar = useToast();
   const [lista, setLista] = useState(iniciales);
@@ -70,22 +86,22 @@ export function Tarjetas({
         !(digitos.length >= 3 && t.telefono?.replace(/\D/g, "").includes(digitos))
       )
         return false;
-      if (filtro === "premio") return t.premios > 0;
-      if (filtro === "cerca") return programa.meta - t.sellos <= 2;
+      if (filtro === "premio") return puntos ? t.puntos >= minimoCatalogo : t.premios > 0;
+      if (filtro === "cerca") return puntos ? t.puntos >= minimoCatalogo * 0.8 : programa.meta - t.sellos <= 2;
       if (filtro === "nuevas") return ahora - Date.parse(t.created_at) < 30 * 86400000;
       if (filtro === "dormidas") return ahora - Date.parse(t.ultima_at ?? t.created_at) > 45 * 86400000;
       return true;
     });
-  }, [lista, q, filtro, programa.meta, ahora]);
+  }, [lista, q, filtro, programa.meta, ahora, puntos, minimoCatalogo]);
 
   const resumen = useMemo(
     () => ({
       tarjetas: lista.length,
-      sellos: lista.reduce((n, t) => n + t.total_sellos, 0),
+      sellos: lista.reduce((n, t) => n + (puntos ? t.total_puntos : t.total_sellos), 0),
       listos: lista.reduce((n, t) => n + t.premios, 0),
       canjes: lista.reduce((n, t) => n + t.canjes, 0),
     }),
-    [lista],
+    [lista, puntos],
   );
 
   useEffect(() => {
@@ -107,7 +123,7 @@ export function Tarjetas({
         <div className="mr-auto min-w-0">
           <h1 className="text-xl font-semibold">Clientes con tarjeta</h1>
           <p className="text-sm text-suave">
-            {programa.meta} sellos = {programa.premio} · {textoRegla(programa, formato)}
+            {puntos ? `Tarjeta de ${programa.nombre_puntos}` : `${programa.meta} sellos = ${programa.premio}`} · {textoRegla(programa, formato)}
             {!programa.activo && " · tarjeta pausada"}
           </p>
         </div>
@@ -121,7 +137,7 @@ export function Tarjetas({
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Dato titulo="Clientes" valor={resumen.tarjetas} />
-        <Dato titulo="Sellos dados" valor={resumen.sellos} />
+        <Dato titulo={puntos ? `${mayus(programa.nombre_puntos)} dados` : "Sellos dados"} valor={resumen.sellos} />
         <Dato titulo="Premios por canjear" valor={resumen.listos} acento={resumen.listos > 0} />
         <Dato titulo="Premios canjeados" valor={resumen.canjes} />
       </div>
@@ -140,7 +156,7 @@ export function Tarjetas({
             [
               ["todas", "Todas"],
               ["premio", "Con premio listo"],
-              ["cerca", "A 2 sellos o menos"],
+              ["cerca", puntos ? "Cerca de un premio" : "A 2 sellos o menos"],
               ["nuevas", "Nuevas (30 días)"],
               ["dormidas", "Sin venir hace 45 días"],
             ] as [Filtro, string][]
@@ -191,12 +207,16 @@ export function Tarjetas({
                 </span>
                 <span className="w-40 shrink-0">
                   <span className="text-xs text-suave">
-                    {t.sellos}/{programa.meta} sellos
+                    {puntos ? `${t.puntos.toLocaleString("es-CL")} ${programa.nombre_puntos}` : `${t.sellos}/${programa.meta} sellos`}
+                    {nivelDe(programa, t.visitas) && ` · ${nivelDe(programa, t.visitas)?.nombre}`}
                   </span>
                   <span className="mt-1 block h-2 overflow-hidden rounded-full bg-stone-100">
                     <span
                       className="block h-full rounded-full"
-                      style={{ width: `${Math.min(100, (t.sellos / programa.meta) * 100)}%`, background: programa.color }}
+                      style={{
+                        width: `${Math.min(100, puntos ? (t.puntos / (Number.isFinite(minimoCatalogo) ? minimoCatalogo : Math.max(1, t.puntos))) * 100 : (t.sellos / programa.meta) * 100)}%`,
+                        background: programa.color,
+                      }}
                     />
                   </span>
                 </span>
@@ -229,6 +249,7 @@ export function Tarjetas({
           dueno={dueno}
           pidePin={pidePin}
           programa={programa}
+          extras={extras}
           tarjeta={elegida}
           onCambio={recargar}
           onCerrar={() => setElegida(null)}
@@ -331,6 +352,7 @@ function FichaTarjeta({
   dueno,
   pidePin,
   programa,
+  extras,
   tarjeta: t,
   onCambio,
   onCerrar,
@@ -339,6 +361,7 @@ function FichaTarjeta({
   dueno: boolean;
   pidePin: boolean;
   programa: ProgramaSellos;
+  extras: ExtrasFicha;
   tarjeta: FilaTarjeta;
   onCambio: () => Promise<void>;
   onCerrar: () => void;
@@ -351,7 +374,13 @@ function FichaTarjeta({
   const [monto, setMonto] = useState("");
   const [cantidad, setCantidad] = useState(2);
   const [movimientos, setMovimientos] = useState<{ tipo: string; cantidad: number; origen: string; created_at: string }[]>([]);
-  const porMonto = programa.regla === "monto";
+  const puntos = programa.tipo === "puntos";
+  const porMonto = puntos || programa.regla === "monto";
+  const u = unidad(programa);
+  const local = extras.sucursal;
+  const nivel = nivelDe(programa, t.visitas);
+  const [cuponesTarjeta, setCuponesTarjeta] = useState<{ id: string; titulo: string; detalle: string; vence_at: string | null; usado_at: string | null }[]>([]);
+  const [darCupon, setDarCupon] = useState("");
   const formato = (n: number) => formatoPrecio(n, negocio.moneda);
 
   useEffect(() => {
@@ -362,7 +391,14 @@ function FichaTarjeta({
       .order("created_at", { ascending: false })
       .limit(15)
       .then(({ data }) => setMovimientos(data ?? []));
-  }, [supabase, t.id, t.sellos, t.premios]);
+    supabase
+      .from("tarjeta_cupones")
+      .select("id, titulo, detalle, vence_at, usado_at")
+      .eq("tarjeta_id", t.id)
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(({ data }) => setCuponesTarjeta(data ?? []));
+  }, [supabase, t.id, t.sellos, t.premios, t.puntos]);
 
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
@@ -374,12 +410,20 @@ function FichaTarjeta({
     const valor = porMonto ? Number(monto.replace(/[^\d.,]/g, "").replace(",", ".")) : null;
     if (porMonto && !(valor && valor > 0)) return avisar("Anota el monto de la compra", "error");
     setTrabajando(true);
-    const { data, error } = await supabase.rpc("sellar", { p_tarjeta: t.codigo, p_monto: valor });
+    const { data, error } = await supabase.rpc("sellar", { p_tarjeta: t.codigo, p_monto: valor, p_sucursal: local });
     setTrabajando(false);
     if (error) return avisar(mensajeError(error), "error");
-    const r = (data ?? {}) as { sumados?: number; doble?: boolean };
+    const r = (data ?? {}) as { sumados?: number; doble?: boolean; referido?: boolean; retos?: string[] | null; promocion?: { titulo: string } | null };
     const n = r.sumados ?? 1;
-    avisar(`${n === 1 ? "Sello sumado" : `${n} sellos sumados`}${r.doble ? " (día de sello doble)" : ""}`);
+    const extra = [
+      r.doble && "día doble",
+      r.promocion && r.promocion.titulo,
+      r.referido && "¡y su amigo también ganó!",
+      r.retos?.length && `logró el reto ${r.retos.join(", ")}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    avisar(`${n === 1 ? `1 ${unidad(programa, 1)} sumado` : `${n} ${u} sumados`}${extra ? ` (${extra})` : ""}`);
     avisarTarjeta(t.codigo);
     setMonto("");
     await onCambio();
@@ -387,7 +431,7 @@ function FichaTarjeta({
 
   async function ajustar(n: number) {
     const ok = await autorizar({
-      titulo: n > 0 ? `¿Sumar ${n} sellos a ${t.nombre}?` : `¿Quitar ${-n === 1 ? "un sello" : `${-n} sellos`}?`,
+      titulo: n > 0 ? `¿Sumar ${n} ${u} a ${t.nombre}?` : `¿Quitar ${-n} ${u}?`,
       pin: pidePin,
       motivo: "opcional",
       ejemplos: n > 0 ? ["Sellos de su tarjeta de papel", "Compensación"] : ["Sello por error", "Se equivocó de tarjeta"],
@@ -399,10 +443,11 @@ function FichaTarjeta({
       p_cantidad: n,
       p_pin: ok.pin,
       p_motivo: ok.motivo || null,
+      p_sucursal: local,
     });
     setTrabajando(false);
     if (error) return avisar(mensajeError(error), "error");
-    avisar(n > 0 ? `${n} sellos sumados` : "Sellos quitados");
+    avisar(n > 0 ? `${n} ${u} sumados` : `${u} quitados`);
     if (n > 0) avisarTarjeta(t.codigo);
     await onCambio();
   }
@@ -411,13 +456,42 @@ function FichaTarjeta({
     const ok = await autorizar({ titulo: `¿Canjear ${programa.premio}?`, detalle: `Para ${t.nombre}.`, pin: pidePin, motivo: "no" });
     if (!ok) return;
     setTrabajando(true);
-    const { error } = await supabase.rpc("canjear", { p_tarjeta: t.codigo, p_pin: ok.pin });
+    const { error } = await supabase.rpc("canjear", { p_tarjeta: t.codigo, p_pin: ok.pin, p_sucursal: local });
     setTrabajando(false);
     if (error) return avisar(mensajeError(error), "error");
     avisar(`Premio canjeado: ${programa.premio}`);
     avisarTarjeta(t.codigo);
     await onCambio();
   }
+
+  // Canjes que piden PIN si el dueño lo activó.
+  async function canjearCon(titulo: string, rpc: string, args: Record<string, unknown>) {
+    const ok = await autorizar({ titulo, detalle: `Para ${t.nombre}.`, pin: pidePin, motivo: "no" });
+    if (!ok) return;
+    setTrabajando(true);
+    const { error } = await supabase.rpc(rpc, { ...args, p_pin: ok.pin, p_sucursal: local });
+    setTrabajando(false);
+    if (error) return avisar(mensajeError(error), "error");
+    avisar("Listo, entregado");
+    avisarTarjeta(t.codigo);
+    await onCambio();
+    const { data } = await supabase.from("tarjeta_cupones").select("id, titulo, detalle, vence_at, usado_at").eq("tarjeta_id", t.id).order("created_at", { ascending: false }).limit(20);
+    setCuponesTarjeta(data ?? []);
+  }
+
+  async function regalarCupon() {
+    if (!darCupon) return;
+    const { error } = await supabase.rpc("dar_cupon", { p_cupon: darCupon, p_tarjeta: t.codigo });
+    if (error) return avisar(mensajeError(error), "error");
+    avisar("Cupón regalado");
+    setDarCupon("");
+    const { data } = await supabase.from("tarjeta_cupones").select("id, titulo, detalle, vence_at, usado_at").eq("tarjeta_id", t.id).order("created_at", { ascending: false }).limit(20);
+    setCuponesTarjeta(data ?? []);
+  }
+
+  const hitosListos = puntos ? [] : hitosDe(programa).filter((h) => t.sellos >= h.sellos && !t.hitos_canjeados.includes(h.sellos));
+  const canjeables = puntos ? extras.catalogo.filter((r) => r.activo && (r.stock === null || r.stock > 0)) : [];
+  const cuponesVigentes = cuponesTarjeta.filter((c) => !c.usado_at && (!c.vence_at || Date.parse(c.vence_at) > Date.now()));
 
   async function borrar() {
     if (!confirm(`¿Borrar la tarjeta de ${t.nombre}? Pierde sus sellos y premios. No se puede deshacer.`)) return;
@@ -436,7 +510,7 @@ function FichaTarjeta({
     `https://wa.me/${numeroWhatsapp(t.telefono, negocio.pais)}?text=${encodeURIComponent(
       t.premios > 0
         ? `Hola ${primer}, ¡tienes ${programa.premio} esperándote en ${negocio.nombre}! Tu tarjeta: ${enlace}`
-        : `Hola ${primer}, esta es tu tarjeta de sellos de ${negocio.nombre}. Guárdala en tu celular: ${enlace}`,
+        : `Hola ${primer}, esta es tu tarjeta de ${puntos ? programa.nombre_puntos : "sellos"} de ${negocio.nombre}. Guárdala en tu celular: ${enlace}`,
     )}`;
 
   const TEXTO: Record<string, string> = {
@@ -447,6 +521,11 @@ function FichaTarjeta({
     cumpleanos: "Regalo de cumpleaños",
     regreso: "Regalo “te extrañamos”",
     migracion: "Sellos anteriores",
+    referido: "Regalo por traer a un amigo",
+    api: "Desde la caja",
+    premio: "Premio del catálogo",
+    cupon: "Cupón",
+    reto: "Reto logrado",
   };
 
   return (
@@ -473,10 +552,77 @@ function FichaTarjeta({
                 programa={programa}
                 sellos={t.sellos}
                 premios={t.premios}
+                puntos={t.puntos}
+                proximo={canjeables.filter((r) => r.puntos > t.puntos).sort((a, b) => a.puntos - b.puntos)[0] ?? canjeables.at(-1) ?? null}
+                nivel={nivel?.nombre}
                 nombre={t.nombre}
               />
             </Inclinable>
           </div>
+
+          {nivel?.beneficio && (
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              Nivel <b>{nivel.nombre}</b>: {nivel.beneficio}
+            </p>
+          )}
+
+          {hitosListos.map((h) => (
+            <button
+              key={h.sellos}
+              type="button"
+              className="boton w-full bg-emerald-600 py-2.5 hover:bg-emerald-700"
+              disabled={trabajando}
+              onClick={() => canjearCon(`¿Entregar ${h.premio}?`, "canjear_hito", { p_tarjeta: t.codigo, p_sellos: h.sellos })}
+            >
+              🎀 Entregar {h.premio} ({h.sellos} sellos)
+            </button>
+          ))}
+
+          {cuponesVigentes.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className="boton w-full bg-violet-600 py-2.5 hover:bg-violet-700"
+              disabled={trabajando}
+              onClick={() => canjearCon(`¿Usar el cupón ${c.titulo}?`, "canjear_cupon", { p_id: c.id })}
+            >
+              🎟️ Usar cupón: {c.titulo}
+            </button>
+          ))}
+
+          {puntos && canjeables.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">Canjear del catálogo</p>
+              <ul className="grid grid-cols-2 gap-2">
+                {canjeables.map((r) => {
+                  const alcanza = t.puntos >= r.puntos;
+                  return (
+                    <li key={r.id}>
+                      <button
+                        type="button"
+                        disabled={!alcanza || trabajando}
+                        onClick={() => canjearCon(`¿Canjear ${r.titulo} por ${r.puntos} ${u}?`, "canjear_puntos", { p_tarjeta: t.codigo, p_premio: r.id })}
+                        className="flex w-full items-center gap-2 rounded-xl border border-borde p-2 text-left text-sm hover:border-marca disabled:opacity-45"
+                      >
+                        {r.imagen_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={r.imagen_url} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                        ) : (
+                          <span className="text-2xl">🎁</span>
+                        )}
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">{r.titulo}</span>
+                          <span className="text-xs text-suave">
+                            {r.puntos.toLocaleString("es-CL")} {u}
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           {t.premios > 0 && (
             <button
@@ -492,19 +638,19 @@ function FichaTarjeta({
           <div className="space-y-2">
             {porMonto && (
               <label className="block text-sm">
-                <span className="etiqueta-campo">Monto de la compra</span>
+                <span className="etiqueta-campo">Monto de la compra{local ? "" : ""}</span>
                 <input
                   inputMode="decimal"
                   value={monto}
                   onChange={(e) => setMonto(e.target.value)}
-                  placeholder={formato(programa.monto_por_sello * 2)}
+                  placeholder={formato(puntos ? programa.puntos_cada * 100 : programa.monto_por_sello * 2)}
                   className="campo"
                 />
                 <span className="mt-1 block text-xs text-suave">{textoRegla(programa, formato)}.</span>
               </label>
             )}
             <button type="button" className="boton w-full py-3 text-base" disabled={trabajando} onClick={sellar}>
-              + Sumar sello
+              + Sumar {puntos ? programa.nombre_puntos : "sello"}
             </button>
           </div>
 
@@ -534,8 +680,15 @@ function FichaTarjeta({
               <dd className="font-mono">{t.codigo}</dd>
             </div>
             <div>
-              <dt className="text-suave">Sellos en total</dt>
-              <dd>{t.total_sellos}</dd>
+              <dt className="text-suave">{puntos ? `${mayus(programa.nombre_puntos)} en total` : "Sellos en total"}</dt>
+              <dd>{puntos ? t.total_puntos.toLocaleString("es-CL") : t.total_sellos}</dd>
+            </div>
+            <div>
+              <dt className="text-suave">Visitas</dt>
+              <dd>
+                {t.visitas}
+                {nivel && ` · ${nivel.nombre}`}
+              </dd>
             </div>
             <div>
               <dt className="text-suave">Premios canjeados</dt>
@@ -558,7 +711,7 @@ function FichaTarjeta({
                 {movimientos.map((m, i) => (
                   <li key={i} className="flex items-center justify-between gap-3 px-3 py-2">
                     <span>
-                      {m.tipo === "canje" ? "Premio canjeado" : m.cantidad < 0 ? "Sellos quitados" : (TEXTO[m.origen] ?? "Ajuste")}
+                      {m.tipo === "canje" ? "Premio canjeado" : m.cantidad < 0 ? `${u} quitados` : (TEXTO[m.origen] ?? "Ajuste")}
                       <span className="block text-xs text-suave">
                         {formatoFecha(
                           m.created_at,
@@ -579,13 +732,13 @@ function FichaTarjeta({
           )}
 
           <details className="rounded-xl border border-borde px-3 py-2 text-sm">
-            <summary className="cursor-pointer font-medium">Corregir sellos</summary>
+            <summary className="cursor-pointer font-medium">Corregir {u}</summary>
             <div className="mt-3 flex flex-wrap items-center gap-2 pb-1">
               <div className="flex items-center rounded-lg border border-borde">
                 <button
                   type="button"
                   className="px-3 py-1.5 text-lg text-suave"
-                  onClick={() => setCantidad((c) => Math.max(1, c - 1))}
+                  onClick={() => setCantidad((c) => Math.max(1, c - (puntos ? 10 : 1)))}
                   aria-label="Menos"
                 >
                   −
@@ -594,7 +747,7 @@ function FichaTarjeta({
                 <button
                   type="button"
                   className="px-3 py-1.5 text-lg text-suave"
-                  onClick={() => setCantidad((c) => Math.min(30, c + 1))}
+                  onClick={() => setCantidad((c) => Math.min(puntos ? 1000000 : 30, c + (puntos ? 10 : 1)))}
                   aria-label="Más"
                 >
                   +
@@ -616,6 +769,22 @@ function FichaTarjeta({
               Para pasar los sellos de una tarjeta de papel o corregir un error.{pidePin ? " Pide el PIN del dueño." : ""}
             </p>
           </details>
+
+          {extras.gestor && extras.cupones.length > 0 && (
+            <div className="flex gap-2 text-sm">
+              <select value={darCupon} onChange={(e) => setDarCupon(e.target.value)} className="campo py-1.5" aria-label="Cupón para regalar">
+                <option value="">Regalar un cupón…</option>
+                {extras.cupones.filter((c) => c.activo).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.titulo}
+                  </option>
+                ))}
+              </select>
+              <button type="button" className="boton-secundario shrink-0 py-1.5" disabled={!darCupon} onClick={regalarCupon}>
+                Regalar
+              </button>
+            </div>
+          )}
 
           {dueno && (
             <div className="border-t border-borde pt-4 text-right text-sm">

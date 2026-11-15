@@ -23,7 +23,11 @@ export function datosWallet(t: TarjetaPublica, sitio: string): DatosWallet {
     sitio,
     negocio: { id: t.negocio.id, nombre: t.negocio.nombre, logo_url: t.negocio.logo_url, pais: t.negocio.pais },
     programa: t.programa ?? PROGRAMA_BASE,
-    tarjeta: { codigo: t.codigo, nombre: t.nombre, sellos: t.sellos, premios: t.premios },
+    tarjeta: { codigo: t.codigo, nombre: t.nombre, sellos: t.sellos, premios: t.premios, puntos: t.puntos, nivel: t.nivel?.nombre ?? null },
+    ubicaciones: [
+      ...(t.negocio.latitud != null && t.negocio.longitud != null ? [{ latitud: t.negocio.latitud, longitud: t.negocio.longitud }] : []),
+      ...(t.locales ?? []).flatMap((l) => (l.latitud != null && l.longitud != null ? [{ latitud: l.latitud, longitud: l.longitud }] : [])),
+    ],
   };
 }
 

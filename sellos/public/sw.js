@@ -1,4 +1,4 @@
-// Service worker de Sellito: muestra los avisos de la tarjeta aunque esté cerrada.
+// Service worker de la plataforma: muestra los avisos de la tarjeta aunque esté cerrada.
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 

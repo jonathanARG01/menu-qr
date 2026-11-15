@@ -3,7 +3,7 @@ import { AuthShell, Aviso } from "@/components/AuthShell";
 import { createClient } from "@/lib/supabase/server";
 import { FormCrear } from "./FormCrear";
 
-export const metadata = { title: "Nuevo negocio · Sellito" };
+export const metadata = { title: "Nuevo negocio" };
 
 // Crear un negocio con una cuenta que ya existe (otro local, o alguien del equipo que abre el suyo).
 export default async function PaginaCrear({ searchParams }: { searchParams: Promise<{ error?: string }> }) {

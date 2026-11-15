@@ -3,16 +3,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { qrSvg } from "@/lib/qr";
-import { rutaUnirse, textoRegla, vigente, type Negocio, type ProgramaSellos } from "@/lib/tipos";
+import { rutaUnirse, textoRegla, unidad, vigente, type Negocio, type ProgramaSellos } from "@/lib/tipos";
 import { formatoPrecio, mensajeError, urlSitio } from "@/lib/utils";
 
 type Estado = { usado: boolean; nombre: string | null; sumados: number | null; vencido: boolean };
 
 // "Sumar con QR": el equipo muestra este QR (en el celular o una tablet en el mesón) y el cliente lo escanea con su
 // cámara. Cada QR sirve una vez y dura 15 minutos; al usarse aparece a quién se le sumó y sale uno nuevo.
-export function Cobrar({ negocio, programa }: { negocio: Negocio; programa: ProgramaSellos }) {
+export function Cobrar({ negocio, programa, sucursal }: { negocio: Negocio; programa: ProgramaSellos; sucursal: { id: string; nombre: string } | null }) {
   const supabase = useMemo(() => createClient(), []);
-  const porMonto = programa.regla === "monto";
+  const puntos = programa.tipo === "puntos";
+  const porMonto = puntos || programa.regla === "monto";
+  const u = unidad(programa);
   const formato = (n: number) => formatoPrecio(n, negocio.moneda);
   const [codigo, setCodigo] = useState<string | null>(null);
   const [monto, setMonto] = useState("");
@@ -25,12 +27,12 @@ export function Cobrar({ negocio, programa }: { negocio: Negocio; programa: Prog
       if (creando.current) return;
       creando.current = true;
       setError("");
-      const { data, error } = await supabase.rpc("crear_codigo", { p_negocio: negocio.id, p_monto: valor });
+      const { data, error } = await supabase.rpc("crear_codigo", { p_negocio: negocio.id, p_monto: valor, p_sucursal: sucursal?.id ?? null });
       creando.current = false;
       if (error) return setError(mensajeError(error));
       setCodigo(String(data));
     },
-    [supabase, negocio.id],
+    [supabase, negocio.id, sucursal?.id],
   );
 
   // Con "un sello por visita" el QR aparece al tiro; con monto, después de anotarlo.
@@ -67,7 +69,9 @@ export function Cobrar({ negocio, programa }: { negocio: Negocio; programa: Prog
   return (
     <div className="mx-auto max-w-md space-y-5">
       <div className="text-center">
-        <h1 className="text-xl font-semibold">Sumar sello con QR</h1>
+        <h1 className="text-xl font-semibold">
+          Sumar {puntos ? programa.nombre_puntos : "sello"} con QR{sucursal ? ` · ${sucursal.nombre}` : ""}
+        </h1>
         <p className="text-sm text-suave">
           Muéstrale este QR al cliente: lo escanea con la cámara de su celular y suma su sello. Si no tiene tarjeta, se la crea
           en el mismo paso.
@@ -90,7 +94,7 @@ export function Cobrar({ negocio, programa }: { negocio: Negocio; programa: Prog
               inputMode="decimal"
               value={monto}
               onChange={(e) => setMonto(e.target.value)}
-              placeholder={formato(programa.monto_por_sello * 2)}
+              placeholder={formato(puntos ? programa.puntos_cada * 100 : programa.monto_por_sello * 2)}
               className="campo text-lg"
               autoFocus
             />
@@ -108,7 +112,7 @@ export function Cobrar({ negocio, programa }: { negocio: Negocio; programa: Prog
             ✅
           </p>
           <p className="text-lg font-semibold">
-            {listo.sumados === 1 ? "Sello sumado" : `${listo.sumados} sellos sumados`}
+            {listo.sumados === 1 ? `1 ${unidad(programa, 1)} sumado` : `${listo.sumados} ${u} sumados`}
             {listo.nombre ? ` a ${listo.nombre}` : ""}
           </p>
           <p className="text-sm text-suave">{porMonto ? "Listo para la próxima compra." : "En un momento sale el QR siguiente."}</p>

@@ -1,7 +1,7 @@
 import { cargarPanelDueno } from "@/lib/panel";
 import { DatosNegocio } from "@/components/panel/DatosNegocio";
 
-export const metadata = { title: "Negocio · Sellito" };
+export const metadata = { title: "Negocio" };
 
 export default async function PaginaNegocio() {
   const { supabase, negocio, usuario } = await cargarPanelDueno();
