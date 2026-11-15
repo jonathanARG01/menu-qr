@@ -14,7 +14,7 @@ import { Avatar } from "@/components/Avatar";
 import { ELEMENTOS, type Lado, type LadoSillas, type Piso, nombreMesa, sillasAutomaticas, tono } from "@/lib/salon";
 import type { Mesa } from "@/lib/types";
 import type { EstadoMesa, Seleccion } from "./Plano";
-import { COLOR_RELOJ } from "./indicadores";
+import { COLOR_RELOJ, duracion } from "./indicadores";
 import {
   type Asiento,
   type GeoGente,
@@ -1517,15 +1517,15 @@ export default function Maqueta({
                         style={{ background: COLOR_RELOJ[est.reloj.nivel] }}
                         title={est.reloj.texto}
                       >
-                        ⏱ {est.reloj.min}′ {est.reloj.corto}
+                        ⏱ {duracion(est.reloj.min)} {est.reloj.corto}
                       </span>
                     )}
                     {est.atrasado && (
                       <span
                         className="indicador-parpadeo rounded-full bg-red-600 px-1 text-[8px] font-bold leading-[14px] text-white"
-                        title={`Pedido en cocina hace ${est.atrasado} min`}
+                        title={`Pedido en cocina hace ${duracion(est.atrasado)}`}
                       >
-                        🔥 {est.atrasado}′
+                        🔥 {duracion(est.atrasado)}
                       </span>
                     )}
                   </span>

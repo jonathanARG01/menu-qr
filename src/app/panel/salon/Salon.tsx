@@ -60,6 +60,7 @@ import {
   colorCalor,
   COLOR_RELOJ,
   colorZona,
+  duracion,
   guardarPrefIndicadores,
   leerPrefIndicadores,
   PREF_INDICADORES,
@@ -1228,9 +1229,9 @@ function BotonMesa({
           : estado?.unida
             ? `Unida · ${estado.grupo}`
             : estado?.ocupada
-              ? `${estado.comensales} pers. · ${estado.minutos} min${estado.total && !estado.sinTotal ? ` · ${formato(estado.total)}` : ""}`
+              ? `${estado.comensales} pers. · ${duracion(estado.minutos ?? 0)}${estado.total && !estado.sinTotal ? ` · ${formato(estado.total)}` : ""}`
               : estado?.limpiar !== undefined
-                ? `🧹 Por limpiar · cobrada hace ${estado.limpiar} min`
+                ? `🧹 Por limpiar · cobrada hace ${duracion(estado.limpiar)}`
                 : `Libre · ${mesa.capacidad ?? 4} lugares`}
       </span>
       {!estado?.calor && (estado?.reloj || estado?.atrasado) && (
@@ -1241,12 +1242,12 @@ function BotonMesa({
               style={{ background: COLOR_RELOJ[estado.reloj.nivel] }}
               title={estado.reloj.texto}
             >
-              ⏱ {grande ? estado.reloj.texto : `${estado.reloj.min}′`}
+              ⏱ {grande ? estado.reloj.texto : duracion(estado.reloj.min)}
             </span>
           )}
           {estado.atrasado && (
             <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-              🔥 {grande ? `En cocina hace ${estado.atrasado} min` : `${estado.atrasado}′`}
+              🔥 {grande ? `En cocina hace ${duracion(estado.atrasado)}` : duracion(estado.atrasado)}
             </span>
           )}
         </span>

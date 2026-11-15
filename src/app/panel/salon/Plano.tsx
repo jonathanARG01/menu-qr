@@ -17,7 +17,7 @@ import {
   tono,
 } from "@/lib/salon";
 import type { Mesa } from "@/lib/types";
-import { COLOR_RELOJ } from "./indicadores";
+import { COLOR_RELOJ, duracion } from "./indicadores";
 
 export type Caja = { x: number; y: number; ancho: number; alto: number };
 export type Seleccion = { tipo: "mesa" | "elemento"; id: string } | null;
@@ -857,7 +857,7 @@ export function Plano({
                   </span>
                 ) : !editando && est?.ocupada ? (
                   <span className="text-[10px] tabular-nums opacity-80" suppressHydrationWarning>
-                    {est.comensales}/{m.capacidad ?? 4} · {est.minutos}′
+                    {est.comensales}/{m.capacidad ?? 4} · {duracion(est.minutos ?? 0)}
                   </span>
                 ) : (
                   <span className="text-[10px] opacity-60">{m.capacidad ?? 4} pers.</span>
@@ -891,9 +891,9 @@ export function Plano({
                     />
                     <span
                       className="absolute -bottom-1.5 -right-1.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white shadow"
-                      title={`Pedido en cocina hace ${est.atrasado} min`}
+                      title={`Pedido en cocina hace ${duracion(est.atrasado)}`}
                     >
-                      🔥 {est.atrasado}′
+                      🔥 {duracion(est.atrasado)}
                     </span>
                   </>
                 )}
@@ -903,7 +903,7 @@ export function Plano({
                     style={{ background: COLOR_RELOJ[est.reloj.nivel] }}
                     title={est.reloj.texto}
                   >
-                    ⏱ {est.reloj.min}′ {est.reloj.corto}
+                    ⏱ {duracion(est.reloj.min)} {est.reloj.corto}
                   </span>
                 )}
                 {!editando && est?.grupo && (
