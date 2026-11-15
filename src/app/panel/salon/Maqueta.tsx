@@ -84,7 +84,45 @@ type Manija = {
   gente: THREE.Group;
   lugarMesero: { x: number; z: number; giro: number };
   mesero: THREE.Object3D | null;
+  // Sillas de siempre (se esconden cuando hay más comensales que sillas y se arriman sillas extra) y medidas del
+  // tablero para repartirlas.
+  sillasBase: THREE.Group;
+  contorno: Contorno;
 };
+type Contorno = { redonda: boolean; tw: number; td: number; radio: number };
+
+// Más comensales que sillas: se arriman sillas alrededor de la mesa, repartidas para que no se encimen. En las
+// rectangulares cada silla nueva va al lado que queda más holgado.
+function rodear(c: Contorno, total: number): Asiento[] {
+  const n = Math.min(total, 24);
+  const sep = 0.28;
+  const asiento = (x: number, z: number, giro: number): Asiento => ({ x, z, giro, alto: 0, alcance: sep + 0.22 });
+  if (c.redonda) {
+    const r = c.radio + sep;
+    return Array.from({ length: n }, (_, i) => {
+      const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+      return asiento(Math.cos(a) * r, Math.sin(a) * r, Math.atan2(Math.cos(a), Math.sin(a)));
+    });
+  }
+  const lados: Lado[] = ["abajo", "arriba", "derecha", "izquierda"];
+  const largo = (l: Lado) => (l === "arriba" || l === "abajo" ? c.tw : c.td);
+  const cuenta: Record<Lado, number> = { abajo: 0, arriba: 0, derecha: 0, izquierda: 0 };
+  for (let i = 0; i < n; i++) {
+    const mejor = lados.reduce((a, b) => (largo(b) / (cuenta[b] + 1) > largo(a) / (cuenta[a] + 1) + 1e-6 ? b : a));
+    cuenta[mejor]++;
+  }
+  const out: Asiento[] = [];
+  for (const lado of lados) {
+    const k = cuenta[lado];
+    const horizontal = lado === "arriba" || lado === "abajo";
+    const fijo = horizontal ? (lado === "arriba" ? -c.td / 2 - sep : c.td / 2 + sep) : lado === "izquierda" ? -c.tw / 2 - sep : c.tw / 2 + sep;
+    for (let i = 0; i < k; i++) {
+      const t = -largo(lado) / 2 + (i + 0.5) * (largo(lado) / k);
+      out.push(asiento(horizontal ? t : fijo, horizontal ? fijo : t, GIRO[lado]));
+    }
+  }
+  return out;
+}
 
 type Etiqueta = { id: string; pos: THREE.Vector3; texto?: string };
 type Pared = { mesh: THREE.Object3D; normal: THREE.Vector3 };
@@ -97,6 +135,7 @@ type Mundo = {
   // Cuerdas verdes entre mesas unidas: se rearman cada vez que cambia el estado (no la forma del piso).
   cuerdas: THREE.Group;
   geoGente: GeoGente;
+  silla: THREE.BufferGeometry;
   mat: (color: string, extra?: THREE.MeshStandardMaterialParameters) => THREE.MeshStandardMaterial;
   tamano: { ancho: number; fondo: number };
   liberar: () => void;
@@ -773,13 +812,15 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
 
     const conf = m.sillas && Object.keys(m.sillas).length ? m.sillas : sillasAutomaticas(m.forma, m.capacidad ?? 4, w, d);
     const asientos: Asiento[] = [];
+    const sillasBase = new THREE.Group();
+    g.add(sillasBase);
     // Altura del cuerpo según el asiento: taburete más alto, sillón más bajo que una silla.
     const altoDe = (tipo?: string) => (tipo === "taburete" ? 0.2 : tipo === "sillon" ? -0.14 : 0);
     const pon = (geom: THREE.BufferGeometry, x: number, z: number, giro: number, tipo?: string, sep = 0.28) => {
       const s = malla(geom, sillas);
       s.position.set(x, 0, z);
       s.rotation.y = giro;
-      g.add(s);
+      sillasBase.add(s);
       if (tipo !== "banca" && tipo !== "sillon") asientos.push({ x, z, giro, alto: altoDe(tipo), alcance: sep + 0.22 });
     };
     if (redonda) {
@@ -910,6 +951,8 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
       gente,
       lugarMesero: { ...lugar, giro: Math.atan2(lugar.x, lugar.z) },
       mesero: null,
+      sillasBase,
+      contorno: { redonda, tw, td, radio },
     });
     etiquetas.push({ id: m.id, pos: new THREE.Vector3(g.position.x, ALTO_MESA + 0.55, g.position.z) });
   }
@@ -928,6 +971,7 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
     paredes,
     cuerdas,
     geoGente,
+    silla: geo.silla,
     mat,
     tamano: { ancho: C, fondo: F },
     liberar: () => {
@@ -1324,6 +1368,7 @@ export default function Maqueta({
     for (const [id, h] of mundo.manijas) {
       h.gente.clear();
       h.mesero = null;
+      h.sillasBase.visible = true;
       const est = estados.get(id);
       const jefe = est?.unida ? est.principal : id;
       if (jefe) grupos.set(jefe, [...(grupos.get(jefe) ?? []), h]);
@@ -1342,9 +1387,25 @@ export default function Maqueta({
       if (!est?.ocupada || est.unida) continue;
       const conPlatos = gente.platos && (est.total ?? 0) > 0;
       if (!gente.comensales && !conPlatos) continue;
-      const lugares = hs.flatMap((h) => h.asientos.map((a, i) => ({ h, a, clave: `${h.mesa.id}:${i}` })));
-      const k = Math.min(Math.max(1, est.comensales ?? 1), lugares.length);
-      for (const { h, a, clave } of repartir(lugares, k)) {
+      let lugares = hs.flatMap((h) => h.asientos.map((a, i) => ({ h, a, clave: `${h.mesa.id}:${i}` })));
+      const k = Math.max(1, est.comensales ?? 1);
+      // Más comensales que sillas (siempre se puede sentar uno más): en la mesa principal se arriman sillas
+      // hasta que alcancen para todos.
+      const p = mundo.manijas.get(id) ?? hs[0];
+      if (k > lugares.length && p) {
+        const otros = lugares.filter((l) => l.h !== p);
+        const nuevos = rodear(p.contorno, k - otros.length);
+        p.sillasBase.visible = false;
+        for (const a of nuevos) {
+          const silla = new THREE.Mesh(mundo.silla, p.sillas);
+          silla.castShadow = silla.receiveShadow = true;
+          silla.position.set(a.x, 0, a.z);
+          silla.rotation.y = a.giro;
+          p.gente.add(silla);
+        }
+        lugares = [...otros, ...nuevos.map((a, i) => ({ h: p, a, clave: `${p.mesa.id}:${i}` }))];
+      }
+      for (const { h, a, clave } of repartir(lugares, Math.min(k, lugares.length))) {
         if (gente.comensales) h.gente.add(sentar(geo, mat, a, gente.estilo, clave));
         if (conPlatos) h.gente.add(servir(geo, mat, a, tablero, clave));
       }
