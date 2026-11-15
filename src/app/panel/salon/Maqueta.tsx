@@ -14,7 +14,7 @@ import { Avatar } from "@/components/Avatar";
 import { ELEMENTOS, type Lado, type LadoSillas, type Piso, nombreMesa, sillasAutomaticas, tono } from "@/lib/salon";
 import type { Mesa } from "@/lib/types";
 import type { EstadoMesa, Seleccion } from "./Plano";
-import { COLOR_RELOJ } from "./indicadores";
+import { COLOR_RELOJ, duracion } from "./indicadores";
 import {
   type Asiento,
   type GeoGente,
@@ -84,6 +84,8 @@ type Manija = {
   gente: THREE.Group;
   lugarMesero: { x: number; z: number; giro: number };
   mesero: THREE.Object3D | null;
+  // Sillas que se agregan cuando se sientan más comensales que los lugares de la mesa.
+  extras: (n: number) => { asiento: Asiento; silla: THREE.Object3D }[];
 };
 
 type Etiqueta = { id: string; pos: THREE.Vector3; texto?: string };
@@ -909,6 +911,49 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
       asientos,
       gente,
       lugarMesero: { ...lugar, giro: Math.atan2(lugar.x, lugar.z) },
+      // Cada silla extra va en el hueco más grande entre las que ya hay, pegada al borde de la mesa y mirándola.
+      extras: (n) => {
+        const angulos = asientos.map((a) => Math.atan2(a.z, a.x));
+        const lista: { asiento: Asiento; silla: THREE.Object3D }[] = [];
+        for (let i = 0; i < Math.min(n, 24); i++) {
+          const orden = [...angulos].sort((a, b) => a - b);
+          let ang = Math.PI / 2;
+          let hueco = -1;
+          for (let k = 0; k < orden.length; k++) {
+            const a = orden[k];
+            const b = k + 1 < orden.length ? orden[k + 1] : orden[0] + Math.PI * 2;
+            if (b - a > hueco) {
+              hueco = b - a;
+              ang = (a + b) / 2;
+            }
+          }
+          angulos.push(ang);
+          const c = Math.cos(ang);
+          const s = Math.sin(ang);
+          let x: number;
+          let z: number;
+          if (redonda) {
+            x = c * (radio + 0.28);
+            z = s * (radio + 0.28);
+          } else {
+            const tx = Math.abs(c) > 1e-6 ? tw / 2 / Math.abs(c) : Infinity;
+            const tz = Math.abs(s) > 1e-6 ? td / 2 / Math.abs(s) : Infinity;
+            if (tx < tz) {
+              x = Math.sign(c) * (tw / 2 + 0.28);
+              z = s * tx;
+            } else {
+              x = c * tz;
+              z = Math.sign(s) * (td / 2 + 0.28);
+            }
+          }
+          const giro = Math.atan2(x, z);
+          const silla = malla(geo.silla, sillas);
+          silla.position.set(x, 0, z);
+          silla.rotation.y = giro;
+          lista.push({ asiento: { x, z, giro, alto: 0, alcance: 0.5 }, silla });
+        }
+        return lista;
+      },
       mesero: null,
     });
     etiquetas.push({ id: m.id, pos: new THREE.Vector3(g.position.x, ALTO_MESA + 0.55, g.position.z) });
@@ -1343,7 +1388,15 @@ export default function Maqueta({
       const conPlatos = gente.platos && (est.total ?? 0) > 0;
       if (!gente.comensales && !conPlatos) continue;
       const lugares = hs.flatMap((h) => h.asientos.map((a, i) => ({ h, a, clave: `${h.mesa.id}:${i}` })));
-      const k = Math.min(Math.max(1, est.comensales ?? 1), lugares.length);
+      // Más comensales que lugares (se agregan sillas en los restaurantes): sillas extra en la mesa principal.
+      const pedidos = Math.max(1, est.comensales ?? 1);
+      const principal = hs.find((h) => h.mesa.id === id) ?? hs[0];
+      if (pedidos > lugares.length && principal)
+        principal.extras(pedidos - lugares.length).forEach(({ asiento, silla }, i) => {
+          principal.gente.add(silla);
+          lugares.push({ h: principal, a: asiento, clave: `${principal.mesa.id}:extra${i}` });
+        });
+      const k = Math.min(pedidos, lugares.length);
       for (const { h, a, clave } of repartir(lugares, k)) {
         if (gente.comensales) h.gente.add(sentar(geo, mat, a, gente.estilo, clave));
         if (conPlatos) h.gente.add(servir(geo, mat, a, tablero, clave));
@@ -1456,15 +1509,15 @@ export default function Maqueta({
                         style={{ background: COLOR_RELOJ[est.reloj.nivel] }}
                         title={est.reloj.texto}
                       >
-                        ⏱ {est.reloj.min}′ {est.reloj.corto}
+                        ⏱ {duracion(est.reloj.min)} {est.reloj.corto}
                       </span>
                     )}
                     {est.atrasado && (
                       <span
                         className="indicador-parpadeo rounded-full bg-red-600 px-1 text-[8px] font-bold leading-[14px] text-white"
-                        title={`Pedido en cocina hace ${est.atrasado} min`}
+                        title={`Pedido en cocina hace ${duracion(est.atrasado)}`}
                       >
-                        🔥 {est.atrasado}′
+                        🔥 {duracion(est.atrasado)}
                       </span>
                     )}
                   </span>

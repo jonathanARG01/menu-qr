@@ -68,6 +68,15 @@ export function guardarPrefIndicadores(p: PrefIndicadores) {
 }
 
 // corto: lo que cabe sobre la mesa en el plano ("pedir", "postre?", "cuenta", "mesero").
+// Minutos para mostrar corto: "45′", "5 h 25′", "11 d 21 h".
+export function duracion(min: number) {
+  const m = Math.max(0, Math.round(min));
+  if (m < 60) return `${m}′`;
+  if (m < 1440) return `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60}′` : ""}`;
+  const h = Math.floor((m % 1440) / 60);
+  return `${Math.floor(m / 1440)} d${h ? ` ${h} h` : ""}`;
+}
+
 export type Reloj = {
   nivel: "ambar" | "rojo";
   min: number;
@@ -96,7 +105,7 @@ export function relojDe(
         min,
         motivo: "espera",
         corto: cuenta.aviso.tipo === "cuenta" ? "cuenta" : "mesero",
-        texto: cuenta.aviso.tipo === "cuenta" ? `Espera la cuenta · ${min} min` : `Espera al mesero · ${min} min`,
+        texto: cuenta.aviso.tipo === "cuenta" ? `Espera la cuenta · ${duracion(min)}` : `Espera al mesero · ${duracion(min)}`,
       };
   }
   const vivos = suyos.filter((p) => p.estado !== "cancelado");
@@ -104,17 +113,20 @@ export function relojDe(
   if (!vivos.length) {
     const min = minutosDesde(cuenta.abierta_at, ahora);
     const n = nivel(min, pref.sinPedir);
-    return n ? { nivel: n, min, motivo: "sin_pedir", corto: "pedir", texto: `Sin pedir · ${min} min` } : undefined;
+    return n ? { nivel: n, min, motivo: "sin_pedir", corto: "pedir", texto: `Sin pedir · ${duracion(min)}` } : undefined;
   }
   // Ya se les sirvió todo y no han pedido nada más (postre, café, otra ronda).
   if (vivos.every((p) => p.estado === "entregado")) {
     const ultimo = vivos.reduce((t, p) => (p.actualizado_at > t ? p.actualizado_at : t), vivos[0].actualizado_at);
     const min = minutosDesde(ultimo, ahora);
     const n = nivel(min, pref.sinMas);
-    return n ? { nivel: n, min, motivo: "sin_mas", corto: "postre?", texto: `Sin pedir más · ${min} min` } : undefined;
+    return n ? { nivel: n, min, motivo: "sin_mas", corto: "postre?", texto: `Sin pedir más · ${duracion(min)}` } : undefined;
   }
   return undefined;
 }
+
+// Un pedido "en cocina" de hace más de 6 horas no es un atraso: quedó olvidado (cuenta de prueba, sin cerrar).
+const OLVIDADO = 6 * 60;
 
 // Minutos del pedido más atrasado en cocina (en preparación o recién llegado), si pasa el límite.
 export function atrasoDe(suyos: Pedido[], ahora: number, limite: number) {
@@ -122,7 +134,7 @@ export function atrasoDe(suyos: Pedido[], ahora: number, limite: number) {
   for (const p of suyos) {
     if (p.estado !== "nuevo" && p.estado !== "preparando") continue;
     const min = minutosDesde(p.created_at, ahora);
-    if (min >= limite && min > peor) peor = min;
+    if (min >= limite && min < OLVIDADO && min > peor) peor = min;
   }
   return peor || undefined;
 }
