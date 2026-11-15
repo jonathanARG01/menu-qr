@@ -374,3 +374,22 @@ body {
 @media (prefers-reduced-motion: reduce) {
   [data-campana] svg { animation: none !important; }
 }
+
+/* Salón: mesa con un pedido atrasado en cocina (indicador "Platos atrasados"). */
+@keyframes indicador-parpadeo {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+.indicador-parpadeo {
+  animation: indicador-parpadeo 1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .indicador-parpadeo {
+    animation: none;
+  }
+}

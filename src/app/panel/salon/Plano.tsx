@@ -17,6 +17,7 @@ import {
   tono,
 } from "@/lib/salon";
 import type { Mesa } from "@/lib/types";
+import { COLOR_RELOJ } from "./indicadores";
 
 export type Caja = { x: number; y: number; ancho: number; alto: number };
 export type Seleccion = { tipo: "mesa" | "elemento"; id: string } | null;
@@ -40,6 +41,19 @@ export type EstadoMesa = {
   unida?: boolean;
   // Mesa unida: id de la mesa principal, para dibujar la cuerda que las une.
   principal?: string;
+  // Indicadores (Salón → Indicadores, ver indicadores.ts).
+  // Reloj ámbar o rojo: lleva rato sin pedir, sin pedir nada más o esperando la cuenta o al mesero.
+  reloj?: { nivel: "ambar" | "rojo"; min: number; texto: string; corto: string };
+  // Minutos del pedido más atrasado en cocina: la mesa parpadea.
+  atrasado?: number;
+  // No mostrar el total consumido (indicador "Total en vivo" apagado).
+  sinTotal?: boolean;
+  // Zonas por mesero: color del mesero a cargo y su nombre.
+  zona?: { color: string; nombre: string };
+  // Cobrada y sin limpiar todavía (minutos desde que se cobró).
+  limpiar?: number;
+  // Mapa de calor: 0 (poco) a 1 (lo que más), color y texto corto ("$120.000", "14 visitas").
+  calor?: { t: number; color: string; texto: string };
 };
 
 export const cajaMesa = (m: Mesa): Caja => ({ x: m.x ?? 0, y: m.y ?? 0, ancho: m.ancho ?? 2, alto: m.alto ?? 2 });
@@ -159,6 +173,8 @@ const DIBUJADOS = new Set(["planta", "palmera", "sombrilla", "farol"]);
 const ZONAS = new Set(["toldo", "vereda", "arena", "deck", "mar", "calle", "choza"]);
 
 function colorMesa(e?: EstadoMesa) {
+  if (e?.calor) return "text-stone-900";
+  if (!e?.ocupada && e?.limpiar !== undefined) return "bg-stone-200 border-dashed border-stone-500 text-stone-700";
   if (!e?.ocupada) return "bg-superficie border-stone-300 text-stone-700";
   if (e.aviso === "cuenta") return "bg-violet-50 border-violet-500 text-violet-900";
   if (e.aviso === "pago") return "bg-emerald-50 border-emerald-600 text-emerald-900";
@@ -313,6 +329,7 @@ function techoQuincho(color?: string): React.CSSProperties {
 
 // Color de las sillas según cómo está la mesa.
 function colorSillas(e?: EstadoMesa) {
+  if (e?.calor) return e.calor.color;
   if (!e?.ocupada) return "#56604f";
   if (e.aviso === "cuenta") return "#8b5cf6";
   if (e.aviso === "pago") return "#059669";
@@ -772,7 +789,7 @@ export function Plano({
                 className={`absolute flex flex-col items-center justify-center p-0.5 leading-tight transition-[box-shadow] ${
                   ambientado
                     ? "text-[#fff7ed]"
-                    : `border-2 shadow-sm ${m.color && (editando || !est?.ocupada) ? "" : colorMesa(editando ? undefined : est)}`
+                    : `border-2 shadow-sm ${m.color && (editando || (!est?.ocupada && !est?.calor && est?.limpiar === undefined)) ? "" : colorMesa(editando ? undefined : est)}`
                 } ${m.forma === "redonda" ? "rounded-full" : ambientado ? "rounded-md" : "rounded-xl"} ${
                   editando || movibles?.has(m.id) ? "cursor-grab touch-none active:cursor-grabbing" : "hover:shadow-md"
                 } ${elegido ? (editando ? "ring-2 ring-marca ring-offset-2" : "animate-pulse ring-4 ring-marca ring-offset-2") : ""} ${invalido ? "!border-red-500 !bg-red-50 opacity-80" : ""} ${
@@ -781,8 +798,16 @@ export function Plano({
                 style={{
                   ...pct(caja),
                   // Color elegido para la mesa (en el simple, mientras está libre; ocupada manda el color del estado).
-                  ...(!ambientado && m.color && (editando || !est?.ocupada)
+                  ...(!ambientado && m.color && (editando || (!est?.ocupada && !est?.calor && est?.limpiar === undefined))
                     ? { background: m.color, color: textoSobre(m.color), borderColor: tono(m.color, 0.3) }
+                    : {}),
+                  // Mapa de calor: la mesa entera toma el color de la escala.
+                  ...(!ambientado && !editando && est?.calor
+                    ? { background: `color-mix(in srgb, ${est.calor.color} 35%, white)`, borderColor: est.calor.color }
+                    : {}),
+                  // Zonas: borde del color del mesero a cargo, por fuera de la mesa.
+                  ...(!editando && est?.zona && !est.calor
+                    ? { outline: `3px solid ${est.zona.color}`, outlineOffset: ambientado ? 2 : 3 }
                     : {}),
                   ...(ambientado
                     ? {
@@ -791,7 +816,7 @@ export function Plano({
                           ? `linear-gradient(135deg,${tono(m.color, -0.15)},${m.color} 55%,${tono(m.color, 0.2)})`
                           : "linear-gradient(135deg,#a8774a,#7b5332 55%,#6a4529)",
                         color: m.color ? textoSobre(m.color) : undefined,
-                        boxShadow: `${tres ? "0 2px 0 #4a2e18, 0 4px 0 #3d2614, 0 10px 14px rgb(0 0 0 / 0.55)" : "0 3px 8px rgb(0 0 0 / 0.45)"}, 0 0 0 ${est?.ocupada && !editando ? 3 : 0}px ${colorSillas(est)}`,
+                        boxShadow: `${tres ? "0 2px 0 #4a2e18, 0 4px 0 #3d2614, 0 10px 14px rgb(0 0 0 / 0.55)" : "0 3px 8px rgb(0 0 0 / 0.45)"}, 0 0 0 ${(est?.ocupada || est?.calor || est?.limpiar !== undefined) && !editando ? (est?.calor ? 5 : 3) : 0}px ${est?.limpiar !== undefined && !est.ocupada && !est.calor ? "#d6d3d1" : colorSillas(est)}`,
                         transformStyle: tres ? "preserve-3d" : undefined,
                       }
                     : {}),
@@ -822,8 +847,14 @@ export function Plano({
                 >
                   {m.numero}
                 </span>
-                {!editando && est?.unida ? (
+                {!editando && est?.calor ? (
+                  <span className="text-[10px] font-bold tabular-nums">{est.calor.texto}</span>
+                ) : !editando && est?.unida ? (
                   <span className="text-[10px] font-semibold opacity-80">unida</span>
+                ) : !editando && !est?.ocupada && est?.limpiar !== undefined ? (
+                  <span className="text-[10px] font-semibold" title={`Cobrada hace ${est.limpiar} min`}>
+                    🧹 limpiar
+                  </span>
                 ) : !editando && est?.ocupada ? (
                   <span className="text-[10px] tabular-nums opacity-80" suppressHydrationWarning>
                     {est.comensales}/{m.capacidad ?? 4} · {est.minutos}′
@@ -831,7 +862,7 @@ export function Plano({
                 ) : (
                   <span className="text-[10px] opacity-60">{m.capacidad ?? 4} pers.</span>
                 )}
-                {!editando && est?.ocupada && caja.ancho * caja.alto >= 6 && !!est.total && (
+                {!editando && est?.ocupada && !est.calor && !est.sinTotal && caja.ancho * caja.alto >= 4 && !!est.total && (
                   <span className="text-[10px] font-semibold tabular-nums">{formato(est.total)}</span>
                 )}
                 {!editando && (est?.aviso || est?.listo || est?.pendiente) && (
@@ -849,6 +880,30 @@ export function Plano({
                     }`}
                   >
                     {est.aviso === "cuenta" || est.aviso === "pago" ? "$" : est.aviso ? "!" : est.pendiente ? "●" : "✓"}
+                  </span>
+                )}
+                {!editando && !!est?.atrasado && !est.calor && (
+                  // Pedido atrasado en cocina: marco rojo que parpadea y los minutos abajo a la derecha.
+                  <>
+                    <span
+                      aria-hidden
+                      className={`indicador-parpadeo pointer-events-none absolute -inset-1 border-4 border-red-600 ${m.forma === "redonda" ? "rounded-full" : "rounded-xl"}`}
+                    />
+                    <span
+                      className="absolute -bottom-1.5 -right-1.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white shadow"
+                      title={`Pedido en cocina hace ${est.atrasado} min`}
+                    >
+                      🔥 {est.atrasado}′
+                    </span>
+                  </>
+                )}
+                {!editando && est?.reloj && !est.calor && (
+                  <span
+                    className="absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none text-white shadow"
+                    style={{ background: COLOR_RELOJ[est.reloj.nivel] }}
+                    title={est.reloj.texto}
+                  >
+                    ⏱ {est.reloj.min}′ {est.reloj.corto}
                   </span>
                 )}
                 {!editando && est?.grupo && (

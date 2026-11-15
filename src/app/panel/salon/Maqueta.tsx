@@ -14,6 +14,7 @@ import { Avatar } from "@/components/Avatar";
 import { ELEMENTOS, type Lado, type LadoSillas, type Piso, nombreMesa, sillasAutomaticas, tono } from "@/lib/salon";
 import type { Mesa } from "@/lib/types";
 import type { EstadoMesa, Seleccion } from "./Plano";
+import { COLOR_RELOJ } from "./indicadores";
 import {
   type Asiento,
   type GeoGente,
@@ -32,12 +33,19 @@ import {
 type Visual = { color: string; nivel: 0 | 1 | 2; clave: string | null };
 
 function visualDe(e?: EstadoMesa): Visual {
+  // Mapa de calor: todo el salón con la escala (es una vista para analizar, no para atender).
+  if (e?.calor) return { color: e.calor.color, nivel: 1, clave: null };
   if (e?.aviso === "cuenta") return { color: "#8b5cf6", nivel: 2, clave: "cuenta" };
   if (e?.aviso === "pago") return { color: "#10b981", nivel: 2, clave: "pago" };
   if (e?.aviso) return { color: "#0ea5e9", nivel: 2, clave: "mozo" };
   if (e?.pendiente) return { color: "#ef4444", nivel: 2, clave: "pendiente" };
+  if (e?.atrasado) return { color: "#dc2626", nivel: 2, clave: "atrasado" };
   if (e?.listo) return { color: "#10b981", nivel: 2, clave: "listo" };
+  if (e?.reloj?.nivel === "rojo") return { color: COLOR_RELOJ.rojo, nivel: 2, clave: "reloj" };
+  if (e?.reloj) return { color: "#ea580c", nivel: 1, clave: null };
   if (e?.ocupada) return { color: "#f59e0b", nivel: 1, clave: null };
+  if (e?.limpiar !== undefined) return { color: "#a8a29e", nivel: 1, clave: "limpiar" };
+  if (e?.zona) return { color: e.zona.color, nivel: 1, clave: null };
   return { color: "#6b7280", nivel: 0, clave: null };
 }
 
@@ -47,6 +55,9 @@ const AVISOS: Record<string, { titulo: (m: string) => string; detalle: string; i
   pago: { titulo: (m) => `${m} pagó desde la carta`, detalle: "Revisa el pago y libera la mesa", icono: "✅" },
   pendiente: { titulo: (m) => `${m} hizo un pedido`, detalle: "Confírmalo para que llegue a cocina", icono: "🛎️" },
   listo: { titulo: (m) => `Pedido listo para ${m}`, detalle: "Retíralo en cocina o barra", icono: "🍽️" },
+  atrasado: { titulo: (m) => `Pedido atrasado en ${m}`, detalle: "Lleva rato en cocina: revisa con cocina", icono: "🔥" },
+  reloj: { titulo: (m) => `${m} necesita que pases`, detalle: "Lleva rato esperando", icono: "⏱️" },
+  limpiar: { titulo: (m) => `${m} por limpiar`, detalle: "Ya pagaron: límpiala y márcala lista", icono: "🧹" },
 };
 
 // ── Medidas (1 = una casilla del plano) ─────────────────────────
@@ -1417,23 +1428,51 @@ export default function Maqueta({
             >
               <span
                 className="relative flex flex-col items-center rounded-xl border-2 bg-white/95 px-2 py-0.5 leading-tight text-stone-900 shadow-lg"
-                style={{ borderColor: vis.nivel ? vis.color : "#d6d3d1" }}
+                style={{
+                  borderColor: vis.nivel ? vis.color : "#d6d3d1",
+                  ...(est?.zona && !est.calor ? { outline: `2px solid ${est.zona.color}`, outlineOffset: 1 } : {}),
+                }}
               >
                 <span className="text-base font-extrabold" style={{ color: "#1c1917" }}>
                   {mesa.numero}
                 </span>
-                {est?.unida ? (
+                {est?.calor ? (
+                  <span className="maqueta-sub text-[9px] font-bold tabular-nums text-stone-800">{est.calor.texto}</span>
+                ) : est?.unida ? (
                   <span className="maqueta-sub text-[9px] font-semibold text-stone-500">unida</span>
                 ) : est?.ocupada ? (
                   <span className="maqueta-sub text-[9px] tabular-nums text-stone-600" suppressHydrationWarning>
                     {est.comensales}/{mesa.capacidad ?? 4} · {tiempo(est.minutos)}
-                    {est.total ? ` · ${formato(est.total)}` : ""}
+                    {est.total && !est.sinTotal ? ` · ${formato(est.total)}` : ""}
                   </span>
+                ) : est?.limpiar !== undefined ? (
+                  <span className="maqueta-sub text-[9px] font-semibold text-stone-600">🧹 por limpiar</span>
                 ) : null}
+                {!est?.calor && (est?.reloj || est?.atrasado) && (
+                  <span className="maqueta-sub flex gap-1 pb-0.5">
+                    {est.reloj && (
+                      <span
+                        className="rounded-full px-1 text-[8px] font-bold leading-[14px] text-white"
+                        style={{ background: COLOR_RELOJ[est.reloj.nivel] }}
+                        title={est.reloj.texto}
+                      >
+                        ⏱ {est.reloj.min}′ {est.reloj.corto}
+                      </span>
+                    )}
+                    {est.atrasado && (
+                      <span
+                        className="indicador-parpadeo rounded-full bg-red-600 px-1 text-[8px] font-bold leading-[14px] text-white"
+                        title={`Pedido en cocina hace ${est.atrasado} min`}
+                      >
+                        🔥 {est.atrasado}′
+                      </span>
+                    )}
+                  </span>
+                )}
                 {vis.clave && (
                   <span
                     className={`absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white shadow ${
-                      vis.clave === "pago" || vis.clave === "listo" ? "" : "animate-pulse"
+                      vis.clave === "pago" || vis.clave === "listo" || vis.clave === "limpiar" ? "" : "animate-pulse"
                     }`}
                     style={{ background: vis.color }}
                   >
@@ -1443,7 +1482,13 @@ export default function Maqueta({
                         ? "!"
                         : vis.clave === "pendiente"
                           ? "●"
-                          : "✓"}
+                          : vis.clave === "atrasado"
+                            ? "🔥"
+                            : vis.clave === "reloj"
+                              ? "⏱"
+                              : vis.clave === "limpiar"
+                                ? "🧹"
+                                : "✓"}
                   </span>
                 )}
                 {est?.grupo && (
