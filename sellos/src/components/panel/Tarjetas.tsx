@@ -504,6 +504,14 @@ function FichaTarjeta({
 
   const hitosListos = puntos ? [] : hitosDe(programa).filter((h) => t.sellos >= h.sellos && !t.hitos_canjeados.includes(h.sellos));
   const canjeables = puntos ? extras.catalogo.filter((r) => r.activo && (r.stock === null || r.stock > 0)) : [];
+  // Tarjeta de sellos con catálogo prendido: al completarla, el cliente puede elegir otro premio.
+  const hoyFecha = new Date().toISOString().slice(0, 10);
+  const paraElegir =
+    !puntos && programa.mostrar_catalogo !== false
+      ? extras.catalogo.filter(
+          (r) => r.activo && (r.stock === null || r.stock > 0) && (!r.desde || r.desde <= hoyFecha) && (!r.hasta || r.hasta >= hoyFecha),
+        )
+      : [];
   const cuponesVigentes = cuponesTarjeta.filter((c) => !c.usado_at && (!c.vence_at || Date.parse(c.vence_at) > Date.now()));
 
   async function borrar() {
@@ -646,6 +654,35 @@ function FichaTarjeta({
             >
               <Icono nombre="regalo" className="h-5 w-5" /> Canjear {programa.premio}
             </button>
+          )}
+
+          {t.premios > 0 && paraElegir.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">O elige un premio del catálogo</p>
+              <ul className="grid grid-cols-2 gap-2">
+                {paraElegir.map((r) => (
+                  <li key={r.id}>
+                    <button
+                      type="button"
+                      disabled={trabajando}
+                      onClick={() => canjearCon(`¿Entregar ${r.titulo}?`, "canjear", { p_tarjeta: t.codigo, p_premio: r.id })}
+                      className="flex w-full items-center gap-2 rounded-xl border border-borde p-2 text-left text-sm hover:border-marca disabled:opacity-45"
+                    >
+                      {r.imagen_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={r.imagen_url} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                      ) : (
+                        <span className="text-2xl">🎁</span>
+                      )}
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium">{r.titulo}</span>
+                        <span className="text-xs text-suave">{r.stock === null ? "Sin límite" : `Quedan ${r.stock}`}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
 
           <div className="space-y-2">

@@ -192,8 +192,9 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
   const puntos = p.tipo === "puntos";
   const u = unidad(p);
   const catalogo = t.catalogo ?? [];
-  const proximo =
-    catalogo.filter((r) => !r.agotado && r.puntos > t.puntos).sort((a, b) => a.puntos - b.puntos)[0] ??
+  const proximo = !puntos
+    ? null
+    : catalogo.filter((r) => !r.agotado && r.puntos > t.puntos).sort((a, b) => a.puntos - b.puntos)[0] ??
     catalogo.filter((r) => !r.agotado).sort((a, b) => b.puntos - a.puntos)[0] ??
     null;
   const niveles = [...(p.niveles ?? [])].sort((a, b) => a.visitas - b.visitas);
@@ -360,14 +361,23 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
           </section>
         )}
 
-        {puntos && catalogo.length > 0 && (
+        {catalogo.length > 0 && (
           <section className="w-full">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Canjea tus {u}</h2>
-              <p className="text-xs text-suave">
-                Tienes {t.puntos.toLocaleString("es-CL")} {u}
-              </p>
-            </div>
+            {puntos ? (
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Canjea tus {u}</h2>
+                <p className="text-xs text-suave">
+                  Tienes {t.puntos.toLocaleString("es-CL")} {u}
+                </p>
+              </div>
+            ) : (
+              <div className="mb-2">
+                <h2 className="text-sm font-semibold">Elige tu premio</h2>
+                <p className="text-xs text-suave">
+                  Al completar tu tarjeta te llevas uno de estos o {p.premio.charAt(0).toLowerCase() + p.premio.slice(1)}.
+                </p>
+              </div>
+            )}
             {categorias.length > 1 && (
               <div className="sin-barra mb-2 flex gap-1.5 overflow-x-auto">
                 {["", ...categorias].map((c) => (
@@ -386,7 +396,8 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
               {catalogo
                 .filter((r) => !categoria || r.categoria === categoria)
                 .map((r) => {
-                  const alcanza = t.puntos >= r.puntos;
+                  const alcanza = puntos ? t.puntos >= r.puntos : t.premios > 0;
+                  const avance = puntos ? t.puntos / r.puntos : t.premios > 0 ? 1 : t.sellos / p.meta;
                   return (
                     <li key={r.id} className={`overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 ${r.agotado ? "opacity-50" : ""}`}>
                       <div className="relative aspect-square bg-stone-50">
@@ -400,14 +411,26 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
                       </div>
                       <div className="p-2.5">
                         <p className="text-sm font-semibold leading-tight">{r.titulo}</p>
-                        <p className="mt-0.5 text-xs font-bold" style={{ color: p.color }}>
-                          {r.puntos.toLocaleString("es-CL")} {u}
-                        </p>
+                        {puntos ? (
+                          <p className="mt-0.5 text-xs font-bold" style={{ color: p.color }}>
+                            {r.puntos.toLocaleString("es-CL")} {u}
+                          </p>
+                        ) : (
+                          r.descripcion && <p className="mt-0.5 line-clamp-2 text-[11px] text-suave">{r.descripcion}</p>
+                        )}
                         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-100">
-                          <div className="h-full rounded-full" style={{ width: `${Math.min(100, (t.puntos / r.puntos) * 100)}%`, background: alcanza ? "#059669" : p.color }} />
+                          <div className="h-full rounded-full" style={{ width: `${Math.min(100, avance * 100)}%`, background: alcanza ? "#059669" : p.color }} />
                         </div>
                         <p className="mt-1 text-[11px] text-suave">
-                          {r.agotado ? "Agotado" : alcanza ? "¡Ya te alcanza! Pídelo al pagar" : `Te faltan ${(r.puntos - t.puntos).toLocaleString("es-CL")}`}
+                          {r.agotado
+                            ? "Agotado"
+                            : alcanza
+                              ? puntos
+                                ? "¡Ya te alcanza! Pídelo al pagar"
+                                : "¡Ya puedes elegirlo! Pídelo al pagar"
+                              : puntos
+                                ? `Te faltan ${(r.puntos - t.puntos).toLocaleString("es-CL")}`
+                                : `Te faltan ${restan} ${restan === 1 ? "sello" : "sellos"}`}
                         </p>
                       </div>
                     </li>
