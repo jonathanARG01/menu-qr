@@ -3,6 +3,7 @@ import { Marco } from "@/components/panel/Marco";
 import { MARCA } from "@/lib/marca";
 import { cargarPanel } from "@/lib/panel";
 import { diasPrueba, vigente } from "@/lib/tipos";
+import { SCRIPT_TEMA } from "@/lib/tema";
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +21,10 @@ export const viewport: Viewport = {
 };
 
 // Pone el tema antes de pintar (sin parpadeo) y guarda el aviso de "instalar app" si llega antes que React.
-const SCRIPT_INICIO = `(function(){try{var p=localStorage.getItem("club-tema");var o=p==="oscuro"||(p!=="claro"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.tema=o?"oscuro":"claro"}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__instalarPanel=e})})()`;
+const SCRIPT_INICIO = `${SCRIPT_TEMA};window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__instalarPanel=e})`;
 
 export default async function LayoutPanel({ children }: { children: React.ReactNode }) {
-  const { negocio, negocios, rol, dueno, gestor, usuario, sucursales, sucursal, localFijo } = await cargarPanel();
+  const { negocio, negocios, rol, dueno, gestor, usuario, sucursales, sucursal, localFijo, soporte, superadmin } = await cargarPanel();
 
   return (
     <div className="panel-app min-h-dvh">
@@ -39,6 +40,8 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
           sucursales: sucursales.map((s) => ({ id: s.id, nombre: s.nombre })),
           sucursal: sucursal ? { id: sucursal.id, nombre: sucursal.nombre } : null,
           localFijo,
+          soporte,
+          superadmin,
           prueba: { estado: negocio.estado, dias: diasPrueba(negocio), alDia: vigente(negocio) },
         }}
       >

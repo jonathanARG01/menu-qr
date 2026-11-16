@@ -141,7 +141,8 @@ body {
    El tema se guarda en <html data-tema="claro|oscuro"> (lo pone el script del panel).
    Todo se resuelve con variables, así los componentes no cambian sus clases.
    ═════════════════════════════════════════════ */
-.panel-app {
+.panel-app,
+.cliente-app {
   --color-marca: #4f6bff;
   --color-marca-oscuro: #3b54e6;
   --color-acento: #f5b83d;
@@ -170,7 +171,7 @@ body {
   background-attachment: fixed;
 }
 
-html[data-tema="oscuro"] .panel-app {
+html[data-tema="oscuro"] :is(.panel-app, .cliente-app) {
   color-scheme: dark;
   --color-marca: #6a85ff;
   --color-marca-oscuro: #5570f5;
@@ -188,6 +189,11 @@ html[data-tema="oscuro"] .panel-app {
   --color-red-700: #fca5a5;
   --color-red-800: #fecaca;
   --color-amber-50: rgba(245, 184, 61, 0.12);
+  --color-amber-100: rgba(245, 184, 61, 0.16);
+  --color-red-100: rgba(248, 113, 113, 0.16);
+  --color-emerald-900: #d1fae5;
+  --color-violet-50: rgba(167, 139, 250, 0.12);
+  --color-violet-950: #ede9fe;
   --color-amber-900: #fde68a;
   --color-amber-950: #fef3c7;
   --color-emerald-50: rgba(52, 211, 153, 0.1);
@@ -203,51 +209,60 @@ html[data-tema="oscuro"] .panel-app {
   --brillo-3: rgba(14, 165, 233, 0.12);
   --barra: rgba(10, 15, 32, 0.72);
 }
-html[data-tema="oscuro"] body:has(.panel-app) {
+html[data-tema="oscuro"] body:has(:is(.panel-app, .cliente-app)) {
   background: #060a17;
 }
 
 /* Las tarjetas de sellos y los carteles conservan sus colores en cualquier tema. */
-.panel-app .tema-fijo {
+:is(.panel-app, .cliente-app) .tema-fijo {
+  color-scheme: light;
+  --color-tinta: #1f1a17;
+  --color-suave: #78716c;
+  --color-borde: #e7e5e4;
+  --color-fondo: #fbf8f4;
+  --color-superficie: #ffffff;
   --color-red-700: oklch(50.5% 0.213 27.518);
   --color-emerald-700: oklch(50.8% 0.118 165.612);
+  --color-emerald-800: oklch(43.2% 0.095 166.913);
+  --color-stone-50: oklch(98.5% 0.001 106.423);
   --color-stone-100: oklch(97% 0.001 106.424);
   --color-stone-200: oklch(92.3% 0.003 48.717);
+  --color-stone-300: oklch(86.9% 0.005 56.366);
 }
 
 @layer components {
 /* Vidrio: tarjetas, campos y botones del panel. */
-.panel-app .tarjeta {
+:is(.panel-app, .cliente-app) .tarjeta {
   background: var(--vidrio);
   border-color: var(--vidrio-borde);
   box-shadow: var(--vidrio-sombra);
 }
-.panel-app .campo {
+:is(.panel-app, .cliente-app) .campo {
   background: color-mix(in srgb, var(--color-superficie) 70%, transparent);
   border-color: var(--color-borde);
 }
-.panel-app .campo::placeholder {
+:is(.panel-app, .cliente-app) .campo::placeholder {
   color: var(--color-suave);
   opacity: 0.8;
 }
-.panel-app .boton {
+:is(.panel-app, .cliente-app) .boton {
   border-radius: 0.8rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
     0 10px 24px -12px color-mix(in srgb, var(--color-marca) 80%, transparent);
 }
-.panel-app .boton:not([class*="bg-emerald"]):not([class*="bg-violet"]):not([class*="bg-red"]) {
+:is(.panel-app, .cliente-app) .boton:not([class*="bg-emerald"]):not([class*="bg-violet"]):not([class*="bg-red"]) {
   background-image: linear-gradient(135deg, var(--color-marca), #8b5cf6);
 }
-.panel-app .boton:not(:disabled):hover {
+:is(.panel-app, .cliente-app) .boton:not(:disabled):hover {
   filter: brightness(1.08);
 }
-.panel-app .boton-secundario {
+:is(.panel-app, .cliente-app) .boton-secundario {
   border-radius: 0.8rem;
   background: var(--vidrio);
   border-color: var(--vidrio-borde);
 }
-.panel-app .boton-secundario:not(:disabled):hover {
+:is(.panel-app, .cliente-app) .boton-secundario:not(:disabled):hover {
   background: var(--color-stone-100);
 }
 
@@ -279,4 +294,43 @@ html[data-tema="oscuro"] body:has(.panel-app) {
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.15;
+}
+
+/* ═════════════════════════════════════════════
+   Pantallas del cliente (/t y /u): mismo vidrio y modo claro/oscuro, pero con el color de cada negocio.
+   La página pone --tinte con el color de la tarjeta.
+   ═════════════════════════════════════════════ */
+.cliente-app {
+  --color-marca: var(--tinte, #c43d22);
+  --color-marca-oscuro: color-mix(in srgb, var(--tinte, #c43d22) 82%, #000);
+  --color-tinta: #18181b;
+  --color-suave: #6b6b76;
+  --color-borde: rgba(24, 24, 27, 0.09);
+  --color-fondo: #f4f4f6;
+  --color-stone-50: #f8f8fa;
+  --color-stone-100: #efeff3;
+  --color-stone-200: #e3e3e9;
+  --color-stone-300: #cfcfd8;
+  --brillo-1: color-mix(in srgb, var(--tinte, #c43d22) 18%, transparent);
+  --brillo-2: color-mix(in srgb, var(--tinte, #c43d22) 10%, transparent);
+  --brillo-3: rgba(255, 255, 255, 0);
+}
+html[data-tema="oscuro"] .cliente-app {
+  --color-marca: color-mix(in srgb, var(--tinte, #c43d22) 70%, #fff);
+  --color-marca-oscuro: color-mix(in srgb, var(--tinte, #c43d22) 85%, #fff);
+  --color-tinta: #ececf1;
+  --color-suave: #9a9aa8;
+  --color-fondo: #09090c;
+  --color-superficie: #16161c;
+  --brillo-1: color-mix(in srgb, var(--tinte, #c43d22) 32%, transparent);
+  --brillo-2: color-mix(in srgb, var(--tinte, #c43d22) 16%, transparent);
+  --brillo-3: rgba(0, 0, 0, 0);
+}
+@layer components {
+  .cliente-app .boton:not([class*="bg-emerald"]):not([class*="bg-violet"]):not([class*="bg-red"]) {
+    background-image: linear-gradient(135deg, var(--tinte, #c43d22), color-mix(in srgb, var(--tinte, #c43d22) 65%, #000));
+  }
+}
+html[data-tema="oscuro"] body:has(.cliente-app) {
+  background: #09090c;
 }

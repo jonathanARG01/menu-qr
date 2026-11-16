@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Icono } from "@/components/Icono";
 import { Logo } from "@/components/Logo";
+import { SelectorTema, Tema } from "@/components/Tema";
 import { NOMBRE_ROL, type Rol } from "@/lib/tipos";
 
 // quien: "todos" (también el equipo), "gestor" (dueño o encargado) o "dueno".
@@ -50,6 +51,9 @@ export type DatosMarco = {
   sucursal: { id: string; nombre: string } | null;
   localFijo: boolean;
   prueba: { estado: string; dias: number; alDia: boolean };
+  // Superadmin dentro del panel de un negocio (modo soporte).
+  soporte: boolean;
+  superadmin: boolean;
 };
 
 // Estructura del panel: barra lateral de vidrio (en computador) o menú desplegable (en celular).
@@ -105,6 +109,7 @@ export function Marco({ datos, children }: { datos: DatosMarco; children: React.
       )}
 
       <div className="lg:pl-[17.5rem]">
+        {datos.soporte && <Soporte nombre={datos.negocio.nombre} />}
         <BarraSuperior datos={datos} titulo={actual?.texto ?? "Panel"} />
         <Avisos datos={datos} />
         <main className="mx-auto max-w-6xl px-4 pb-10 pt-4 lg:px-8 lg:pt-2">{children}</main>
@@ -131,7 +136,7 @@ function Contenido({ datos, ruta }: { datos: DatosMarco; ruta: string }) {
             <Inicial nombre={negocio.nombre} logo={negocio.logo_url} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold">{negocio.nombre}</span>
-              <span className="block text-xs text-suave">{NOMBRE_ROL[datos.rol]}</span>
+              <span className="block text-xs text-suave">{datos.soporte ? "Modo soporte" : NOMBRE_ROL[datos.rol]}</span>
             </span>
             <Icono nombre="abajo" className="h-4 w-4 text-suave transition group-open:rotate-180" />
           </summary>
@@ -146,9 +151,22 @@ function Contenido({ datos, ruta }: { datos: DatosMarco; ruta: string }) {
                 <span className="text-xs text-suave">{NOMBRE_ROL[n.rol]}</span>
               </a>
             ))}
-            <a href="/crear" className="block rounded-xl px-3 py-2 text-sm font-medium text-marca hover:bg-stone-100">
-              + Otro negocio
-            </a>
+            {datos.soporte ? (
+              <a href="/panel/soporte?salir=1" className="block rounded-xl px-3 py-2 text-sm font-medium text-marca hover:bg-stone-100">
+                ← Volver a Admin
+              </a>
+            ) : (
+              <>
+                <a href="/crear" className="block rounded-xl px-3 py-2 text-sm font-medium text-marca hover:bg-stone-100">
+                  + Otro negocio
+                </a>
+                {datos.superadmin && (
+                  <a href="/admin" className="block rounded-xl px-3 py-2 text-sm font-medium text-marca hover:bg-stone-100">
+                    Ir a Admin (todos los negocios)
+                  </a>
+                )}
+              </>
+            )}
           </div>
         </details>
         {sucursales.length > 0 &&
@@ -286,6 +304,25 @@ function BarraSuperior({ datos, titulo }: { datos: DatosMarco; titulo: string })
   );
 }
 
+// Franja fija que recuerda que estás dentro de un negocio ajeno como soporte.
+function Soporte({ nombre }: { nombre: string }) {
+  return (
+    <div className="mx-auto max-w-6xl px-4 pt-3 lg:px-8 lg:pt-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/40 bg-amber-50 px-4 py-2.5 text-sm text-amber-950">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-amber-400 text-base text-black" aria-hidden>
+          🛠️
+        </span>
+        <p className="min-w-0 flex-1">
+          <b>Modo soporte.</b> Estás dentro de <b>{nombre}</b> como desarrollador: todo lo que cambies queda guardado en su cuenta.
+        </p>
+        <a href="/panel/soporte?salir=1" className="boton-secundario py-1.5">
+          Salir del modo soporte
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function Avisos({ datos }: { datos: DatosMarco }) {
   const { prueba } = datos;
   if (prueba.alDia) return null;
@@ -303,76 +340,6 @@ function Avisos({ datos }: { datos: DatosMarco }) {
           </Link>
         )}
       </div>
-    </div>
-  );
-}
-
-// ── Tema claro / oscuro ──
-type Preferencia = "claro" | "oscuro" | "sistema";
-const CLAVE_TEMA = "club-tema";
-
-function leerPreferencia(): Preferencia {
-  try {
-    const v = localStorage.getItem(CLAVE_TEMA);
-    return v === "claro" || v === "oscuro" ? v : "sistema";
-  } catch {
-    return "sistema";
-  }
-}
-function aplicar(p: Preferencia) {
-  const oscuro = p === "oscuro" || (p === "sistema" && matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.dataset.tema = oscuro ? "oscuro" : "claro";
-}
-
-// Mantiene el tema al navegar dentro del panel y sigue al sistema si así se eligió.
-function Tema() {
-  useEffect(() => {
-    aplicar(leerPreferencia());
-    const mq = matchMedia("(prefers-color-scheme: dark)");
-    const cambio = () => leerPreferencia() === "sistema" && aplicar("sistema");
-    mq.addEventListener("change", cambio);
-    return () => {
-      mq.removeEventListener("change", cambio);
-      delete document.documentElement.dataset.tema;
-    };
-  }, []);
-  return null;
-}
-
-function SelectorTema() {
-  const [pref, setPref] = useState<Preferencia>("sistema");
-  useEffect(() => setPref(leerPreferencia()), []);
-  const elegir = (p: Preferencia) => {
-    setPref(p);
-    try {
-      if (p === "sistema") localStorage.removeItem(CLAVE_TEMA);
-      else localStorage.setItem(CLAVE_TEMA, p);
-    } catch {}
-    aplicar(p);
-  };
-  const opciones: [Preferencia, string, string][] = [
-    ["claro", "sol", "Claro"],
-    ["oscuro", "luna", "Oscuro"],
-    ["sistema", "monitor", "Auto"],
-  ];
-  return (
-    <div className="grid grid-cols-3 gap-1 rounded-2xl border border-borde bg-stone-50 p-1" role="radiogroup" aria-label="Tema del panel">
-      {opciones.map(([id, icono, texto]) => (
-        <button
-          key={id}
-          type="button"
-          role="radio"
-          aria-checked={pref === id}
-          title={id === "sistema" ? "Igual que tu computador" : `Modo ${texto.toLowerCase()}`}
-          onClick={() => elegir(id)}
-          className={`flex items-center justify-center gap-1.5 rounded-xl py-1.5 text-[11px] font-medium transition ${
-            pref === id ? "bg-superficie text-tinta shadow-sm ring-1 ring-borde" : "text-suave hover:text-tinta"
-          }`}
-        >
-          <Icono nombre={icono} className="h-3.5 w-3.5" />
-          {texto}
-        </button>
-      ))}
     </div>
   );
 }

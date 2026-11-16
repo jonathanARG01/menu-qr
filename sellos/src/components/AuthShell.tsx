@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { EMPRESA } from "@/lib/marca";
+import { BotonTema, ScriptTema, Tema } from "@/components/Tema";
 
 const VENTAJAS: [string, string, string][] = [
   ["📲", "Sin app ni tarjetas de papel", "El cliente la guarda en su celular en 10 segundos."],
@@ -11,7 +12,9 @@ const VENTAJAS: [string, string, string][] = [
 // Pantallas de acceso: la marca a la izquierda y el formulario a la derecha.
 export function AuthShell({ titulo, children, pie }: { titulo: string; children: React.ReactNode; pie?: React.ReactNode }) {
   return (
-    <main className="grid min-h-screen bg-fondo lg:grid-cols-[1.1fr_1fr]">
+    <main className="cliente-app grid min-h-screen lg:grid-cols-[1.1fr_1fr]" style={{ "--tinte": "#c43d22" } as React.CSSProperties}>
+      <ScriptTema />
+      <Tema />
       <section className="relative hidden overflow-hidden bg-[#2a1712] p-10 text-orange-50 lg:flex lg:flex-col xl:p-14">
         <div
           aria-hidden
@@ -48,13 +51,14 @@ export function AuthShell({ titulo, children, pie }: { titulo: string; children:
         <p className="relative mt-10 text-xs text-orange-100/50">© {new Date().getFullYear()} {EMPRESA}</p>
       </section>
 
-      <section className="flex items-center justify-center px-4 py-10 sm:px-8">
+      <section className="relative flex items-center justify-center px-4 py-10 sm:px-8">
+        <BotonTema className="absolute right-4 top-4" />
         <div className="w-full max-w-md">
           <Link href="/" className="mb-8 flex justify-center lg:hidden" aria-label="Inicio">
             <Logo className="text-3xl" />
           </Link>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{titulo}</h1>
-          <div className="mt-6 rounded-2xl border border-borde bg-superficie p-6 shadow-xl shadow-stone-900/5 sm:p-8">
+          <div className="tarjeta mt-6 p-6 sm:p-8">
             {children}
           </div>
           {pie && <div className="mt-6 text-center text-sm text-suave">{pie}</div>}
@@ -68,7 +72,7 @@ export function Aviso({ tipo = "error", children }: { tipo?: "error" | "ok"; chi
   return (
     <p
       role={tipo === "error" ? "alert" : "status"}
-      className={`rounded-lg px-3 py-2 text-sm ${tipo === "error" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-800"}`}
+      className={`rounded-lg px-3 py-2 text-sm ${tipo === "error" ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"}`}
     >
       {children}
     </p>
