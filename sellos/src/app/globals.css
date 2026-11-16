@@ -19,6 +19,7 @@ body {
   font-family: var(--font-sans);
 }
 
+@layer components {
 .campo {
   @apply w-full rounded-lg border border-borde bg-superficie px-3 py-2.5 text-base outline-none transition focus:border-marca focus:ring-2 focus:ring-marca/20;
 }
@@ -37,6 +38,7 @@ body {
 
 .tarjeta {
   @apply rounded-2xl border border-borde bg-superficie;
+}
 }
 
 .sin-barra {
@@ -132,4 +134,149 @@ body {
 @keyframes flotar {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-5px); }
+}
+
+/* ═════════════════════════════════════════════
+   Panel: diseño de vidrio con modo claro y oscuro.
+   El tema se guarda en <html data-tema="claro|oscuro"> (lo pone el script del panel).
+   Todo se resuelve con variables, así los componentes no cambian sus clases.
+   ═════════════════════════════════════════════ */
+.panel-app {
+  --color-marca: #4f6bff;
+  --color-marca-oscuro: #3b54e6;
+  --color-acento: #f5b83d;
+  --color-tinta: #0f172a;
+  --color-suave: #5f6b85;
+  --color-borde: rgba(15, 23, 42, 0.09);
+  --color-fondo: #f3f5fb;
+  --color-superficie: #ffffff;
+  --color-stone-50: #f6f8fc;
+  --color-stone-100: #eef1f8;
+  --color-stone-200: #e2e7f2;
+  --color-stone-300: #c9d1e3;
+  --vidrio: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.72));
+  --vidrio-borde: rgba(15, 23, 42, 0.07);
+  --vidrio-sombra: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px -18px rgba(37, 52, 120, 0.28);
+  --brillo-1: rgba(79, 107, 255, 0.14);
+  --brillo-2: rgba(168, 85, 247, 0.1);
+  --brillo-3: rgba(56, 189, 248, 0.08);
+  --barra: rgba(255, 255, 255, 0.7);
+  color: var(--color-tinta);
+  background:
+    radial-gradient(60rem 40rem at 0% -10%, var(--brillo-1), transparent 60%),
+    radial-gradient(50rem 36rem at 100% 0%, var(--brillo-2), transparent 60%),
+    radial-gradient(44rem 30rem at 60% 110%, var(--brillo-3), transparent 60%),
+    var(--color-fondo);
+  background-attachment: fixed;
+}
+
+html[data-tema="oscuro"] .panel-app {
+  color-scheme: dark;
+  --color-marca: #6a85ff;
+  --color-marca-oscuro: #5570f5;
+  --color-tinta: #e8ecf8;
+  --color-suave: #8c97b5;
+  --color-borde: rgba(255, 255, 255, 0.09);
+  --color-fondo: #060a17;
+  --color-superficie: #10172c;
+  --color-stone-50: rgba(255, 255, 255, 0.035);
+  --color-stone-100: rgba(255, 255, 255, 0.06);
+  --color-stone-200: rgba(255, 255, 255, 0.1);
+  --color-stone-300: rgba(255, 255, 255, 0.22);
+  --color-red-50: rgba(248, 113, 113, 0.12);
+  --color-red-600: #f87171;
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+  --color-amber-50: rgba(245, 184, 61, 0.12);
+  --color-amber-900: #fde68a;
+  --color-amber-950: #fef3c7;
+  --color-emerald-50: rgba(52, 211, 153, 0.1);
+  --color-emerald-100: rgba(52, 211, 153, 0.16);
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+  --color-emerald-950: #d1fae5;
+  --vidrio: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025));
+  --vidrio-borde: rgba(255, 255, 255, 0.085);
+  --vidrio-sombra: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px -22px rgba(0, 0, 0, 0.8);
+  --brillo-1: rgba(79, 107, 255, 0.24);
+  --brillo-2: rgba(147, 51, 234, 0.18);
+  --brillo-3: rgba(14, 165, 233, 0.12);
+  --barra: rgba(10, 15, 32, 0.72);
+}
+html[data-tema="oscuro"] body:has(.panel-app) {
+  background: #060a17;
+}
+
+/* Las tarjetas de sellos y los carteles conservan sus colores en cualquier tema. */
+.panel-app .tema-fijo {
+  --color-red-700: oklch(50.5% 0.213 27.518);
+  --color-emerald-700: oklch(50.8% 0.118 165.612);
+  --color-stone-100: oklch(97% 0.001 106.424);
+  --color-stone-200: oklch(92.3% 0.003 48.717);
+}
+
+@layer components {
+/* Vidrio: tarjetas, campos y botones del panel. */
+.panel-app .tarjeta {
+  background: var(--vidrio);
+  border-color: var(--vidrio-borde);
+  box-shadow: var(--vidrio-sombra);
+}
+.panel-app .campo {
+  background: color-mix(in srgb, var(--color-superficie) 70%, transparent);
+  border-color: var(--color-borde);
+}
+.panel-app .campo::placeholder {
+  color: var(--color-suave);
+  opacity: 0.8;
+}
+.panel-app .boton {
+  border-radius: 0.8rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 10px 24px -12px color-mix(in srgb, var(--color-marca) 80%, transparent);
+}
+.panel-app .boton:not([class*="bg-emerald"]):not([class*="bg-violet"]):not([class*="bg-red"]) {
+  background-image: linear-gradient(135deg, var(--color-marca), #8b5cf6);
+}
+.panel-app .boton:not(:disabled):hover {
+  filter: brightness(1.08);
+}
+.panel-app .boton-secundario {
+  border-radius: 0.8rem;
+  background: var(--vidrio);
+  border-color: var(--vidrio-borde);
+}
+.panel-app .boton-secundario:not(:disabled):hover {
+  background: var(--color-stone-100);
+}
+
+/* Barra lateral y barra superior: vidrio esmerilado. */
+.vidrio-barra {
+  background: var(--barra);
+  border: 1px solid var(--vidrio-borde);
+  box-shadow: var(--vidrio-sombra);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+}
+/* Ícono del menú activo: burbuja con degradado y halo. */
+.icono-activo {
+  background: linear-gradient(135deg, var(--color-marca), #8b5cf6);
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset, 0 8px 22px -6px color-mix(in srgb, var(--color-marca) 85%, transparent);
+}
+.texto-degradado {
+  background: linear-gradient(120deg, var(--color-marca), #a855f7 60%, #38bdf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+}
+
+/* Títulos de cada sección del panel: grandes y firmes. */
+.panel-app main h1 {
+  font-size: clamp(1.5rem, 1.15rem + 1vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }

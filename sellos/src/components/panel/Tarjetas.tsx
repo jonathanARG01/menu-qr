@@ -121,7 +121,9 @@ export function Tarjetas({
     <div className="space-y-5">
       <div className="flex flex-wrap items-end gap-3">
         <div className="mr-auto min-w-0">
-          <h1 className="text-xl font-semibold">Clientes con tarjeta</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Clientes con <span className="texto-degradado">tarjeta</span>
+          </h1>
           <p className="text-sm text-suave">
             {puntos ? `Tarjeta de ${programa.nombre_puntos}` : `${programa.meta} sellos = ${programa.premio}`} · {textoRegla(programa, formato)}
             {!programa.activo && " · tarjeta pausada"}
@@ -136,10 +138,15 @@ export function Tarjetas({
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Dato titulo="Clientes" valor={resumen.tarjetas} />
-        <Dato titulo={puntos ? `${mayus(programa.nombre_puntos)} dados` : "Sellos dados"} valor={resumen.sellos} />
-        <Dato titulo="Premios por canjear" valor={resumen.listos} acento={resumen.listos > 0} />
-        <Dato titulo="Premios canjeados" valor={resumen.canjes} />
+        <Dato titulo="Clientes" valor={resumen.tarjetas} icono="clientes" tono="from-sky-400 to-blue-600" />
+        <Dato
+          titulo={puntos ? `${mayus(programa.nombre_puntos)} dados` : "Sellos dados"}
+          valor={resumen.sellos}
+          icono="sellos"
+          tono="from-indigo-400 to-violet-600"
+        />
+        <Dato titulo="Premios por canjear" valor={resumen.listos} icono="regalo" tono="from-emerald-400 to-teal-600" acento={resumen.listos > 0} />
+        <Dato titulo="Premios canjeados" valor={resumen.canjes} icono="check" tono="from-amber-300 to-orange-500" />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -166,7 +173,7 @@ export function Tarjetas({
               type="button"
               aria-pressed={filtro === id}
               onClick={() => setFiltro(id)}
-              className={`rounded-full px-3 py-1.5 text-sm ${filtro === id ? "bg-tinta text-white" : "bg-stone-100 text-suave hover:text-tinta"}`}
+              className={`rounded-full px-3 py-1.5 text-sm ${filtro === id ? "bg-marca text-white shadow-sm" : "bg-stone-100 text-suave hover:text-tinta"}`}
             >
               {texto}
             </button>
@@ -259,11 +266,17 @@ export function Tarjetas({
   );
 }
 
-function Dato({ titulo, valor, acento }: { titulo: string; valor: number; acento?: boolean }) {
+function Dato({ titulo, valor, icono, tono, acento }: { titulo: string; valor: number; icono: string; tono: string; acento?: boolean }) {
   return (
-    <div className={`tarjeta p-4 ${acento ? "ring-2 ring-emerald-400" : ""}`}>
-      <p className="text-xs text-suave">{titulo}</p>
-      <p className="text-2xl font-semibold tabular-nums">{valor.toLocaleString("es-CL")}</p>
+    <div className={`tarjeta relative overflow-hidden p-4 ${acento ? "ring-2 ring-emerald-400/70" : ""}`}>
+      <span aria-hidden className={`pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-gradient-to-br ${tono} opacity-20 blur-2xl`} />
+      <div className="flex items-center gap-2">
+        <span className={`grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br ${tono} text-white shadow-lg`}>
+          <Icono nombre={icono} className="h-4 w-4" />
+        </span>
+        <p className="text-xs font-medium text-suave">{titulo}</p>
+      </div>
+      <p className="mt-3 text-3xl font-bold tracking-tight tabular-nums">{valor.toLocaleString("es-CL")}</p>
     </div>
   );
 }
@@ -544,7 +557,7 @@ function FichaTarjeta({
           </button>
         </div>
         <div className="space-y-5 px-5 py-5">
-          <div className="flex justify-center">
+          <div className="tema-fijo flex justify-center">
             <Inclinable>
               <TarjetaVisual
                 local={negocio.nombre}

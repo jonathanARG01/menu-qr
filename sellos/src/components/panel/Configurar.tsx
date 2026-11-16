@@ -551,7 +551,7 @@ export function Configurar({
                   className="pointer-events-none flex h-40 items-start justify-center overflow-hidden bg-fondo pt-3"
                   aria-hidden
                 >
-                  <span className="w-[384px] shrink-0" style={{ zoom: 0.4 }}>
+                  <span className="tema-fijo w-[384px] shrink-0" style={{ zoom: 0.4 }}>
                     <TarjetaVisual
                       local={negocio.nombre}
                       logo={negocio.logo_url}
@@ -625,7 +625,7 @@ export function Configurar({
 
       <div className="lg:sticky lg:top-24 lg:self-start">
         <p className="mb-2 text-center text-xs text-suave">Así la ven tus clientes</p>
-        <div className="flex justify-center">
+        <div className="tema-fijo flex justify-center">
           <Inclinable>
             <TarjetaVisual
               local={negocio.nombre}
