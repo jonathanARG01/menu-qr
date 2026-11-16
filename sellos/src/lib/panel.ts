@@ -8,6 +8,8 @@ import { incluye, type Funcion } from "./marca";
 
 export const COOKIE_NEGOCIO = "club_negocio";
 export const COOKIE_LOCAL = "club_local";
+// Modo soporte del superadmin: el negocio en que entró (desde /admin).
+export const COOKIE_SOPORTE = "club_soporte";
 
 export type Panel = {
   supabase: Awaited<ReturnType<typeof createClient>>;
@@ -25,7 +27,12 @@ export type Panel = {
   // true si el miembro tiene un local fijo (no puede cambiarlo).
   localFijo: boolean;
   incluye: (f: Funcion) => boolean;
+  // Tú (superadmin) dentro del panel de un negocio ajeno, como su dueño.
+  soporte: boolean;
+  superadmin: boolean;
 };
+
+type Elegido = { id: string; nombre: string; rol: Rol; sucursal_id: string | null };
 
 // Lo que necesita cada página del panel: la sesión, el negocio elegido (cookie) y su tarjeta.
 // Si la cuenta todavía no tiene negocio pero se registró con los datos (confirmó el correo), termina el alta aquí.
@@ -36,31 +43,52 @@ export const cargarPanel = cache(async (): Promise<Panel> => {
   } = await supabase.auth.getUser();
   if (!user) redirect("/entrar?next=/panel");
 
-  const cargarMios = () =>
-    supabase.from("miembros").select("rol, sucursal_id, negocio:negocios(id, nombre)").eq("user_id", user.id).order("created_at");
-  let { data: mios } = await cargarMios();
+  const galletas = await cookies();
+  const soporteId = galletas.get(COOKIE_SOPORTE)?.value ?? "";
+  let superadmin = false;
+  let soporte = false;
+  let negocios: Elegido[] = [];
+  let actual: Elegido | undefined;
 
-  if (!mios?.length) {
-    const alta = user.user_metadata?.alta as DatosAlta | undefined;
-    if (alta?.nombre && alta.slug) {
-      const { error } = await crearNegocio(supabase, alta);
-      await supabase.auth.updateUser({ data: { alta: null } });
-      if (error) redirect(`/crear?error=${encodeURIComponent(error.message)}`);
-      ({ data: mios } = await cargarMios());
+  // Modo soporte: el superadmin entra a un negocio ajeno como si fuera su dueño (los permisos de la base ya lo dejan).
+  if (/^[0-9a-f-]{36}$/.test(soporteId)) {
+    const [{ data: admin }, { data: n }] = await Promise.all([
+      supabase.rpc("es_superadmin"),
+      supabase.from("negocios").select("id, nombre").eq("id", soporteId).maybeSingle(),
+    ]);
+    if (admin === true && n) {
+      superadmin = soporte = true;
+      actual = { id: n.id as string, nombre: n.nombre as string, rol: "dueno", sucursal_id: null };
+      negocios = [actual];
     }
   }
-  if (!mios?.length) {
-    const { data: admin } = await supabase.rpc("es_superadmin");
-    redirect(admin ? "/admin" : "/crear");
-  }
 
-  const negocios = mios.flatMap((m) => {
-    const n = m.negocio as unknown as { id: string; nombre: string } | null;
-    return n ? [{ id: n.id, nombre: n.nombre, rol: m.rol as Rol, sucursal_id: (m.sucursal_id as string | null) ?? null }] : [];
-  });
-  const galletas = await cookies();
-  const elegido = galletas.get(COOKIE_NEGOCIO)?.value;
-  const actual = negocios.find((n) => n.id === elegido) ?? negocios[0];
+  if (!actual) {
+    const cargarMios = () =>
+      supabase.from("miembros").select("rol, sucursal_id, negocio:negocios(id, nombre)").eq("user_id", user.id).order("created_at");
+    let { data: mios } = await cargarMios();
+
+    if (!mios?.length) {
+      const alta = user.user_metadata?.alta as DatosAlta | undefined;
+      if (alta?.nombre && alta.slug) {
+        const { error } = await crearNegocio(supabase, alta);
+        await supabase.auth.updateUser({ data: { alta: null } });
+        if (error) redirect(`/crear?error=${encodeURIComponent(error.message)}`);
+        ({ data: mios } = await cargarMios());
+      }
+    }
+    const { data: admin } = await supabase.rpc("es_superadmin");
+    superadmin = admin === true;
+    if (!mios?.length) redirect(superadmin ? "/admin" : "/crear");
+
+    negocios = mios.flatMap((m) => {
+      const n = m.negocio as unknown as { id: string; nombre: string } | null;
+      return n ? [{ id: n.id, nombre: n.nombre, rol: m.rol as Rol, sucursal_id: (m.sucursal_id as string | null) ?? null }] : [];
+    });
+    const elegido = galletas.get(COOKIE_NEGOCIO)?.value;
+    actual = negocios.find((n) => n.id === elegido) ?? negocios[0];
+  }
+  if (!actual) redirect(superadmin ? "/admin" : "/crear");
 
   const [{ data: negocio }, { data: programa }, { data: locales }] = await Promise.all([
     supabase.from("negocios").select("*").eq("id", actual.id).single(),
@@ -87,6 +115,8 @@ export const cargarPanel = cache(async (): Promise<Panel> => {
     sucursal,
     localFijo: Boolean(actual.sucursal_id && sucursal),
     incluye: (f: Funcion) => incluye(n, f),
+    soporte,
+    superadmin,
   };
 });
 

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAutorizar } from "@/components/Autorizar";
 import { TarjetaVisual } from "@/components/TarjetaVisual";
 import { Inclinable } from "@/components/Inclinable";
+import { BotonTema, ScriptTema, Tema } from "@/components/Tema";
 import { avisarTarjeta, guardarTarjeta, suscribirTarjeta } from "@/lib/cliente";
 import { PROGRAMA_BASE, faltan, hitosDe, textoDias, unidad, type TarjetaPublica } from "@/lib/tipos";
 import { iphoneSinInstalar, soportaPush } from "@/lib/push";
@@ -213,8 +214,25 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
   }
 
   return (
-    <main className="min-h-dvh bg-stone-100 px-4 py-6">
+    <main className="cliente-app min-h-dvh px-4 pb-8 pt-4" style={{ "--tinte": p.color } as React.CSSProperties}>
+      <ScriptTema />
+      <Tema />
       <div className="mx-auto flex max-w-sm flex-col items-center gap-5">
+        <header className="flex w-full items-center gap-3">
+          {t.negocio.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={t.negocio.logo_url} alt="" className="h-10 w-10 shrink-0 rounded-xl bg-white object-contain p-0.5 shadow-sm" />
+          ) : (
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-base font-bold text-white shadow-sm" style={{ background: p.color }}>
+              {t.negocio.nombre.trim().charAt(0).toUpperCase()}
+            </span>
+          )}
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block text-xs text-suave">Tu tarjeta en</span>
+            <span className="block truncate font-semibold">{t.negocio.nombre}</span>
+          </span>
+          <BotonTema />
+        </header>
         {aviso && (
           <p
             role="status"
@@ -230,7 +248,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
         )}
 
         {pedirResena && !resenaVista && t.negocio.resena_url && (
-          <section className="w-full rounded-2xl bg-white p-4 text-center shadow-sm ring-1 ring-black/5">
+          <section className="tarjeta w-full p-4 text-center">
             <p className="text-2xl" aria-hidden>
               ⭐⭐⭐⭐⭐
             </p>
@@ -274,26 +292,28 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
           </div>
         ))}
 
-        <Inclinable giroscopio>
-          <TarjetaVisual
-            local={t.negocio.nombre}
-            logo={t.negocio.logo_url}
-            programa={p}
-            sellos={t.sellos}
-            premios={t.premios}
-            puntos={t.puntos}
-            proximo={proximo}
-            nivel={t.nivel?.nombre}
-            nombre={t.nombre}
-            animarUltimos={nuevos}
-            pie={
-              <div className="mt-4 flex flex-col items-center gap-1">
-                <div className="w-36 overflow-hidden rounded-xl bg-white p-1.5" dangerouslySetInnerHTML={{ __html: qr }} />
-                <p className="font-mono text-xs tracking-widest opacity-80">{t.codigo}</p>
-              </div>
-            }
-          />
-        </Inclinable>
+        <div className="tema-fijo">
+          <Inclinable giroscopio>
+            <TarjetaVisual
+              local={t.negocio.nombre}
+              logo={t.negocio.logo_url}
+              programa={p}
+              sellos={t.sellos}
+              premios={t.premios}
+              puntos={t.puntos}
+              proximo={proximo}
+              nivel={t.nivel?.nombre}
+              nombre={t.nombre}
+              animarUltimos={nuevos}
+              pie={
+                <div className="mt-4 flex flex-col items-center gap-1">
+                  <div className="w-36 overflow-hidden rounded-xl bg-white p-1.5" dangerouslySetInnerHTML={{ __html: qr }} />
+                  <p className="font-mono text-xs tracking-widest opacity-80">{t.codigo}</p>
+                </div>
+              }
+            />
+          </Inclinable>
+        </div>
 
         <p className="text-center text-sm text-suave">
           {puntos
@@ -385,7 +405,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
                     key={c || "todas"}
                     type="button"
                     onClick={() => setCategoria(c)}
-                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${categoria === c ? "bg-tinta text-white" : "bg-white text-suave"}`}
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${categoria === c ? "bg-marca text-white" : "bg-superficie text-suave ring-1 ring-borde"}`}
                   >
                     {c || "Todos"}
                   </button>
@@ -399,7 +419,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
                   const alcanza = puntos ? t.puntos >= r.puntos : t.premios > 0;
                   const avance = puntos ? t.puntos / r.puntos : t.premios > 0 ? 1 : t.sellos / p.meta;
                   return (
-                    <li key={r.id} className={`overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 ${r.agotado ? "opacity-50" : ""}`}>
+                    <li key={r.id} className={`tarjeta overflow-hidden ${r.agotado ? "opacity-50" : ""}`}>
                       <div className="relative aspect-square bg-stone-50">
                         {r.imagen_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -476,7 +496,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
               Cuando venga por primera vez, los dos ganan {p.referido_regalo * (puntos ? p.puntos_regalo : 1)}{" "}
               {unidad(p, p.referido_regalo * (puntos ? p.puntos_regalo : 1))}.
             </p>
-            <button type="button" onClick={invitar} className="mt-3 w-full rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-tinta">
+            <button type="button" onClick={invitar} className="mt-3 w-full rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-[#18181b]">
               Compartir mi enlace
             </button>
           </section>
@@ -520,7 +540,7 @@ export function TarjetaCliente({ inicial, googleWallet }: { inicial: TarjetaPubl
           )}
           {avisos === "si" && <p className="text-center text-xs text-emerald-700">Avisos activados en este celular.</p>}
           {avisos === "iphone" && (
-            <p className="rounded-xl bg-white px-4 py-3 text-xs text-suave">
+            <p className="tarjeta px-4 py-3 text-xs text-suave">
               En iPhone: toca <b>Compartir</b> y luego <b>Agregar a inicio</b> para tener tu tarjeta a mano y recibir avisos.
             </p>
           )}

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { TarjetaVisual } from "@/components/TarjetaVisual";
 import { Inclinable } from "@/components/Inclinable";
+import { BotonTema, ScriptTema, Tema } from "@/components/Tema";
 import { guardarTarjeta, tarjetaGuardada } from "@/lib/cliente";
 import { rutaTarjeta, textoDias, type PremioCatalogo, type ProgramaSellos } from "@/lib/tipos";
 import { MARCA } from "@/lib/marca";
@@ -77,17 +78,38 @@ export function Unirse({
     router.replace(destino(String(data), true));
   }
 
-  if (revisando) return <main className="min-h-dvh bg-stone-100" />;
+  const tinte = { "--tinte": p.color } as React.CSSProperties;
+  if (revisando)
+    return (
+      <main className="cliente-app min-h-dvh" style={tinte}>
+        <ScriptTema />
+      </main>
+    );
   if (!datos.activa)
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-stone-100 px-4 text-center">
+      <main className="cliente-app flex min-h-dvh items-center justify-center px-4 text-center" style={tinte}>
+        <ScriptTema />
         <p className="max-w-xs text-sm text-suave">La tarjeta de {r.nombre} está pausada por ahora. ¡Vuelve pronto!</p>
       </main>
     );
 
   return (
-    <main className="min-h-dvh bg-stone-100 px-4 py-8">
+    <main className="cliente-app min-h-dvh px-4 pb-8 pt-4" style={tinte}>
+      <ScriptTema />
+      <Tema />
       <div className="mx-auto flex max-w-sm flex-col items-center gap-6">
+        <div className="flex w-full items-center gap-3">
+          {r.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={r.logo_url} alt="" className="h-10 w-10 shrink-0 rounded-xl bg-white object-contain p-0.5 shadow-sm" />
+          ) : (
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-base font-bold text-white shadow-sm" style={{ background: p.color }}>
+              {r.nombre.trim().charAt(0).toUpperCase()}
+            </span>
+          )}
+          <span className="min-w-0 flex-1 truncate font-semibold">{r.nombre}</span>
+          <BotonTema />
+        </div>
         <div className="text-center">
           {referido && (
             <p className="mb-3 rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-semibold text-emerald-900">
@@ -108,16 +130,18 @@ export function Unirse({
           </p>
         </div>
 
-        <Inclinable giroscopio>
-          <TarjetaVisual
-            local={r.nombre}
-            logo={r.logo_url}
-            programa={p}
-            sellos={p.bienvenida}
-            puntos={p.bienvenida * p.puntos_regalo}
-            nombre={nombre || undefined}
-          />
-        </Inclinable>
+        <div className="tema-fijo">
+          <Inclinable giroscopio>
+            <TarjetaVisual
+              local={r.nombre}
+              logo={r.logo_url}
+              programa={p}
+              sellos={p.bienvenida}
+              puntos={p.bienvenida * p.puntos_regalo}
+              nombre={nombre || undefined}
+            />
+          </Inclinable>
+        </div>
         {p.dias_dobles?.length > 0 && (
           <p className="rounded-full bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-900">
             🔥 {textoDias(p.dias_dobles)}: día doble
@@ -145,9 +169,9 @@ export function Unirse({
               {(datos.catalogo ?? []).map((c) => (
                 <li
                   key={c.id}
-                  className={`w-32 shrink-0 snap-start overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 ${c.agotado ? "opacity-50" : ""}`}
+                  className={`tarjeta w-32 shrink-0 snap-start overflow-hidden ${c.agotado ? "opacity-50" : ""}`}
                 >
-                  <div className="aspect-square bg-stone-50">
+                  <div className="aspect-square bg-stone-100">
                     {c.imagen_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={c.imagen_url} alt="" className="h-full w-full object-cover" />
