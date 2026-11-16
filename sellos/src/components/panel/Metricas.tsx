@@ -114,7 +114,7 @@ export function Metricas({
               <Link
                 key={p}
                 href={`/panel/metricas?d=${p}`}
-                className={`rounded-md px-3 py-1.5 text-sm ${p === dias ? "bg-tinta text-white" : "text-suave"}`}
+                className={`rounded-md px-3 py-1.5 text-sm ${p === dias ? "bg-marca text-white shadow-sm" : "text-suave"}`}
               >
                 {p === 365 ? "1 año" : `${p} días`}
               </Link>

@@ -52,7 +52,7 @@ export function Premios({
             role="tab"
             aria-selected={pestana === id}
             onClick={() => setPestana(id)}
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ${pestana === id ? "bg-tinta text-white" : "bg-superficie text-suave ring-1 ring-borde"}`}
+            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ${pestana === id ? "bg-marca text-white shadow-sm" : "bg-superficie text-suave ring-1 ring-borde"}`}
           >
             {texto}
           </button>

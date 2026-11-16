@@ -63,7 +63,7 @@ export function Integraciones({ negocio, claves, sucursales, puede }: { negocio:
               <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-950">
                 <p className="font-semibold">Tu clave nueva (cópiala ahora, no se vuelve a mostrar):</p>
                 <div className="mt-1 flex items-center gap-2">
-                  <code className="min-w-0 flex-1 break-all rounded bg-white px-2 py-1">{nueva}</code>
+                  <code className="min-w-0 flex-1 break-all rounded bg-stone-100 px-2 py-1">{nueva}</code>
                   <button className="boton-secundario py-1" onClick={() => copiar(nueva)}>
                     Copiar
                   </button>
