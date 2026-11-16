@@ -32,6 +32,8 @@ export type ProgramaSellos = {
   cumple_cupon: string | null;
   fondo_url: string | null;
   texto_claro: boolean;
+  // 0004: el cliente ve el catálogo de premios (con sellos, elige uno al completar la tarjeta).
+  mostrar_catalogo: boolean;
 };
 
 export type TipoTarjeta = "sellos" | "puntos";
@@ -68,6 +70,7 @@ export const PROGRAMA_BASE: ProgramaSellos = {
   cumple_cupon: null,
   fondo_url: null,
   texto_claro: true,
+  mostrar_catalogo: true,
 };
 
 // Lo que se dibuja en cada sello de la tarjeta (los de comida vienen de Platovi; el resto, para otros rubros).

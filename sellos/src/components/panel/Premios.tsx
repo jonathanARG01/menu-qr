@@ -120,6 +120,17 @@ function Catalogo({ negocio, programa, premios }: { negocio: Negocio; programa: 
   const [editando, setEditando] = useState<(typeof PREMIO_NUEVO & { id?: string }) | null>(null);
   const [subiendo, setSubiendo] = useState(false);
   const u = programa.nombre_puntos || "puntos";
+  const conPuntos = programa.tipo === "puntos";
+  const [visible, setVisible] = useState(programa.mostrar_catalogo !== false);
+
+  async function cambiarVisible(v: boolean) {
+    setVisible(v);
+    const ok = await correr(
+      () => supabase.rpc("mostrar_catalogo", { p_negocio: negocio.id, p_valor: v }),
+      v ? "Tus clientes ya ven el catálogo" : "Catálogo oculto para tus clientes",
+    );
+    if (!ok) setVisible(!v);
+  }
 
   async function foto(archivo: File | undefined) {
     if (!archivo || !editando) return;
@@ -150,15 +161,21 @@ function Catalogo({ negocio, programa, premios }: { negocio: Negocio; programa: 
 
   return (
     <div className="space-y-4">
-      {programa.tipo !== "puntos" && (
-        <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          El catálogo se canjea con puntos. Tu tarjeta es de sellos: cámbiala a puntos o cashback en{" "}
-          <a href="/panel/tarjeta" className="font-semibold underline">
-            Tu tarjeta
-          </a>{" "}
-          para que tus clientes lo vean.
-        </p>
-      )}
+      <div className="tarjeta flex items-start gap-4 p-4">
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">Mostrar el catálogo a tus clientes</p>
+          <p className="text-sm text-suave">
+            {!visible
+              ? conPuntos
+                ? "Apagado: tus clientes no ven los premios en su tarjeta ni al unirse. Tu equipo igual puede canjearlos."
+                : `Apagado: al completar la tarjeta se llevan ${programa.premio.toLowerCase()}, como siempre.`
+              : conPuntos
+                ? `Lo ven en su tarjeta y al unirse, con cuántos ${u} les faltan para cada premio.`
+                : `Lo ven en su tarjeta y al unirse. Al completar la tarjeta eligen uno de estos premios o ${programa.premio.toLowerCase()}.`}
+          </p>
+        </div>
+        <Interruptor activo={visible} onChange={cambiarVisible} etiqueta="Mostrar el catálogo a tus clientes" />
+      </div>
       <div className="flex items-center justify-between">
         <p className="text-sm text-suave">{premios.length} premios</p>
         <button className="boton py-2" onClick={() => setEditando({ ...PREMIO_NUEVO, orden: premios.length })}>
@@ -201,6 +218,7 @@ function Catalogo({ negocio, programa, premios }: { negocio: Negocio; programa: 
                 className="campo resize-none"
               />
             </label>
+            {conPuntos && (
             <label className="block text-sm">
               <span className="etiqueta-campo">Cuesta ({u})</span>
               <input
@@ -212,6 +230,7 @@ function Catalogo({ negocio, programa, premios }: { negocio: Negocio; programa: 
                 className="campo"
               />
             </label>
+            )}
             <label className="block text-sm">
               <span className="etiqueta-campo">Categoría</span>
               <input
@@ -298,7 +317,7 @@ function Catalogo({ negocio, programa, premios }: { negocio: Negocio; programa: 
                   {r.titulo}
                 </p>
                 <p className="shrink-0 rounded-full bg-marca/10 px-2 py-0.5 text-xs font-bold text-marca">
-                  {r.puntos.toLocaleString("es-CL")} {u}
+                  {conPuntos ? `${r.puntos.toLocaleString("es-CL")} ${u}` : "Al completar"}
                 </p>
               </div>
               <p className="text-xs text-suave">

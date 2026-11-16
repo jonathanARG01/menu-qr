@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { TarjetaVisual } from "@/components/TarjetaVisual";
 import { Inclinable } from "@/components/Inclinable";
 import { guardarTarjeta, tarjetaGuardada } from "@/lib/cliente";
-import { rutaTarjeta, textoDias, type ProgramaSellos } from "@/lib/tipos";
+import { rutaTarjeta, textoDias, type PremioCatalogo, type ProgramaSellos } from "@/lib/tipos";
 import { MARCA } from "@/lib/marca";
 import { mensajeError } from "@/lib/utils";
 
@@ -15,6 +15,8 @@ export type DatosUnirse = {
   negocio: { nombre: string; slug: string; logo_url: string | null; color: string; rubro: string; pais: string };
   programa: ProgramaSellos;
   activa: boolean;
+  // Premios del catálogo (vacío si el dueño lo apagó o su plan no lo incluye).
+  catalogo?: PremioCatalogo[];
 };
 
 // El cliente se une con su nombre y teléfono. Si en este celular ya tiene la tarjeta del local, va directo a ella
@@ -129,6 +131,43 @@ export function Unirse({
                 ? "Empiezas con 1 sello de regalo"
                 : `Empiezas con ${p.bienvenida} sellos de regalo`}
           </p>
+        )}
+
+        {(datos.catalogo ?? []).length > 0 && (
+          <section className="w-full">
+            <h2 className="text-sm font-semibold">Premios que puedes ganar</h2>
+            <p className="mb-2 text-xs text-suave">
+              {p.tipo === "puntos"
+                ? `Canjéalos con tus ${p.nombre_puntos}.`
+                : `Al completar tu tarjeta eliges uno de estos o ${p.premio.charAt(0).toLowerCase() + p.premio.slice(1)}.`}
+            </p>
+            <ul className="sin-barra -mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1">
+              {(datos.catalogo ?? []).map((c) => (
+                <li
+                  key={c.id}
+                  className={`w-32 shrink-0 snap-start overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 ${c.agotado ? "opacity-50" : ""}`}
+                >
+                  <div className="aspect-square bg-stone-50">
+                    {c.imagen_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={c.imagen_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-4xl">🎁</div>
+                    )}
+                  </div>
+                  <div className="p-2">
+                    <p className="text-xs font-semibold leading-tight">{c.titulo}</p>
+                    {p.tipo === "puntos" && (
+                      <p className="mt-0.5 text-[11px] font-bold" style={{ color: p.color }}>
+                        {c.puntos.toLocaleString("es-CL")} {p.nombre_puntos}
+                      </p>
+                    )}
+                    {c.agotado && <p className="text-[11px] text-suave">Agotado</p>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         <form onSubmit={unirse} className="tarjeta w-full space-y-4 p-5">

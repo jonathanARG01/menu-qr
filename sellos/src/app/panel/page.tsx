@@ -14,7 +14,7 @@ export default async function PaginaClientes() {
       .order("ultima_at", { ascending: false, nullsFirst: false })
       .limit(5000),
     supabase.rpc("pide_pin", { p_negocio: negocio.id }),
-    programa.tipo === "puntos" && incluye("puntos")
+    (programa.tipo === "puntos" && incluye("puntos")) || (programa.mostrar_catalogo !== false && incluye("premios"))
       ? supabase.from("premios").select("*").eq("negocio_id", negocio.id).eq("activo", true).order("puntos")
       : Promise.resolve({ data: [] }),
     gestor && incluye("cupones") ? supabase.from("cupones").select("*").eq("negocio_id", negocio.id).eq("activo", true) : Promise.resolve({ data: [] }),
