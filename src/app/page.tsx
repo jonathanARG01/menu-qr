@@ -8,6 +8,7 @@ import { PreciosPlanes } from "@/components/inicio/Precios";
 import { SCRIPT_TEMA_SITIO } from "@/components/inicio/tema";
 import { FormContacto } from "@/components/inicio/Contacto";
 import { VitrinaLoyalty } from "@/components/inicio/Loyalty";
+import { EscenaRecorrido } from "@/components/inicio/Recorrido";
 import { NOMBRE_SELLOS, PRECIO_SELLOS } from "@/lib/sellos/tipos";
 import { createPublicClient } from "@/lib/supabase/server";
 import { leerAjustesSitio, REDES_SITIO, type AjustesSitio } from "@/lib/sitio";
@@ -408,7 +409,7 @@ function Ilustracion({ src, alt, className = "" }: { src: string; alt: string; c
   return <Image src={src} alt={alt} width={800} height={600} className={`h-auto w-full object-contain ${className}`} />;
 }
 
-// Recorrido por el sistema con capturas reales, alternando imagen y texto.
+// Recorrido por el sistema: cada paso con su maqueta animada (se reproduce sola al verla y se puede tocar).
 function Recorrido() {
   return (
     <section className="py-24 lg:py-32">
@@ -417,52 +418,54 @@ function Recorrido() {
           etiqueta="El sistema por dentro"
           titulo="Así se ve un servicio"
           acento="con Platovi."
-          texto="Capturas reales del sistema, desde que el cliente pide hasta que paga."
+          texto="Míralo en movimiento: desde que el cliente pide hasta que paga y vuelve. Toca cada escena para verla de nuevo."
         />
-        <div className="mt-20 space-y-28">
+        <div className="mt-20 space-y-28 lg:space-y-36">
           {RECORRIDO.map((r, i) => {
-            const vertical = r.alto > r.ancho;
             const par = i % 2 === 1;
+            const texto = (
+              <>
+                <p className="font-marca text-sm font-bold text-sitio-oro-texto">
+                  {String(i + 1).padStart(2, "0")} <span className="mx-2 text-sitio-suave/60">/</span>
+                  <span className="uppercase tracking-[0.2em]">{r.etiqueta}</span>
+                </p>
+                <h3 className="mt-3 font-marca text-2xl font-bold tracking-tight text-balance sm:text-3xl">{r.titulo}</h3>
+                <p className="mt-4 text-lg text-sitio-suave">{r.texto}</p>
+                <ul className={`mt-7 flex flex-wrap gap-2 ${r.ancho ? "lg:justify-center" : ""}`}>
+                  {r.puntos.map((pt) => (
+                    <li key={pt} className="vidrio flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm">
+                      <Icono nombre="check" className="h-3.5 w-3.5 shrink-0 text-sitio-oro" />
+                      {pt}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            );
+            if (r.ancho) {
+              return (
+                <div key={r.titulo}>
+                  <div data-revelar="" className="mx-auto max-w-3xl lg:text-center">
+                    {texto}
+                  </div>
+                  <div data-revelar="zoom" style={retraso(120)} className="relative mt-12">
+                    <div aria-hidden className="absolute inset-[8%] rounded-full bg-sitio-oro/20 blur-3xl" />
+                    <div className="relative" data-escena={r.escena}>
+                      <EscenaRecorrido id={r.escena} />
+                    </div>
+                  </div>
+                </div>
+              );
+            }
             return (
               <div key={r.titulo} className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
                 <div data-revelar={par ? "derecha" : "izquierda"} className={`min-w-0 ${par ? "lg:order-2" : ""}`}>
-                  <p className="font-marca text-sm font-bold text-sitio-oro-texto">
-                    {String(i + 1).padStart(2, "0")} <span className="mx-2 text-sitio-suave/60">/</span>
-                    <span className="uppercase tracking-[0.2em]">{r.etiqueta}</span>
-                  </p>
-                  <h3 className="mt-3 font-marca text-2xl font-bold tracking-tight text-balance sm:text-3xl">{r.titulo}</h3>
-                  <p className="mt-4 text-lg text-sitio-suave">{r.texto}</p>
-                  <ul className="mt-7 flex flex-wrap gap-2">
-                    {r.puntos.map((pt) => (
-                      <li key={pt} className="vidrio flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm">
-                        <Icono nombre="check" className="h-3.5 w-3.5 shrink-0 text-sitio-oro" />
-                        {pt}
-                      </li>
-                    ))}
-                  </ul>
+                  {texto}
                 </div>
-                <div data-revelar="zoom" style={retraso(120)} className={`relative flex min-w-0 justify-center ${par ? "lg:order-1" : ""}`}>
+                <div data-revelar="zoom" style={retraso(120)} className={`relative min-w-0 ${par ? "lg:order-1" : ""}`}>
                   <div aria-hidden className="absolute inset-[10%] rounded-full bg-sitio-oro/25 blur-3xl" />
-                  <div className={`vidrio relative rounded-[1.9rem] p-2 ${vertical ? "w-full max-w-72" : "w-full"}`}>
-                    <Image
-                      src={r.imagen}
-                      alt={r.alt}
-                      width={r.ancho}
-                      height={r.alto}
-                      className="h-auto w-full rounded-[1.5rem] shadow-2xl shadow-black/40"
-                    />
+                  <div className="relative" data-escena={r.escena}>
+                    <EscenaRecorrido id={r.escena} />
                   </div>
-                  {r.movil && (
-                    <div className="flotar absolute -right-2 bottom-8 hidden w-44 sm:block lg:right-2" style={retraso(-1500)}>
-                      <Image
-                        src={r.movil}
-                        alt="Aviso al cliente: tu pedido está listo"
-                        width={390}
-                        height={844}
-                        className="h-auto w-full rounded-2xl shadow-2xl shadow-black/60 ring-1 ring-white/15"
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
             );

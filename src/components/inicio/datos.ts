@@ -1,3 +1,4 @@
+import type { IdEscena } from "./Recorrido";
 // Contenido del sitio de venta. Los precios, testimonios y preguntas se cambian aquí, sin tocar el diseño.
 
 export const MONEDA = "CLP";
@@ -112,57 +113,50 @@ export const PASOS: [string, string][] = [
 ];
 
 // Recorrido por el sistema con capturas reales (en public/inicio).
-export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; puntos: string[]; imagen: string; alto: number; ancho: number; alt: string; movil?: string }[] = [
+// Recorrido "Así se ve un servicio": cada paso tiene su maqueta animada en Recorrido.tsx (escena).
+export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; puntos: string[]; escena: IdEscena; ancho?: boolean }[] = [
   {
     etiqueta: "En la mesa",
     titulo: "El cliente pide desde su celular",
-    texto: "Escanea el QR, elige en la carta y envía el pedido con su número de mesa. Después le avisamos cuando la cocina empieza y cuando está listo.",
+    texto: "Escanea el QR, elige en la carta y envía el pedido con su número de mesa. Si necesita algo, llama al mesero o pide la cuenta con un toque.",
     puntos: ["Carta en su idioma", "Notas para la cocina", "Llamar al mesero o pedir la cuenta"],
-    imagen: "/inicio/pedido-movil.webp",
-    ancho: 600,
-    alto: 1298,
-    alt: "Carrito de pedido en el celular del cliente, listo para enviar a la mesa 15",
-    movil: "/inicio/aviso-listo.webp",
+    escena: "pedido",
   },
   {
     etiqueta: "Salón",
     titulo: "Todo tu local en una pantalla",
-    texto: "Dibuja el salón con sus pisos, barra y pasillos. Cada mesa cambia de color cuando se ocupa, tiene un pedido listo o pide la cuenta, y los avisos aparecen al costado.",
-    puntos: ["Vista simple, a color o en 3D", "Pantalla completa para el mostrador", "Avisos con sonido distinto para cada caso"],
-    imagen: "/inicio/salon-3d.webp",
-    ancho: 1440,
-    alto: 1000,
-    alt: "Panel de Platovi con el plano 3D del salón, las mesas numeradas y el aviso de la mesa 4 que pide la cuenta",
+    texto: "Dibuja el salón con sus pisos, terraza o playa. Cada mesa cambia de color cuando se ocupa, titila cuando llaman al mesero o piden la cuenta, y los avisos aparecen al costado. Elige cómo verlo: simple, a color, en 3D o como maqueta con los comensales sentados.",
+    puntos: ["Vista simple, a color, 3D o maqueta", "Varios pisos, terraza y playa", "Pantalla completa para el mostrador", "Avisos con sonido distinto para cada caso"],
+    escena: "salon",
+    ancho: true,
   },
   {
     etiqueta: "Cocina",
     titulo: "Las comandas llegan solas a la cocina",
-    texto: "Cada estación ve lo suyo: la barra las bebidas, la cocina los platos. Se ordenan arrastrando y con un toque el mesero sabe que está listo para llevar.",
-    puntos: ["Separado por cocina y barra", "Tiempo de espera en cada comanda", "Funciona en cualquier tablet o televisor"],
-    imagen: "/inicio/cocina.webp",
-    ancho: 1440,
-    alto: 900,
-    alt: "Pantalla de cocina en el panel de Platovi con las comandas de las mesas 4 y 1",
+    texto: "Cada estación ve lo suyo: la barra las bebidas, la cocina los platos. Con un toque empiezan a preparar, con otro lo terminan, y al cliente le llega el aviso a su celular.",
+    puntos: ["Separado por cocina y barra", "Tiempo de espera en cada comanda", "Aviso al cliente cuando está listo"],
+    escena: "cocina",
   },
   {
     etiqueta: "Cuenta",
     titulo: "Cobra como quieran pagar",
-    texto: "Todo junto, en partes iguales, cada uno lo suyo o un monto libre. Con propina sugerida, medio de pago por persona y cierre de caja al final del turno.",
-    puntos: ["Cuenta dividida en segundos", "Propina en porcentaje o monto", "Cobro online con Mercado Pago"],
-    imagen: "/inicio/cobro.webp",
-    ancho: 512,
-    alto: 900,
-    alt: "Cuenta de la mesa 4 dividida en seis partes iguales",
+    texto: "El mesero toca Cobrar y elige: todo junto, en partes iguales, cada uno lo suyo o un monto libre. Con propina sugerida, medio de pago por persona y cierre de caja al final del turno.",
+    puntos: ["Cuenta dividida en segundos", "Propina en porcentaje o monto", "Efectivo, tarjetas o transferencia"],
+    escena: "cobro",
+  },
+  {
+    etiqueta: "Vuelven",
+    titulo: "Y el cliente vuelve",
+    texto: "Con Platovi Loyalty, el cliente escanea el QR de su precuenta y suma un sello en su tarjeta digital. Después lo invitamos a dejar una reseña y, si deja de venir, le llega un recordatorio.",
+    puntos: ["Tarjeta de sellos sin descargar nada", "Reseñas en Google", "Campañas para que vuelvan"],
+    escena: "loyalty",
   },
   {
     etiqueta: "A tu medida",
-    titulo: "Activa solo lo que usas",
-    texto: "Un café chico no necesita lo mismo que un restaurante de dos pisos. Enciende o apaga cada parte del sistema y decide qué ve cada persona del equipo.",
-    puntos: ["Solo carta, local chico o restaurante completo", "Roles para mesero, cocina y administración", "Se cambia cuando quieras"],
-    imagen: "/inicio/personalizar.webp",
-    ancho: 1440,
-    alto: 900,
-    alt: "Pantalla Personalizar del panel con los módulos del sistema encendidos",
+    titulo: "Tu carta, tu estilo, tu forma de trabajar",
+    texto: "Elige entre decenas de diseños, pon tus colores y tu logo, ofrece la carta en idiomas para turistas y enciende solo los módulos que usas. Todo se cambia cuando quieras y se ve al instante.",
+    puntos: ["Decenas de diseños, nuevos cada mes", "Tus colores y tu logo", "Activa solo lo que usas"],
+    escena: "personalizar",
   },
 ];
 
