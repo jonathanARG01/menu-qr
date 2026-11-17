@@ -22,7 +22,7 @@ const ejemplo = (rubro: IdRubro, diseno: DisenoSello, extra: Partial<ProgramaSel
 
 const MUESTRAS: { rubro: IdRubro; local: string; diseno: DisenoSello; sellos: number; nombre: string }[] = [
   { rubro: "barberia", local: "Barbería Don Pepe", diseno: "dorada", sellos: 4, nombre: "Matías" },
-  { rubro: "padel", local: "Pádel Club Viña", diseno: "holografica", sellos: 7, nombre: "Camila" },
+  { rubro: "padel", local: "Pádel Club Viña", diseno: "holografica", sellos: 7, nombre: "Elizabeth" },
   { rubro: "unas", local: "Nails Studio", diseno: "cristal", sellos: 3, nombre: "Fernanda" },
 ];
 
@@ -142,7 +142,7 @@ export default function Inicio() {
                 </div>
               ))}
             </div>
-            <Aviso className="-left-2 top-6 sm:-left-10" icono="✅" titulo="+1 sello para Camila" texto="Pádel Club Viña · recién" />
+            <Aviso className="-left-2 top-6 sm:-left-10" icono="✅" titulo="+1 sello para Elizabeth" texto="Pádel Club Viña · recién" />
             <Aviso className="-right-2 bottom-10 sm:-right-8" style={retraso(1500)} icono="🎁" titulo="¡Premio listo!" texto="Matías completó su tarjeta" />
           </div>
         </div>

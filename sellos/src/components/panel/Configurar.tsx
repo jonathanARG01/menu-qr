@@ -559,7 +559,7 @@ export function Configurar({
                       sellos={Math.min(p.meta, 10) - 3}
                       puntos={1250}
                       proximo={{ titulo: "Tu premio", puntos: 2000 }}
-                      nombre="Camila"
+                      nombre="Elizabeth"
                     />
                   </span>
                 </span>
@@ -635,7 +635,7 @@ export function Configurar({
               puntos={1250}
               proximo={{ titulo: "Un café de regalo", puntos: 2000 }}
               nivel={p.niveles[0]?.nombre}
-              nombre="Camila"
+              nombre="Elizabeth"
             />
           </Inclinable>
         </div>
