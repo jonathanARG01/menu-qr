@@ -69,7 +69,8 @@ export function numeroWhatsapp(telefono: string, pais = "CL") {
   return d;
 }
 
-export async function comprimirImagen(archivo: File, ladoMax = 800, calidad = 0.85): Promise<Blob> {
+// Achica la imagen (y si se pide, la difumina un poco) y la deja en WebP. "difuminado" va de 0 (nada) a 20.
+export async function comprimirImagen(archivo: Blob, ladoMax = 800, calidad = 0.85, difuminado = 0): Promise<Blob> {
   const bitmap = await createImageBitmap(archivo);
   const escala = Math.min(1, ladoMax / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
@@ -77,12 +78,36 @@ export async function comprimirImagen(archivo: File, ladoMax = 800, calidad = 0.
   canvas.height = Math.round(bitmap.height * escala);
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("No se pudo procesar la imagen");
-  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  if (difuminado > 0) {
+    // Difuminado que funciona en todos los navegadores: se achica y se vuelve a agrandar suavizando (dos pasadas).
+    const factor = Math.max(1.5, 1 + difuminado * 0.9);
+    const chico = document.createElement("canvas");
+    chico.width = Math.max(8, Math.round(canvas.width / factor));
+    chico.height = Math.max(8, Math.round(canvas.height / factor));
+    const c2 = chico.getContext("2d")!;
+    c2.imageSmoothingQuality = "high";
+    c2.drawImage(bitmap, 0, 0, chico.width, chico.height);
+    ctx.imageSmoothingQuality = "high";
+    // Un margen para que los bordes no queden transparentes.
+    ctx.drawImage(chico, -4, -4, canvas.width + 8, canvas.height + 8);
+    c2.drawImage(canvas, 0, 0, chico.width, chico.height);
+    ctx.drawImage(chico, -2, -2, canvas.width + 4, canvas.height + 4);
+  } else {
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  }
   bitmap.close();
   const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/webp", calidad));
   if (!blob) throw new Error("No se pudo comprimir la imagen");
   return blob;
 }
+
+export const blobADataUrl = (b: Blob) =>
+  new Promise<string>((ok, mal) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result));
+    r.onerror = () => mal(new Error("No se pudo leer la imagen"));
+    r.readAsDataURL(b);
+  });
 
 export function mensajeError(error: unknown) {
   const msg =

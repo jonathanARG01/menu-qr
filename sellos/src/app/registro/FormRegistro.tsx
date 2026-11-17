@@ -1,18 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Aviso } from "@/components/AuthShell";
 import { crearNegocio, type DatosAlta } from "@/lib/alta";
 import { RUBROS, type IdRubro } from "@/lib/rubros";
-import { emojiSello } from "@/lib/tipos";
+import { PROGRAMA_BASE, emojiSello } from "@/lib/tipos";
+import { TarjetaVisual } from "@/components/TarjetaVisual";
+import { guardarDemo, leerDemo, type ConfigDemo } from "@/lib/demo";
 import { mensajeError, slugify, urlSitio } from "@/lib/utils";
 import { DIAS_PRUEBA } from "@/lib/marca";
 
 // Alta de un negocio (30 días gratis) o, con ?invitacion=, de alguien del equipo que se suma a un negocio existente.
-export function FormRegistro({ invitacion, rubroInicial }: { invitacion: string | null; rubroInicial: string | null }) {
+export function FormRegistro({ invitacion, rubroInicial, desdeDemo = false }: { invitacion: string | null; rubroInicial: string | null; desdeDemo?: boolean }) {
   const router = useRouter();
+  // Tarjeta armada en el demo de la página principal: se crea con ese diseño.
+  const [demo, setDemo] = useState<ConfigDemo | null>(null);
+  useEffect(() => {
+    if (!desdeDemo) return;
+    const d = leerDemo();
+    if (!d) return;
+    setDemo(d);
+    if (d.negocio) setNombre(d.negocio);
+    if (d.rubro in RUBROS) setRubro(d.rubro as IdRubro);
+  }, [desdeDemo]);
   const [nombre, setNombre] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTocado, setSlugTocado] = useState(false);
@@ -35,6 +47,8 @@ export function FormRegistro({ invitacion, rubroInicial }: { invitacion: string 
     if (!invitacion && direccion.length < 3) return setError("La dirección debe tener al menos 3 letras o números.");
     setCargando(true);
     setError(null);
+    // El panel aplica el diseño del demo solo al negocio con esta dirección.
+    if (demo) guardarDemo({ ...demo, slug: direccion, negocio: alta.nombre });
     const supabase = createClient();
     const siguiente = invitacion ? `/equipo/${invitacion}` : "/panel";
     const { data, error } = await supabase.auth.signUp({
@@ -76,6 +90,35 @@ export function FormRegistro({ invitacion, rubroInicial }: { invitacion: string 
 
   return (
     <form onSubmit={enviar} className="space-y-4">
+      {demo && !invitacion && (
+        <div className="flex items-center gap-4 rounded-2xl border border-marca/30 bg-marca/5 p-3">
+          <div className="tema-fijo pointer-events-none w-[300px] shrink-0" style={{ zoom: 0.36 }} aria-hidden>
+            <TarjetaVisual
+              local={nombre || demo.negocio || "Tu negocio"}
+              logo={demo.logo}
+              programa={{
+                ...PROGRAMA_BASE,
+                tipo: demo.tipo,
+                nombre_puntos: demo.cashback ? "pesos" : "puntos",
+                meta: demo.meta,
+                premio: demo.premio,
+                color: demo.color,
+                icono: demo.icono,
+                diseno: demo.fondo ? "medida" : demo.diseno,
+                fondo_url: demo.fondo,
+                texto_claro: demo.textoClaro,
+              }}
+              sellos={Math.min(3, demo.meta - 1)}
+              puntos={1350}
+              proximo={{ titulo: demo.premio, puntos: 2000 }}
+            />
+          </div>
+          <p className="text-sm">
+            <b className="block">Tu tarjeta del demo</b>
+            <span className="text-suave">Al crear la cuenta queda lista con este diseño{demo.logo ? ", tu logo" : ""}{demo.fondo ? " y tu foto" : ""}.</span>
+          </p>
+        </div>
+      )}
       {!invitacion && (
         <>
           <div>
@@ -103,7 +146,7 @@ export function FormRegistro({ invitacion, rubroInicial }: { invitacion: string 
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-suave">
+            <p className={`mt-1 text-xs text-suave ${demo ? "hidden" : ""}`}>
               Tu tarjeta parte con {RUBROS[rubro].meta} sellos = {RUBROS[rubro].premio}. Lo cambias cuando quieras.
             </p>
           </div>

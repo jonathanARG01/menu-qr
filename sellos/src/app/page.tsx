@@ -4,6 +4,7 @@ import { TarjetaVisual } from "@/components/TarjetaVisual";
 import { Etiqueta, SitioClub, Titulo, retraso } from "@/components/sitio/Marco";
 import { PreciosPlanes } from "@/components/sitio/Precios";
 import { FormContacto } from "@/components/sitio/Contacto";
+import { BotonDemo } from "@/components/sitio/Demo";
 import { DIAS_PRUEBA, EN_TODOS, MARCA, enlaceWhatsapp } from "@/lib/marca";
 import { RUBROS, type IdRubro } from "@/lib/rubros";
 import { PROGRAMA_BASE, emojiSello, type DisenoSello, type ProgramaSellos } from "@/lib/tipos";
@@ -118,9 +119,7 @@ export default function Inicio() {
               <Link href="/registro" className="boton-jade px-6 py-3.5 text-base">
                 Crear mi tarjeta gratis <span className="flecha">→</span>
               </Link>
-              <a href={wa} target="_blank" rel="noopener noreferrer" className="boton-capsula px-6 py-3.5 text-base">
-                Hablar con nosotros
-              </a>
+              <BotonDemo conAncla className="boton-capsula px-6 py-3.5 text-base" />
             </div>
             <p className="entrada-club mt-4 text-sm text-suave" style={retraso(480)}>
               Sin tarjeta de crédito · Lista en 2 minutos · Cancelas cuando quieras
@@ -214,6 +213,12 @@ export default function Inicio() {
               </li>
             ))}
           </ol>
+          <div data-revelar="" className="mt-12 flex flex-col items-center gap-3 text-center">
+            <p className="text-suave">¿Quieres verlo con tu negocio? Arma tu tarjeta en el demo, sin crear cuenta.</p>
+            <BotonDemo className="boton-jade px-6 py-3.5 text-base">
+              Probar el demo con mi negocio <span className="flecha">→</span>
+            </BotonDemo>
+          </div>
         </div>
       </section>
 

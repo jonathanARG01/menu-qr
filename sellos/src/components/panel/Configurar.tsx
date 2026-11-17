@@ -54,6 +54,7 @@ export function Configurar({
   const [p, setP] = useState<ProgramaSellos>(programa);
   const [guardando, setGuardando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
+  const [difuminado, setDifuminado] = useState(0);
   const puntos = p.tipo === "puntos";
   const cashback = puntos && p.nombre_puntos === "pesos";
   const textoRegalo = (n: number) =>
@@ -63,7 +64,7 @@ export function Configurar({
     if (!archivo) return;
     setSubiendo(true);
     try {
-      const url = await subirImagen(supabase, negocio.id, archivo, "fondo", 1400);
+      const url = await subirImagen(supabase, negocio.id, archivo, "fondo", 1400, difuminado);
       cambiar({ fondo_url: url, diseno: "medida" });
       avisar("Imagen lista. Guarda los cambios para usarla.");
     } catch (e) {
@@ -508,12 +509,21 @@ export function Configurar({
           <div className="rounded-2xl border border-marca/30 bg-marca/5 p-4 text-sm">
             <p className="font-semibold">Diseño a medida de tu negocio</p>
             <p className="mt-1 text-suave">
-              Sube una foto de tu local o tu arte, o pídenos que la diseñemos por ti (incluido en tu plan, sin costo extra).
+              Sube una foto de tu local o tu arte (puedes difuminarla un poco para que se lean bien los sellos), o pídenos que la diseñemos por ti (incluido en tu plan, sin costo extra).
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <label className="boton-secundario cursor-pointer py-1.5">
                 {subiendo ? "Subiendo…" : p.fondo_url ? "Cambiar imagen" : "Subir imagen de fondo"}
                 <input type="file" accept="image/*" className="sr-only" disabled={subiendo} onChange={(e) => subirFondo(e.target.files?.[0])} />
+              </label>
+              <label className="flex items-center gap-2 text-sm" title="Se aplica al subir la imagen">
+                <span className="text-suave">Difuminar</span>
+                <select value={difuminado} onChange={(e) => setDifuminado(Number(e.target.value))} className="campo w-auto py-1.5 text-sm">
+                  <option value={0}>Nada</option>
+                  <option value={3}>Un poco</option>
+                  <option value={7}>Medio</option>
+                  <option value={12}>Bastante</option>
+                </select>
               </label>
               <a
                 href={enlaceWhatsapp(`Hola, quiero que me diseñen la tarjeta a medida para ${negocio.nombre} (${negocio.slug}).`)}

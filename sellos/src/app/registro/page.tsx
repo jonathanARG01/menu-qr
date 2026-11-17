@@ -5,10 +5,10 @@ import { FormRegistro } from "./FormRegistro";
 
 export const metadata = { title: "Prueba gratis" };
 
-type Props = { searchParams: Promise<{ invitacion?: string; rubro?: string }> };
+type Props = { searchParams: Promise<{ invitacion?: string; rubro?: string; demo?: string }> };
 
 export default async function PaginaRegistro({ searchParams }: Props) {
-  const { invitacion, rubro } = await searchParams;
+  const { invitacion, rubro, demo } = await searchParams;
   return (
     <AuthShell
       titulo={invitacion ? "Crea tu cuenta del equipo" : "Crea tu tarjeta de sellos"}
@@ -22,7 +22,7 @@ export default async function PaginaRegistro({ searchParams }: Props) {
       }
     >
       <Suspense>
-        <FormRegistro invitacion={invitacion ?? null} rubroInicial={rubro ?? null} />
+        <FormRegistro invitacion={invitacion ?? null} rubroInicial={rubro ?? null} desdeDemo={demo === "1" && !invitacion} />
       </Suspense>
     </AuthShell>
   );
