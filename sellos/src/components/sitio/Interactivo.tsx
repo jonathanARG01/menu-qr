@@ -119,7 +119,7 @@ export function MenuMovil({ enlaces }: { enlaces: [string, string][] }) {
           <Link href="/entrar" className="rounded-2xl px-4 py-2.5 text-tinta transition hover:bg-club-vidrio">
             Entrar
           </Link>
-          <Link href="/registro" className="boton-jade mt-1">
+          <Link href="/registro" className="boton-oro mt-1">
             Crear cuenta gratis
           </Link>
         </nav>

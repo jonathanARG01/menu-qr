@@ -31,11 +31,11 @@ export function PreciosPlanes() {
                 role="radio"
                 aria-checked={activo}
                 onClick={() => setMeses(p.meses)}
-                className={`rounded-full px-4 py-2.5 text-sm font-semibold transition duration-300 ${activo ? "text-[#04201a] shadow-lg shadow-black/15" : "text-suave hover:text-tinta"}`}
-                style={activo ? { background: "var(--jade-degradado)" } : undefined}
+                className={`rounded-full px-4 py-2.5 text-sm font-semibold transition duration-300 ${activo ? "text-[#1a1408] shadow-lg shadow-black/15" : "text-suave hover:text-tinta"}`}
+                style={activo ? { background: "var(--oro-degradado)" } : undefined}
               >
                 {p.nombre}
-                {p.descuento > 0 && <span className={`ml-1.5 ${activo ? "text-[#04201a]/70" : "text-club-coral"}`}>−{p.descuento}%</span>}
+                {p.descuento > 0 && <span className={`ml-1.5 ${activo ? "text-[#1a1408]/70" : "text-club-bronce"}`}>−{p.descuento}%</span>}
               </button>
             );
           })}
@@ -56,34 +56,27 @@ export function PreciosPlanes() {
             <div key={id} data-revelar="" style={{ "--retraso": `${i * 110}ms` } as React.CSSProperties}>
               <div
                 className={`tarjeta-club relative flex h-full flex-col rounded-[2rem] p-7 ${
-                  destacado ? "borde-jade shadow-[0_30px_80px_-30px_rgb(16_163_131/0.45)] lg:-my-4 lg:py-11" : ""
+                  destacado ? "marco-oro pt-12 lg:-my-4 lg:pb-11 lg:pt-14" : ""
                 }`}
               >
-                {destacado && (
-                  <span
-                    className="absolute -top-3.5 left-7 rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[#2a0d05] shadow-lg shadow-black/15"
-                    style={{ background: "var(--coral-degradado)" }}
-                  >
-                    El más elegido
-                  </span>
-                )}
+                {destacado && <span className="pestana-oro">El más elegido</span>}
                 <h3 className="text-2xl font-bold">{p.nombre}</h3>
                 <p className="mt-1 min-h-10 text-sm text-suave">{p.detalle}</p>
                 <p key={periodo.meses} className="aparecer-club mt-6 flex flex-wrap items-baseline gap-x-2">
-                  <span className={`font-titulo text-5xl font-bold tracking-tight tabular-nums ${destacado ? "texto-jade" : ""}`}>{clp(mensual)}</span>
+                  <span className={`font-titulo text-5xl font-bold tracking-tight tabular-nums ${destacado ? "texto-oro" : ""}`}>{clp(mensual)}</span>
                   <span className="text-suave">/mes + IVA</span>
                   {periodo.descuento > 0 && <span className="text-suave tabular-nums line-through">{clp(p.precio)}</span>}
                 </p>
                 <p className="mt-1 h-5 text-sm text-suave tabular-nums">
                   {periodo.meses > 1 && `${clp(mensual * periodo.meses)} + IVA cada ${periodo.meses} meses`}
                 </p>
-                <Link href="/registro" className={`mt-7 w-full shrink-0 ${destacado ? "boton-jade" : "boton-capsula"}`}>
+                <Link href="/registro" className={`mt-7 w-full shrink-0 ${destacado ? "boton-oro" : "boton-capsula"}`}>
                   Probar gratis <span className="flecha">→</span>
                 </Link>
                 <ul className="mt-7 flex-1 space-y-2.5 border-t border-borde pt-6 text-sm">
                   {p.incluye.map((item) => (
                     <li key={item} className="flex gap-2">
-                      <Icono nombre="check" className="mt-0.5 h-4 w-4 shrink-0 text-club-jade" />
+                      <Icono nombre="check" className="mt-0.5 h-4 w-4 shrink-0 text-club-oro" />
                       {item}
                     </li>
                   ))}

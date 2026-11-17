@@ -18,7 +18,7 @@ import { blobADataUrl, comprimirImagen, slugify, urlSitio } from "@/lib/utils";
 
 const PASOS = ["Tu panel", "Tipo", "Diseño", "Avisos", "Pruébala", "¡Lista!"] as const;
 
-const COLORES = ["#0f9f80", "#e2492d", "#1f2937", "#6d28d9", "#be185d", "#0e7490", "#b45309", "#23345c"];
+const COLORES = ["#b38a2e", "#141414", "#7a1f2b", "#1f3a5f", "#2f5d50", "#6d28d9", "#be185d", "#b45309"];
 const DISENOS: DisenoSello[] = ["clasica", "aurora", "cristal", "neon", "premium", "dorada", "pizarra", "editorial", "pop", "holografica"];
 
 const INICIAL: ConfigDemo = {
@@ -28,7 +28,7 @@ const INICIAL: ConfigDemo = {
   cashback: false,
   meta: 8,
   premio: RUBROS.cafe.premio,
-  color: "#0f9f80",
+  color: "#b38a2e",
   icono: RUBROS.cafe.icono,
   diseno: "aurora",
   textoClaro: true,
@@ -178,7 +178,7 @@ function Demo({ cerrar }: { cerrar: () => void }) {
     router.push(`/registro?${q}`);
   }
 
-  const qr = useMemo(() => qrSvg(`${urlSitio()}/u/${slugify(c.negocio) || "tu-negocio"}`, { logo: null, color: "#0a2420" }), [c.negocio]);
+  const qr = useMemo(() => qrSvg(`${urlSitio()}/u/${slugify(c.negocio) || "tu-negocio"}`, { logo: null, color: "#141414" }), [c.negocio]);
   const ultimo = paso === PASOS.length - 1;
 
   return (
@@ -200,7 +200,7 @@ function Demo({ cerrar }: { cerrar: () => void }) {
             <span className="hidden sm:inline">Así funciona </span>
             {MARCA}
           </p>
-          <span className="shrink-0 whitespace-nowrap rounded-full bg-club-jade/15 px-2.5 py-0.5 text-xs font-semibold text-club-jade-texto">
+          <span className="shrink-0 whitespace-nowrap rounded-full bg-club-oro/15 px-2.5 py-0.5 text-xs font-semibold text-club-oro-texto">
             Paso {paso + 1} de {PASOS.length}
           </span>
           <button type="button" onClick={cerrar} aria-label="Cerrar demo" className="ml-auto grid h-10 w-10 place-items-center rounded-full text-suave transition hover:bg-club-vidrio hover:text-tinta">
@@ -215,11 +215,11 @@ function Demo({ cerrar }: { cerrar: () => void }) {
               onClick={() => setPaso(i)}
               aria-current={i === paso ? "step" : undefined}
               className={`flex flex-1 items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition ${
-                i === paso ? "text-[#04201a]" : i < paso ? "text-club-jade-texto hover:bg-club-vidrio" : "text-suave hover:bg-club-vidrio"
+                i === paso ? "text-[#1a1408]" : i < paso ? "text-club-oro-texto hover:bg-club-vidrio" : "text-suave hover:bg-club-vidrio"
               }`}
-              style={i === paso ? { background: "var(--jade-degradado)" } : undefined}
+              style={i === paso ? { background: "var(--oro-degradado)" } : undefined}
             >
-              <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] ${i === paso ? "bg-white/40" : i < paso ? "bg-club-jade/20" : "border border-borde"}`}>
+              <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] ${i === paso ? "bg-white/40" : i < paso ? "bg-club-oro/20" : "border border-borde"}`}>
                 {i < paso ? "✓" : i + 1}
               </span>
               {t}
@@ -227,7 +227,7 @@ function Demo({ cerrar }: { cerrar: () => void }) {
           ))}
         </nav>
         <div aria-hidden className="relative mx-5 mt-3 h-1 overflow-hidden rounded-full bg-club-vidrio md:hidden">
-          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${((paso + 1) / PASOS.length) * 100}%`, background: "var(--jade-degradado)" }} />
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${((paso + 1) / PASOS.length) * 100}%`, background: "var(--oro-degradado)" }} />
         </div>
 
         {/* Cuerpo de cada paso */}
@@ -249,10 +249,10 @@ function Demo({ cerrar }: { cerrar: () => void }) {
                   <button
                     type="button"
                     onClick={() => setPaso(1)}
-                    className="group grid h-[200px] w-[260px] max-w-full place-items-center rounded-3xl border-2 border-dashed border-club-jade/50 bg-club-jade/5 text-club-jade-texto transition hover:border-club-jade hover:bg-club-jade/10"
+                    className="group grid h-[200px] w-[260px] max-w-full place-items-center rounded-3xl border-2 border-dashed border-club-oro/50 bg-club-oro/5 text-club-oro-texto transition hover:border-club-oro hover:bg-club-oro/10"
                   >
                     <span className="flex flex-col items-center gap-3 font-semibold">
-                      <span className="grid h-14 w-14 place-items-center rounded-full text-2xl text-[#04201a] shadow-lg transition group-hover:scale-110" style={{ background: "var(--jade-degradado)" }}>
+                      <span className="grid h-14 w-14 place-items-center rounded-full text-2xl text-[#1a1408] shadow-lg transition group-hover:scale-110" style={{ background: "var(--oro-degradado)" }}>
                         +
                       </span>
                       Crear mi tarjeta
@@ -296,14 +296,14 @@ function Demo({ cerrar }: { cerrar: () => void }) {
                         type="button"
                         onClick={() => cambiar({ tipo, cashback: cb })}
                         aria-pressed={activo}
-                        className={`tarjeta-club relative p-5 text-left ${activo ? "borde-jade shadow-[0_20px_50px_-25px_rgb(16_163_131/0.6)]" : ""}`}
+                        className={`tarjeta-club relative p-5 text-left ${activo ? "borde-oro shadow-[0_20px_50px_-25px_rgb(184_145_47/0.6)]" : ""}`}
                       >
                         {activo && (
-                          <span className="absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full text-xs font-bold text-[#04201a]" style={{ background: "var(--jade-degradado)" }}>
+                          <span className="absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full text-xs font-bold text-[#1a1408]" style={{ background: "var(--oro-degradado)" }}>
                             ✓
                           </span>
                         )}
-                        <span className="icono-club h-12 w-12 text-2xl" aria-hidden>
+                        <span className="anillo-oro h-12 w-12 text-2xl" aria-hidden>
                           {icono}
                         </span>
                         <span className="mt-4 block font-titulo text-lg font-bold">{t}</span>
@@ -321,9 +321,9 @@ function Demo({ cerrar }: { cerrar: () => void }) {
                       onClick={() => elegirRubro(r)}
                       aria-pressed={c.rubro === r}
                       className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
-                        c.rubro === r ? "border-transparent font-semibold text-[#04201a]" : "border-borde bg-club-vidrio hover:border-club-jade/60"
+                        c.rubro === r ? "border-transparent font-semibold text-[#1a1408]" : "border-borde bg-club-vidrio hover:border-club-oro/60"
                       }`}
-                      style={c.rubro === r ? { background: "var(--jade-degradado)" } : undefined}
+                      style={c.rubro === r ? { background: "var(--oro-degradado)" } : undefined}
                     >
                       {emojiSello(RUBROS[r].icono)} {RUBROS[r].nombre}
                     </button>
@@ -363,7 +363,7 @@ function Demo({ cerrar }: { cerrar: () => void }) {
                             <span className="font-medium">Difuminado de la foto</span>
                             <span className="text-suave">{c.difuminado === 0 ? "Nítida" : c.difuminado < 6 ? "Suave" : c.difuminado < 12 ? "Medio" : "Fuerte"}</span>
                           </span>
-                          <input type="range" min={0} max={18} value={c.difuminado} onChange={(e) => cambiar({ difuminado: Number(e.target.value) })} className="mt-2 w-full accent-[var(--club-jade)]" />
+                          <input type="range" min={0} max={18} value={c.difuminado} onChange={(e) => cambiar({ difuminado: Number(e.target.value) })} className="mt-2 w-full accent-[var(--club-oro)]" />
                         </label>
                         <Interruptor activo={c.textoClaro} cambiar={(v) => cambiar({ textoClaro: v })} texto="Letras blancas" />
                       </div>
@@ -394,7 +394,7 @@ function Demo({ cerrar }: { cerrar: () => void }) {
                             cambiar({ meta: m });
                             setSellos((s) => Math.min(s, m - 1));
                           }}
-                          className="mt-2 w-full accent-[var(--club-jade)]"
+                          className="mt-2 w-full accent-[var(--club-oro)]"
                         />
                       </label>
                     )}
@@ -408,7 +408,7 @@ function Demo({ cerrar }: { cerrar: () => void }) {
                             onClick={() => cambiar({ color: col })}
                             aria-label={`Color ${col}`}
                             aria-pressed={c.color === col}
-                            className={`h-9 w-9 rounded-full transition hover:scale-110 ${c.color === col ? "ring-2 ring-club-jade ring-offset-2 ring-offset-[var(--club-fondo)]" : ""}`}
+                            className={`h-9 w-9 rounded-full border border-white/15 transition hover:scale-110 ${c.color === col ? "ring-2 ring-club-oro ring-offset-2 ring-offset-[var(--club-fondo)]" : ""}`}
                             style={{ background: col }}
                           />
                         ))}
@@ -429,9 +429,9 @@ function Demo({ cerrar }: { cerrar: () => void }) {
                               onClick={() => cambiar({ diseno: d })}
                               aria-pressed={c.diseno === d}
                               className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
-                                c.diseno === d ? "border-transparent font-semibold text-[#04201a]" : "border-borde bg-club-vidrio hover:border-club-jade/60"
+                                c.diseno === d ? "border-transparent font-semibold text-[#1a1408]" : "border-borde bg-club-vidrio hover:border-club-oro/60"
                               }`}
-                              style={c.diseno === d ? { background: "var(--jade-degradado)" } : undefined}
+                              style={c.diseno === d ? { background: "var(--oro-degradado)" } : undefined}
                             >
                               {DISENOS_SELLO[d].nombre}
                             </button>
@@ -464,10 +464,10 @@ function Demo({ cerrar }: { cerrar: () => void }) {
                         key={a.id}
                         onClick={() => setAvisoVisto(a.id)}
                         className={`flex cursor-pointer items-center gap-4 rounded-2xl border p-4 transition ${
-                          avisoVisto === a.id ? "border-club-jade/60 bg-club-jade/10" : "border-borde bg-club-vidrio hover:border-club-jade/40"
+                          avisoVisto === a.id ? "border-club-oro/60 bg-club-oro/10" : "border-borde bg-club-vidrio hover:border-club-oro/40"
                         }`}
                       >
-                        <span className="icono-club h-11 w-11 shrink-0 text-xl" aria-hidden>
+                        <span className="anillo-oro h-11 w-11 shrink-0 text-xl" aria-hidden>
                           {a.icono}
                         </span>
                         <span className="min-w-0 flex-1">
@@ -528,7 +528,7 @@ function Demo({ cerrar }: { cerrar: () => void }) {
                         <Vista c={c} sellos={sellos} puntos={puntos} animar={animar} />
                       </div>
                       {completa && (
-                        <div className="aparecer-club mt-3 rounded-2xl p-3 text-center text-sm font-semibold text-[#04201a]" style={{ background: "var(--jade-degradado)" }}>
+                        <div className="aparecer-club mt-3 rounded-2xl p-3 text-center text-sm font-semibold text-[#1a1408]" style={{ background: "var(--oro-degradado)" }}>
                           🎉 ¡Premio listo! {c.premio}
                         </div>
                       )}
@@ -539,10 +539,10 @@ function Demo({ cerrar }: { cerrar: () => void }) {
                       <p className="text-sm text-suave">{c.tipo === "puntos" ? (c.cashback ? "Saldo de Elizabeth" : "Puntos de Elizabeth") : "Sellos de Elizabeth"}</p>
                       <p className="mt-1 font-titulo text-5xl font-bold tabular-nums">
                         {c.tipo === "puntos" ? (
-                          <span className="texto-jade">{c.cashback ? `$${puntos.toLocaleString("es-CL")}` : puntos.toLocaleString("es-CL")}</span>
+                          <span className="texto-oro">{c.cashback ? `$${puntos.toLocaleString("es-CL")}` : puntos.toLocaleString("es-CL")}</span>
                         ) : (
                           <>
-                            <span className="texto-jade">{sellos}</span>
+                            <span className="texto-oro">{sellos}</span>
                             <span className="text-2xl text-suave"> / {c.meta}</span>
                           </>
                         )}
@@ -556,12 +556,12 @@ function Demo({ cerrar }: { cerrar: () => void }) {
                               setSellos(0);
                               setPuntos(0);
                             }}
-                            className="boton-jade boton-coral px-6 py-3"
+                            className="boton-oro boton-bronce px-6 py-3"
                           >
                             🎁 Canjear premio
                           </button>
                         ) : (
-                          <button type="button" onClick={sumar} className="boton-jade px-6 py-3 text-base">
+                          <button type="button" onClick={sumar} className="boton-oro px-6 py-3 text-base">
                             {c.tipo === "puntos" ? (c.cashback ? "+ Compra de $12.000 (5 %)" : "+ Compra de $12.000") : "+1 sello"}
                           </button>
                         )}
@@ -587,9 +587,9 @@ function Demo({ cerrar }: { cerrar: () => void }) {
                   </div>
                   <div className="mx-auto flex w-full max-w-xs flex-col items-center text-center">
                     <div className="rounded-[1.75rem] border border-borde bg-white p-5 shadow-xl">
-                      <p className="text-xs font-bold uppercase tracking-widest text-[#0a2420]">{c.negocio.trim() || "Tu negocio"}</p>
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#141414]">{c.negocio.trim() || "Tu negocio"}</p>
                       <div className="mx-auto mt-3 w-44" dangerouslySetInnerHTML={{ __html: qr }} />
-                      <p className="mt-3 text-sm font-semibold text-[#0a2420]">Escanea y únete a nuestro club</p>
+                      <p className="mt-3 text-sm font-semibold text-[#141414]">Escanea y únete a nuestro club</p>
                     </div>
                     <p className="mt-4 text-sm text-suave">
                       Tu dirección será <b className="text-tinta">…/u/{slugify(c.negocio) || "tu-negocio"}</b>
@@ -630,15 +630,15 @@ function Demo({ cerrar }: { cerrar: () => void }) {
           )}
           <div className="ml-auto flex items-center gap-2 md:hidden" aria-hidden>
             {PASOS.map((t, i) => (
-              <span key={t} className={`h-1.5 rounded-full transition-all ${i === paso ? "w-5 bg-club-jade" : "w-1.5 bg-borde"}`} />
+              <span key={t} className={`h-1.5 rounded-full transition-all ${i === paso ? "w-5 bg-club-oro" : "w-1.5 bg-borde"}`} />
             ))}
           </div>
           {ultimo ? (
-            <button type="button" onClick={crear} className="boton-jade ml-auto px-5 py-3 text-sm sm:px-6 sm:text-base md:ml-auto">
+            <button type="button" onClick={crear} className="boton-oro ml-auto px-5 py-3 text-sm sm:px-6 sm:text-base md:ml-auto">
               Crear mi tarjeta gratis <span className="flecha">→</span>
             </button>
           ) : (
-            <button type="button" onClick={() => setPaso(paso + 1)} className="boton-jade px-5 py-3 text-sm sm:px-6 sm:text-base md:ml-auto">
+            <button type="button" onClick={() => setPaso(paso + 1)} className="boton-oro px-5 py-3 text-sm sm:px-6 sm:text-base md:ml-auto">
               Siguiente <span className="flecha">→</span>
             </button>
           )}
@@ -678,10 +678,10 @@ function Archivo({
       <span className="mb-1.5 block text-sm text-suave">{etiqueta}</span>
       <div className="flex items-center gap-3 rounded-2xl border border-borde bg-club-vidrio p-2.5">
         <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
-          <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl border border-dashed border-club-jade/50 bg-club-jade/5 text-club-jade-texto">
+          <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl border border-dashed border-club-oro/50 bg-club-oro/5 text-club-oro-texto">
             {imagen ? <img src={imagen} alt="" className={`h-full w-full ${cubrir ? "object-cover" : "bg-white object-contain p-0.5"}`} /> : <Icono nombre="foto" className="h-5 w-5" />}
           </span>
-          <span className={`min-w-0 truncate text-sm ${imagen ? "font-medium text-club-jade-texto" : "text-suave"}`}>
+          <span className={`min-w-0 truncate text-sm ${imagen ? "font-medium text-club-oro-texto" : "text-suave"}`}>
             {imagen ? `✓ ${texto}` : texto}
           </span>
           <input type="file" accept="image/*" className="sr-only" onChange={(e) => onArchivo(e.target.files?.[0])} />
@@ -710,7 +710,7 @@ function Interruptor({ activo, cambiar, texto, oculto = false }: { activo: boole
       className="flex shrink-0 items-center gap-2 text-sm"
     >
       {!oculto && <span>{texto}</span>}
-      <span className={`relative h-7 w-12 rounded-full transition ${activo ? "" : "bg-borde"}`} style={activo ? { background: "var(--jade-degradado)" } : undefined}>
+      <span className={`relative h-7 w-12 rounded-full transition ${activo ? "" : "bg-borde"}`} style={activo ? { background: "var(--oro-degradado)" } : undefined}>
         <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${activo ? "left-6" : "left-1"}`} />
       </span>
     </button>
@@ -725,7 +725,7 @@ function Celular({ children, claro = false }: { children: React.ReactNode; claro
         <div
           className="relative h-[480px] overflow-hidden rounded-[2.25rem]"
           style={{
-            background: claro ? "#f4f6f5" : "radial-gradient(ellipse at 30% 0%, #1d6b58, transparent 60%), radial-gradient(ellipse at 90% 100%, #8a3a26, transparent 60%), #0a1714",
+            background: claro ? "#f4f6f5" : "radial-gradient(ellipse at 30% 0%, #6b5420, transparent 60%), radial-gradient(ellipse at 90% 100%, #3a3a3e, transparent 60%), #0b0b0c",
           }}
         >
           <div aria-hidden className="absolute left-1/2 top-2.5 h-6 w-24 -translate-x-1/2 rounded-full bg-black" />

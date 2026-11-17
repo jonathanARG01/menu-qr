@@ -9,7 +9,7 @@ import { DIAS_PRUEBA, EN_TODOS, MARCA, enlaceWhatsapp } from "@/lib/marca";
 import { RUBROS, type IdRubro } from "@/lib/rubros";
 import { PROGRAMA_BASE, emojiSello, type DisenoSello, type ProgramaSellos } from "@/lib/tipos";
 
-// Página de venta (mismo lenguaje visual que platovi.cl, con la paleta jade y coral de Club de Clientes).
+// Página de venta (mismo lenguaje visual que platovi.cl, en oro, negro y blanco: marcos con pestaña, escudos y anillos dorados).
 
 const ejemplo = (rubro: IdRubro, diseno: DisenoSello, extra: Partial<ProgramaSellos> = {}): ProgramaSellos => ({
   ...PROGRAMA_BASE,
@@ -100,23 +100,23 @@ export default function Inicio() {
       {/* ── Portada ── */}
       <section className="fondo-club relative -mt-[4.25rem] overflow-hidden pb-24 pt-32 sm:pt-36">
         <span aria-hidden className="orbe-club flotar-lento-club left-[2%] top-44 h-14 w-14 opacity-80 max-sm:hidden" />
-        <span aria-hidden className="orbe-club coral orbe-difuso flotar-lento-club bottom-24 right-[42%] h-10 w-10" style={retraso(2500)} />
-        <span aria-hidden className="orbe-club coral flotar-lento-club right-[4%] top-36 h-24 w-24 max-lg:hidden" style={retraso(1200)} />
+        <span aria-hidden className="orbe-club onix orbe-difuso flotar-lento-club bottom-24 right-[42%] h-10 w-10" style={retraso(2500)} />
+        <span aria-hidden className="orbe-club onix flotar-lento-club right-[4%] top-36 h-24 w-24 max-lg:hidden" style={retraso(1200)} />
         <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-[1.1fr_1fr]">
           <div>
             <p className="vidrio-club entrada-club inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold">
-              <span className="h-2 w-2 rounded-full bg-club-jade latido-club" />
+              <span className="h-2 w-2 rounded-full bg-club-oro latido-club" />
               Sellos, puntos y cashback · {DIAS_PRUEBA} días gratis
             </p>
             <h1 className="entrada-club mt-6 text-balance text-5xl font-extrabold leading-[1.02] tracking-tight sm:text-7xl" style={retraso(120)}>
-              Clientes que vuelven, <span className="texto-jade font-acento pr-2 text-[1.08em] font-normal italic">sello a sello.</span>
+              Clientes que vuelven, <span className="texto-oro font-acento pr-2 text-[1.08em] font-normal italic">sello a sello.</span>
             </h1>
             <p className="entrada-club mt-6 max-w-xl text-lg leading-relaxed text-suave" style={retraso(240)}>
               Cambia la tarjeta de cartón por una en el celular de tu cliente: sellos, puntos o cashback, premios, niveles y campañas. Para
               cafés, bares, canchas, peluquerías, hoteles y cualquier negocio, chico o grande.
             </p>
             <div className="entrada-club mt-8 flex flex-wrap gap-3" style={retraso(360)}>
-              <Link href="/registro" className="boton-jade px-6 py-3.5 text-base">
+              <Link href="/registro" className="boton-oro px-6 py-3.5 text-base">
                 Crear mi tarjeta gratis <span className="flecha">→</span>
               </Link>
               <BotonDemo conAncla className="boton-capsula px-6 py-3.5 text-base" />
@@ -156,7 +156,7 @@ export default function Inicio() {
           {CIFRAS.map(([n, unidad, texto], i) => (
             <div key={texto} data-revelar="" style={retraso(i * 90)} className="tarjeta-club p-6 text-center">
               <p className="font-titulo text-4xl font-extrabold tracking-tight sm:text-5xl">
-                <span data-contar={n} className="texto-jade tabular-nums">
+                <span data-contar={n} className="texto-oro tabular-nums">
                   {n}
                 </span>{" "}
                 <span className="text-xl font-semibold text-suave sm:text-2xl">{unidad}</span>
@@ -176,7 +176,7 @@ export default function Inicio() {
                     key={r}
                     href={`/registro?rubro=${r}`}
                     tabIndex={copia ? -1 : undefined}
-                    className="vidrio-club whitespace-nowrap rounded-full px-4 py-2 text-sm transition hover:border-club-jade/60 hover:text-club-jade-texto"
+                    className="vidrio-club whitespace-nowrap rounded-full px-4 py-2 text-sm transition hover:border-club-oro/60 hover:text-club-oro-texto"
                   >
                     {emojiSello(RUBROS[r].icono)} {RUBROS[r].nombre}
                   </Link>
@@ -196,26 +196,43 @@ export default function Inicio() {
               Del cartón al celular,
             </Titulo>
           </div>
-          <ol className="relative mt-16 grid gap-6 md:grid-cols-4">
-            <span aria-hidden className="absolute left-[12%] right-[12%] top-6 hidden h-px md:block" style={{ background: "linear-gradient(90deg, transparent, var(--club-jade), var(--club-coral), transparent)" }} />
+          <ol className="relative mt-16 grid gap-10 sm:grid-cols-2 md:gap-6 lg:grid-cols-4">
+            {/* Conector curvo con puntos dorados entre los pasos */}
+            <svg aria-hidden className="pointer-events-none absolute inset-x-[10%] -top-6 hidden h-16 w-[80%] lg:block" viewBox="0 0 800 60" preserveAspectRatio="none" fill="none">
+              <path d="M0 40 C 130 0, 270 0, 400 30 S 670 60, 800 20" stroke="url(#conector-oro)" strokeWidth="1.5" strokeDasharray="2 6" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              <defs>
+                <linearGradient id="conector-oro" x1="0" x2="1">
+                  <stop offset="0" stopColor="#d4af37" stopOpacity="0" />
+                  <stop offset=".2" stopColor="#d4af37" />
+                  <stop offset=".8" stopColor="#c8a46a" />
+                  <stop offset="1" stopColor="#c8a46a" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+            </svg>
             {PASOS.map(([titulo, texto, icono], i) => (
-              <li key={titulo} data-revelar="" style={retraso(i * 120)} className="relative text-center">
-                <span className="nodo-club latido-club relative mx-auto grid h-12 w-12 place-items-center rounded-full font-titulo text-lg font-bold text-[#04201a]" style={{ background: "var(--jade-degradado)", ...retraso(i * 500) }}>
-                  {i + 1}
-                </span>
-                <div className="tarjeta-club mt-6 p-6">
-                  <p className="text-3xl" aria-hidden>
-                    {icono}
-                  </p>
-                  <h3 className="mt-3 text-lg font-semibold">{titulo}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-suave">{texto}</p>
+              <li key={titulo} data-revelar="" style={retraso(i * 120)} className="relative">
+                <div className="escudo-sombra h-full">
+                  <div className="escudo h-full px-6 pb-20 pt-8 text-center">
+                    {/* Línea dorada que sigue la punta del escudo */}
+                    <svg aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none">
+                      <polyline points="5,48 5,82 50,95 95,82 95,48" stroke="#d4af37" strokeOpacity=".8" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+                    </svg>
+                    <span className="anillo-oro mx-auto h-16 w-16 text-2xl" aria-hidden>
+                      {icono}
+                    </span>
+                    <p className="mt-4 font-titulo text-4xl font-bold leading-none">
+                      <span className="texto-oro">{String(i + 1).padStart(2, "0")}</span>
+                    </p>
+                    <h3 className="mt-3 text-lg font-semibold text-[#f4efe4]">{titulo}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-[#b5ae9f]">{texto}</p>
+                  </div>
                 </div>
               </li>
             ))}
           </ol>
           <div data-revelar="" className="mt-12 flex flex-col items-center gap-3 text-center">
             <p className="text-suave">¿Quieres verlo con tu negocio? Arma tu tarjeta en el demo, sin crear cuenta.</p>
-            <BotonDemo className="boton-jade px-6 py-3.5 text-base">
+            <BotonDemo className="boton-oro px-6 py-3.5 text-base">
               Probar el demo con mi negocio <span className="flecha">→</span>
             </BotonDemo>
           </div>
@@ -236,8 +253,8 @@ export default function Inicio() {
           </div>
           <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {FUNCIONES.map(([icono, titulo, texto], i) => (
-              <div key={titulo} data-revelar="" style={retraso((i % 4) * 80)} className="tarjeta-club p-6">
-                <span className="icono-club h-12 w-12 text-2xl" aria-hidden>
+              <div key={titulo} data-revelar="" style={retraso((i % 4) * 80)} className="tarjeta-club group p-6">
+                <span className="anillo-oro h-14 w-14 text-2xl transition-transform duration-500 group-hover:rotate-[-8deg]" aria-hidden>
                   {icono}
                 </span>
                 <h3 className="mt-5 font-semibold">{titulo}</h3>
@@ -281,13 +298,13 @@ export default function Inicio() {
           data-revelar="zoom"
           className="relative mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] rounded-tr-[6rem] rounded-bl-[6rem] bg-club-contraste px-6 py-14 text-club-contraste-tinta sm:px-12 sm:py-16"
         >
-          <div aria-hidden className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgb(52_214_168/0.35),transparent)]" />
-          <div aria-hidden className="absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgb(255_122_89/0.3),transparent)]" />
+          <div aria-hidden className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgb(212_175_55/0.35),transparent)]" />
+          <div aria-hidden className="absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgb(200_164_106/0.3),transparent)]" />
           <div className="relative grid items-center gap-10 lg:grid-cols-[1.3fr_1fr]">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-club-coral">Incluido en todos los planes</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-club-bronce">Incluido en todos los planes</p>
               <h2 className="mt-4 text-balance text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
-                Tu tarjeta, con <span className="font-acento text-[1.12em] font-normal italic text-club-coral">tu cara.</span>
+                Tu tarjeta, con <span className="font-acento text-[1.12em] font-normal italic text-club-bronce">tu cara.</span>
               </h2>
               <p className="mt-4 max-w-xl leading-relaxed text-club-contraste-suave">
                 Mándanos tu logo, una foto de tu local o tu arte, y te armamos un diseño a la medida de tu negocio. Sin costo extra, en
@@ -297,7 +314,7 @@ export default function Inicio() {
             <ul className="grid gap-3">
               {EN_TODOS.map((x) => (
                 <li key={x} className="flex items-start gap-3 rounded-2xl border border-club-contraste-tinta/10 bg-club-contraste-tinta/5 px-4 py-3 text-sm">
-                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold text-[#04201a]" style={{ background: "var(--jade-degradado)" }}>
+                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold text-[#1a1408]" style={{ background: "var(--oro-degradado)" }}>
                     ✓
                   </span>
                   {x}
@@ -337,10 +354,10 @@ export default function Inicio() {
           </div>
           <div className="space-y-3">
             {PREGUNTAS.map(([p, r], i) => (
-              <details key={p} data-revelar="" style={retraso(i * 70)} className="pregunta-club vidrio-club group rounded-3xl px-6 py-5 transition hover:border-club-jade/40">
+              <details key={p} data-revelar="" style={retraso(i * 70)} className="pregunta-club vidrio-club group rounded-3xl px-6 py-5 transition hover:border-club-oro/40">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">
                   {p}
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-borde text-lg text-club-jade-texto transition duration-300 group-open:rotate-45 group-open:bg-club-jade group-open:text-[#04201a]">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-borde text-lg text-club-oro-texto transition duration-300 group-open:rotate-45 group-open:bg-club-oro group-open:text-[#1a1408]">
                     +
                   </span>
                 </summary>
@@ -367,7 +384,7 @@ export default function Inicio() {
                 ["🇨🇱", "Hecho en Chile", "Precios en pesos y boleta o factura."],
               ].map(([icono, t, d]) => (
                 <li key={t} className="flex items-center gap-3">
-                  <span className="icono-club h-11 w-11 text-xl" aria-hidden>
+                  <span className="anillo-oro h-12 w-12 shrink-0 text-xl" aria-hidden>
                     {icono}
                   </span>
                   <span>
@@ -386,19 +403,21 @@ export default function Inicio() {
 
       {/* ── Cierre ── */}
       <section className="px-3 pb-10 sm:px-5">
-        <div data-revelar="zoom" className="relative mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] bg-[#04140f] px-6 py-16 text-center text-[#eaf6f1] sm:py-20">
-          <div aria-hidden className="absolute inset-0 bg-[radial-gradient(ellipse_50%_70%_at_20%_0%,rgb(52_214_168/0.35),transparent),radial-gradient(ellipse_45%_60%_at_90%_100%,rgb(255_122_89/0.28),transparent)]" />
+        <div data-revelar="zoom" className="relative mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] bg-[#0d0d0f] px-6 py-16 text-center text-[#f4efe4] sm:py-20">
+          <div aria-hidden className="absolute inset-0 bg-[radial-gradient(ellipse_50%_70%_at_20%_0%,rgb(212_175_55/0.35),transparent),radial-gradient(ellipse_45%_60%_at_90%_100%,rgb(200_164_106/0.28),transparent)]" />
           <div aria-hidden className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.07)_1px,transparent_1px)] bg-[size:22px_22px]" />
+          <div aria-hidden className="pointer-events-none absolute inset-0 rounded-[2.5rem] border-[3px] border-[#d4af37]/70" />
+          <div aria-hidden className="pointer-events-none absolute inset-[9px] rounded-[2.1rem] border border-[#d4af37]/35" />
           <div className="relative">
             <h2 className="mx-auto max-w-3xl text-balance text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-              Tu primer cliente con tarjeta, <span className="font-acento text-[1.1em] font-normal italic text-[#7ff0cb]">hoy.</span>
+              Tu primer cliente con tarjeta, <span className="font-acento text-[1.1em] font-normal italic text-[#e6c56a]">hoy.</span>
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-[#a9c3bb]">Créala gratis, imprime el QR y déjalo en tu mesón. En {DIAS_PRUEBA} días ves la diferencia.</p>
+            <p className="mx-auto mt-4 max-w-xl text-[#b5ae9f]">Créala gratis, imprime el QR y déjalo en tu mesón. En {DIAS_PRUEBA} días ves la diferencia.</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Link href="/registro" className="boton-jade px-7 py-3.5 text-base">
+              <Link href="/registro" className="boton-oro px-7 py-3.5 text-base">
                 Crear mi tarjeta gratis <span className="flecha">→</span>
               </Link>
-              <a href={wa} target="_blank" rel="noopener noreferrer" className="boton-jade boton-coral px-7 py-3.5 text-base">
+              <a href={wa} target="_blank" rel="noopener noreferrer" className="boton-oro boton-bronce px-7 py-3.5 text-base">
                 Hablar por WhatsApp
               </a>
             </div>

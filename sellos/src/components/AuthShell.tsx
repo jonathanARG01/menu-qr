@@ -15,26 +15,26 @@ export function AuthShell({ titulo, children, pie }: { titulo: string; children:
     <main className="club fondo-club grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
       <ScriptTema />
       <Tema />
-      <section className="relative m-3 hidden overflow-hidden rounded-[2.5rem] rounded-br-[6rem] bg-[#04140f] p-10 text-[#eaf6f1] lg:flex lg:flex-col xl:p-14">
+      <section className="relative m-3 hidden overflow-hidden rounded-[2.5rem] rounded-br-[6rem] bg-[#0d0d0f] p-10 text-[#f4efe4] lg:flex lg:flex-col xl:p-14">
         <div
           aria-hidden
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse at 15% 10%, rgb(52 214 168 / 0.3), transparent 55%), radial-gradient(ellipse at 90% 90%, rgb(255 122 89 / 0.3), transparent 55%), radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px) 0 0/22px 22px",
+              "radial-gradient(ellipse at 15% 10%, rgb(212 175 55 / 0.3), transparent 55%), radial-gradient(ellipse at 90% 90%, rgb(200 164 106 / 0.3), transparent 55%), radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px) 0 0/22px 22px",
           }}
         />
         <Link href="/" className="relative flex items-end gap-3" aria-label="Inicio">
           <Logo claro className="text-3xl" />
-          <span className="pb-0.5 text-xs text-[#a9c3bb]">por Brote Digital</span>
+          <span className="pb-0.5 text-xs text-[#b5ae9f]">por Brote Digital</span>
         </Link>
         <div className="relative mt-auto max-w-lg">
           <span aria-hidden className="orbe-club flotar-lento-club right-6 -top-24 h-20 w-20" />
-          <span aria-hidden className="orbe-club coral orbe-difuso flotar-lento-club -top-10 right-32 h-9 w-9" style={{ "--retraso": "1800ms" } as React.CSSProperties} />
+          <span aria-hidden className="orbe-club onix orbe-difuso flotar-lento-club -top-10 right-32 h-9 w-9" style={{ "--retraso": "1800ms" } as React.CSSProperties} />
           <h2 className="text-4xl font-bold leading-tight tracking-tight xl:text-5xl">
             Clientes que vuelven,
             <br />
-            <span className="font-acento text-[1.12em] font-normal italic text-[#7ff0cb]">sello a sello.</span>
+            <span className="font-acento text-[1.12em] font-normal italic text-[#e6c56a]">sello a sello.</span>
           </h2>
           <ul className="mt-8 space-y-4">
             {VENTAJAS.map(([icono, titulo, texto]) => (
@@ -44,13 +44,13 @@ export function AuthShell({ titulo, children, pie }: { titulo: string; children:
                 </span>
                 <span>
                   <span className="block font-semibold">{titulo}</span>
-                  <span className="block text-sm text-[#a9c3bb]">{texto}</span>
+                  <span className="block text-sm text-[#b5ae9f]">{texto}</span>
                 </span>
               </li>
             ))}
           </ul>
         </div>
-        <p className="relative mt-10 text-xs text-[#a9c3bb]/70">© {new Date().getFullYear()} {EMPRESA}</p>
+        <p className="relative mt-10 text-xs text-[#b5ae9f]/70">© {new Date().getFullYear()} {EMPRESA}</p>
       </section>
 
       <section className="relative flex items-center justify-center px-4 py-10 sm:px-8">

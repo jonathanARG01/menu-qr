@@ -26,7 +26,7 @@ export function SitioClub({ children, animado = true }: { children: React.ReactN
       {animado && <script dangerouslySetInnerHTML={{ __html: SCRIPT_JS }} />}
       <Tema />
       {animado && <AnimacionesClub />}
-      <div aria-hidden className="barra-avance-club fixed inset-x-0 top-0 z-50 h-[3px]" style={{ background: "var(--jade-degradado)" }} />
+      <div aria-hidden className="barra-avance-club fixed inset-x-0 top-0 z-50 h-[3px]" style={{ background: "var(--oro-degradado)" }} />
       <Cabecera />
       {children}
       <Pie />
@@ -50,10 +50,10 @@ function Cabecera() {
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <BotonTema className="vidrio-club !bg-club-vidrio !shadow-none" />
-          <Link href="/entrar" className="hidden rounded-full px-3 py-2 text-sm font-medium text-tinta transition hover:text-club-jade-texto sm:block">
+          <Link href="/entrar" className="hidden rounded-full px-3 py-2 text-sm font-medium text-tinta transition hover:text-club-oro-texto sm:block">
             Entrar
           </Link>
-          <Link href="/registro" className="boton-jade hidden py-2.5 sm:inline-flex">
+          <Link href="/registro" className="boton-oro hidden py-2.5 sm:inline-flex">
             Crear cuenta <span className="flecha">→</span>
           </Link>
           <MenuMovil enlaces={ENLACES} />
@@ -63,13 +63,22 @@ function Cabecera() {
   );
 }
 
-// Rótulo chico arriba de cada título: una línea jade y texto espaciado.
+// Rótulo chico arriba de cada título: una línea dorada con un punto de anillo y texto espaciado.
+function Adorno({ invertido = false }: { invertido?: boolean }) {
+  return (
+    <span aria-hidden className={`flex items-center gap-1.5 ${invertido ? "flex-row-reverse" : ""}`}>
+      <span className="h-px w-8" style={{ background: invertido ? "linear-gradient(270deg, transparent, var(--club-oro))" : "linear-gradient(90deg, transparent, var(--club-oro))" }} />
+      <span className="punto-oro" />
+    </span>
+  );
+}
+
 export function Etiqueta({ children, centro = false }: { children: React.ReactNode; centro?: boolean }) {
   return (
-    <p className={`flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.22em] text-club-jade-texto ${centro ? "justify-center" : ""}`}>
-      <span aria-hidden className="h-px w-8" style={{ background: "var(--jade-degradado)" }} />
+    <p className={`flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.22em] text-club-oro-texto ${centro ? "justify-center" : ""}`}>
+      <Adorno />
       {children}
-      {centro && <span aria-hidden className="h-px w-8" style={{ background: "var(--jade-degradado)" }} />}
+      {centro && <Adorno invertido />}
     </p>
   );
 }
@@ -82,7 +91,7 @@ export function Titulo({ children, acento, centro = false, className = "" }: { c
       {acento && (
         <>
           {" "}
-          <span className="texto-jade pr-1 font-acento text-[1.12em] font-normal italic">{acento}</span>
+          <span className="texto-oro pr-1 font-acento text-[1.12em] font-normal italic">{acento}</span>
         </>
       )}
     </h2>
@@ -121,13 +130,13 @@ function Pie() {
   ];
   return (
     <footer className="relative mt-10 overflow-hidden border-t border-borde">
-      <div aria-hidden className="absolute inset-x-0 top-0 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--club-jade), var(--club-coral), transparent)" }} />
+      <div aria-hidden className="absolute inset-x-0 top-0 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--club-oro), var(--club-bronce), transparent)" }} />
       <div aria-hidden className="absolute left-1/2 top-0 h-64 w-[44rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,var(--club-brillo),transparent)]" />
       <div className="relative mx-auto grid max-w-6xl gap-10 px-5 pb-10 pt-14 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
           <Logo className="text-2xl" />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-suave">{LEMA}. Para cafés, bares, canchas, peluquerías, tiendas y cualquier negocio donde los clientes vuelven.</p>
-          <Link href="/registro" className="boton-jade mt-6">
+          <Link href="/registro" className="boton-oro mt-6">
             Probar gratis <span className="flecha">→</span>
           </Link>
         </div>
@@ -140,7 +149,7 @@ function Pie() {
                   <a
                     href={href}
                     {...(externo ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                    className="break-all text-suave transition hover:text-club-jade-texto"
+                    className="break-all text-suave transition hover:text-club-oro-texto"
                   >
                     {texto}
                   </a>

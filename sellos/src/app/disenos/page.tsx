@@ -28,7 +28,7 @@ export default function PaginaDisenos() {
             Todos incluidos,
           </Titulo>
           <p className="mt-4 text-suave">En todos los planes. Y si quieres, la hacemos a tu medida.</p>
-          <Link href="/registro" className="boton-jade mt-6">
+          <Link href="/registro" className="boton-oro mt-6">
             Pruébalo gratis <span className="flecha">→</span>
           </Link>
         </div>
