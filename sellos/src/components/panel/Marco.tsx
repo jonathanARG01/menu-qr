@@ -2,40 +2,41 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Icono } from "@/components/Icono";
 import { Logo } from "@/components/Logo";
 import { SelectorTema, Tema } from "@/components/Tema";
 import { NOMBRE_ROL, type Rol } from "@/lib/tipos";
+import { Recorrido, recorridoVisto, type PasoRecorrido } from "./Recorrido";
 
 // quien: "todos" (también el equipo), "gestor" (dueño o encargado) o "dueno".
-type Enlace = { href: string; texto: string; icono: string; quien: "todos" | "gestor" | "dueno" };
+type Enlace = { href: string; texto: string; icono: string; quien: "todos" | "gestor" | "dueno"; ayuda: string };
 const GRUPOS: { titulo: string; enlaces: Enlace[] }[] = [
   {
     titulo: "Día a día",
     enlaces: [
-      { href: "/panel", texto: "Clientes", icono: "clientes", quien: "todos" },
-      { href: "/panel/cobrar", texto: "Sumar con QR", icono: "qr", quien: "todos" },
+      { href: "/panel", texto: "Clientes", icono: "clientes", quien: "todos", ayuda: "Todos los que tienen tu tarjeta. Búscalos por nombre o teléfono, mira quién está cerca del premio y suma sellos a mano." },
+      { href: "/panel/cobrar", texto: "Sumar con QR", icono: "qr", quien: "todos", ayuda: "Escanea la tarjeta del cliente con la cámara y suma sellos o puntos en segundos. Es lo que más vas a usar en la caja." },
     ],
   },
   {
     titulo: "Hacer crecer",
     enlaces: [
-      { href: "/panel/metricas", texto: "Métricas", icono: "estadisticas", quien: "gestor" },
-      { href: "/panel/campanas", texto: "Campañas", icono: "megafono", quien: "gestor" },
-      { href: "/panel/premios", texto: "Premios y cupones", icono: "regalo", quien: "gestor" },
+      { href: "/panel/metricas", texto: "Métricas", icono: "estadisticas", quien: "gestor", ayuda: "Visitas, clientes que vuelven y premios canjeados. Mira qué está funcionando y exporta todo a Excel." },
+      { href: "/panel/campanas", texto: "Campañas", icono: "megafono", quien: "gestor", ayuda: "Envía mensajes por grupo: clientes VIP, frecuentes, los que no vienen hace tiempo o los que están cerca del premio." },
+      { href: "/panel/premios", texto: "Premios y cupones", icono: "regalo", quien: "gestor", ayuda: "Catálogo de premios, cupones, días dobles y regalos de cumpleaños: más razones para que vuelvan." },
     ],
   },
   {
     titulo: "Tu negocio",
     enlaces: [
-      { href: "/panel/tarjeta", texto: "Tu tarjeta", icono: "sellos", quien: "dueno" },
-      { href: "/panel/carteles", texto: "QR para unirse", icono: "impresora", quien: "gestor" },
-      { href: "/panel/locales", texto: "Locales", icono: "ubicacion", quien: "dueno" },
-      { href: "/panel/negocio", texto: "Negocio", icono: "restaurantes", quien: "dueno" },
-      { href: "/panel/equipo", texto: "Equipo", icono: "equipo", quien: "dueno" },
-      { href: "/panel/integraciones", texto: "API e IA", icono: "rayo", quien: "dueno" },
-      { href: "/panel/plan", texto: "Plan", icono: "estrella", quien: "dueno" },
+      { href: "/panel/tarjeta", texto: "Tu tarjeta", icono: "sellos", quien: "dueno", ayuda: "El corazón de tu programa. Elige sellos, puntos o cashback, el premio y el diseño, y mira cómo la ve tu cliente." },
+      { href: "/panel/carteles", texto: "QR para unirse", icono: "impresora", quien: "gestor", ayuda: "Imprime el QR para que tus clientes se unan solos. Déjalo en la caja, en las mesas o en la vitrina." },
+      { href: "/panel/locales", texto: "Locales", icono: "ubicacion", quien: "dueno", ayuda: "¿Tienes más de un local? Agrégalos aquí y mira los números de cada uno por separado." },
+      { href: "/panel/negocio", texto: "Negocio", icono: "restaurantes", quien: "dueno", ayuda: "El nombre, el logo, el color, las redes y los datos de contacto de tu negocio." },
+      { href: "/panel/equipo", texto: "Equipo", icono: "equipo", quien: "dueno", ayuda: "Invita a tus encargados y vendedores, cada uno con su propia cuenta y sus permisos." },
+      { href: "/panel/integraciones", texto: "API e IA", icono: "rayo", quien: "dueno", ayuda: "Conecta tu caja o sistema con la API, o pregúntale a tu IA cosas como «¿quién no viene hace un mes?»." },
+      { href: "/panel/plan", texto: "Plan", icono: "estrella", quien: "dueno", ayuda: "Tu plan, los días de prueba que te quedan y el pago. Puedes cambiar de plan cuando quieras." },
     ],
   },
 ];
@@ -71,6 +72,23 @@ export function Marco({ datos, children }: { datos: DatosMarco; children: React.
 
   const actual = GRUPOS.flatMap((g) => g.enlaces).find((e) => (e.href === "/panel" ? ruta === "/panel" : ruta.startsWith(e.href)));
 
+  // Recorrido guiado: se abre solo la primera vez (no en modo soporte) y luego desde "Ver recorrido".
+  const [recorrido, setRecorrido] = useState(false);
+  useEffect(() => {
+    if (datos.soporte || recorridoVisto(datos.usuario.email)) return;
+    const t = setTimeout(() => setRecorrido(true), 700);
+    return () => clearTimeout(t);
+  }, [datos.soporte, datos.usuario.email]);
+  // En el celular el menú está escondido: lo abrimos mientras dura el recorrido.
+  useEffect(() => {
+    if (recorrido && window.matchMedia("(max-width: 1023px)").matches) setAbierto(true);
+  }, [recorrido]);
+  const verRecorrido = useCallback(() => setRecorrido(true), []);
+  const cerrarRecorrido = useCallback(() => {
+    setRecorrido(false);
+    setAbierto(false);
+  }, []);
+
   return (
     <>
       <Tema />
@@ -78,7 +96,7 @@ export function Marco({ datos, children }: { datos: DatosMarco; children: React.
 
       {/* Computador: barra fija a la izquierda */}
       <aside className="vidrio-barra fixed inset-y-3 left-3 z-30 hidden w-64 flex-col rounded-3xl lg:flex">
-        <Contenido datos={datos} ruta={ruta} />
+        <Contenido datos={datos} ruta={ruta} alAyuda={verRecorrido} />
       </aside>
 
       {/* Celular: barra superior con menú */}
@@ -103,7 +121,7 @@ export function Marco({ datos, children }: { datos: DatosMarco; children: React.
             >
               <Icono nombre="cerrar" className="h-5 w-5" />
             </button>
-            <Contenido datos={datos} ruta={ruta} />
+            <Contenido datos={datos} ruta={ruta} alAyuda={verRecorrido} />
           </aside>
         </div>
       )}
@@ -114,13 +132,38 @@ export function Marco({ datos, children }: { datos: DatosMarco; children: React.
         <Avisos datos={datos} />
         <main className="mx-auto max-w-6xl px-4 pb-10 pt-4 lg:px-8 lg:pt-2">{children}</main>
       </div>
+      {recorrido && <Recorrido pasos={pasosRecorrido(datos)} email={datos.usuario.email} alCerrar={cerrarRecorrido} />}
     </>
   );
 }
 
-function Contenido({ datos, ruta }: { datos: DatosMarco; ruta: string }) {
-  const { negocio, negocios, sucursales, sucursal, localFijo, dueno, gestor } = datos;
-  const ve = (e: Enlace) => e.quien === "todos" || (e.quien === "gestor" ? gestor : dueno);
+const puedeVer = (datos: DatosMarco, e: Enlace) => e.quien === "todos" || (e.quien === "gestor" ? datos.gestor : datos.dueno);
+
+// Pasos del recorrido: bienvenida, cada sección del menú que la persona puede ver y, al final, dónde volver a verlo.
+function pasosRecorrido(datos: DatosMarco): PasoRecorrido[] {
+  const enlaces = GRUPOS.flatMap((g) => g.enlaces).filter((e) => puedeVer(datos, e));
+  const nombre = datos.usuario.nombre.trim().split(/\s+/)[0];
+  return [
+    {
+      icono: "sellos",
+      rotulo: "Bienvenida",
+      titulo: nombre ? `¡Hola, ${nombre}! Este es tu panel` : "¡Bienvenido a tu panel!",
+      texto: "En un minuto te mostramos dónde está cada cosa. Puedes omitirlo y verlo cuando quieras desde «Ver recorrido», abajo en el menú.",
+    },
+    ...enlaces.map((e, n) => ({ objetivo: e.href, icono: e.icono, rotulo: `Menú · ${n + 1}/${enlaces.length}`, titulo: e.texto, texto: e.ayuda })),
+    {
+      objetivo: "ayuda",
+      icono: "tutorial",
+      rotulo: "Ayuda",
+      titulo: "¡Listo para partir!",
+      texto: "Si algo se te olvida, toca «Ver recorrido» y lo repasamos. Y si necesitas una mano, escríbenos cuando quieras.",
+    },
+  ];
+}
+
+function Contenido({ datos, ruta, alAyuda }: { datos: DatosMarco; ruta: string; alAyuda: () => void }) {
+  const { negocio, negocios, sucursales, sucursal, localFijo, dueno } = datos;
+  const ve = (e: Enlace) => puedeVer(datos, e);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="px-5 pb-3 pt-5">
@@ -213,6 +256,7 @@ function Contenido({ datos, ruta }: { datos: DatosMarco; ruta: string }) {
                     <li key={e.href}>
                       <Link
                         href={e.href}
+                        data-recorrido={e.href}
                         aria-current={activo ? "page" : undefined}
                         className={`group flex items-center gap-3 rounded-2xl px-2 py-1 text-sm transition ${
                           activo ? "bg-marca/10 font-semibold text-tinta" : "text-suave hover:bg-stone-100 hover:text-tinta"
@@ -239,6 +283,14 @@ function Contenido({ datos, ruta }: { datos: DatosMarco; ruta: string }) {
       <div className="space-y-2 border-t border-borde p-3 pt-2.5">
         {datos.prueba.estado === "prueba" && datos.prueba.alDia && <Prueba dias={datos.prueba.dias} dueno={dueno} />}
         <Instalar />
+        <button
+          type="button"
+          onClick={alAyuda}
+          data-recorrido="ayuda"
+          className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-xs font-medium text-suave transition hover:bg-stone-100 hover:text-tinta"
+        >
+          <Icono nombre="tutorial" className="h-4 w-4" /> Ver recorrido del panel
+        </button>
         <SelectorTema />
         <form action="/salir" method="post" className="flex items-center gap-2 px-1">
           <span className="min-w-0 flex-1">
