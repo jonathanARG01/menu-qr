@@ -18,8 +18,6 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
-      // Sellito es otra app (su propia carpeta, su propio build).
-      "sellos/**",
     ],
   },
 ];
