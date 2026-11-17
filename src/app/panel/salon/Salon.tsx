@@ -27,7 +27,7 @@ import {
   type Piso,
   type TipoElemento,
 } from "@/lib/salon";
-import { useEquipo } from "@/lib/equipo";
+import { nombrePersona, trabajaEn, useEquipo } from "@/lib/equipo";
 import { Avatar } from "@/components/Avatar";
 import { mapaFotos } from "@/components/Miniatura";
 import type { Categoria, Mesa, Plato, Restaurante, Sucursal } from "@/lib/types";
@@ -55,6 +55,22 @@ import { PantallaSalon } from "./PantallaSalon";
 import { formatoHora, type Region } from "@/lib/region";
 import { guardarSeguirAvisos, leerSeguirAvisos, useAvisoNuevo } from "./avisos";
 import { useRecordatorios } from "@/lib/push";
+import {
+  atrasoDe,
+  colorCalor,
+  COLOR_RELOJ,
+  colorZona,
+  duracion,
+  guardarPrefIndicadores,
+  leerPrefIndicadores,
+  PREF_INDICADORES,
+  relojDe,
+  useCalor,
+  useCobradoTurno,
+  usePorLimpiar,
+  type PrefIndicadores,
+} from "./indicadores";
+import { EscalaCalor, PanelIndicadores } from "./PanelIndicadores";
 
 type Props = {
   restaurante: Restaurante;
@@ -139,6 +155,18 @@ export function Salon({
     } catch {}
   }
 
+  // Indicadores (tiempo en mesa, atrasados, totales, zonas, por limpiar, mapa de calor): se guardan en cada equipo.
+  const [pref, setPref] = useState<PrefIndicadores>(PREF_INDICADORES);
+  const [menuIndicadores, setMenuIndicadores] = useState(false);
+  useEffect(() => setPref(leerPrefIndicadores()), []);
+  const cambiarPref = (c: Partial<PrefIndicadores>) =>
+    setPref((p) => {
+      const n = { ...p, ...c };
+      guardarPrefIndicadores(n);
+      return n;
+    });
+  const cerrarIndicadores = useCallback(() => setMenuIndicadores(false), []);
+
   // En el teléfono se empieza por la lista: el plano completo se ve mejor en tableta o computadora.
   useEffect(() => {
     if (window.innerWidth < 640) setVista("lista");
@@ -163,10 +191,23 @@ export function Salon({
     [mesas, unidas, editando],
   );
   // Tocar una mesa unida abre la cuenta de la mesa principal.
-  const abrirMesa = useCallback((id: string) => setMesaAbierta(unidas.get(id)?.mesa_id ?? id), [unidas]);
+  const abrirFicha = useCallback((id: string) => setMesaAbierta(unidas.get(id)?.mesa_id ?? id), [unidas]);
   // Buscar un plato desde el plano: qué mesas lo pidieron y en qué va.
   const [buscarPlato, setBuscarPlato] = useState("");
-  const { equipo } = useEquipo(supabase, restaurante.id);
+  const { equipo, yo } = useEquipo(supabase, restaurante.id);
+  // Meseros del local con su color de zona (el de su perfil o uno de la paleta).
+  const meseros = useMemo(
+    () =>
+      equipo
+        .filter((p) => p.rol !== "cocina" && trabajaEn(p, sucursalId))
+        .map((p, i) => ({ ...p, colorZona: colorZona(p.color, i) })),
+    [equipo, sucursalId],
+  );
+  const porLimpiar = usePorLimpiar(supabase, restaurante.id, pref.limpiar, cuentas);
+  const calor = useCalor(supabase, restaurante.id, pref.calor, pref.calorDias);
+  const limiteAtraso = pref.atraso ?? ajustes.alertas.rojo;
+  // Repartir mesas (zonas): el mesero elegido; tocar una mesa se la asigna o se la quita.
+  const [repartiendo, setRepartiendo] = useState<string | null>(null);
   const fotos = useMemo(() => (ajustes.miniaturas ? mapaFotos(platos) : null), [platos, ajustes.miniaturas]);
 
   const mesasLocal = mesas.filter(delLocal);
@@ -208,11 +249,63 @@ export function Salon({
         pendiente: suyos.some((p) => p.estado === "pendiente"),
         aviso: c.aviso?.tipo ?? null,
         mesero: avatar(c.mesero_id),
+        reloj: pref.tiempo ? relojDe(c, suyos, ahora, pref) : undefined,
+        atrasado: pref.atrasados ? atrasoDe(suyos, ahora, limiteAtraso) : undefined,
+        sinTotal: !pref.totales,
       });
     }
+    // Cobradas y sin limpiar (si no se volvieron a abrir).
+    for (const l of porLimpiar.lista)
+      for (const id of l.mesas) if (!mapa.get(id)?.ocupada && !mapa.has(`limpiar:${id}`)) mapa.set(`limpiar:${id}`, { ocupada: false, limpiar: minutosDesde(l.desde, ahora) });
     // Libres con mesero asignado: su foto o iniciales, más tenues.
     for (const m of mesas) {
       if (!mapa.has(m.id) && m.mesero_id && avatar(m.mesero_id)) mapa.set(m.id, { ocupada: false, mesero: avatar(m.mesero_id) });
+    }
+    for (const m of mesas) {
+      const limpiar = mapa.get(`limpiar:${m.id}`)?.limpiar;
+      mapa.delete(`limpiar:${m.id}`);
+      if (limpiar !== undefined) mapa.set(m.id, { ...(mapa.get(m.id) ?? { ocupada: false }), limpiar });
+    }
+    for (const k of [...mapa.keys()]) if (k.startsWith("limpiar:")) mapa.delete(k);
+    // Zonas: el color de quien atiende la mesa (o de quien la tiene a cargo, si está libre).
+    if (pref.zonas) {
+      const objetivo = pref.resaltar === "todas" ? null : pref.resaltar === "mias" ? yo : pref.resaltar;
+      for (const m of mesas) {
+        const e = mapa.get(m.id) ?? { ocupada: false };
+        const principal = e.unida ? e.principal : m.id;
+        const cuenta = cuentas.find((c) => c.mesa_id === principal);
+        const quien = (e.ocupada ? cuenta?.mesero_id : null) ?? m.mesero_id ?? null;
+        const p = meseros.find((x) => x.user_id === quien);
+        mapa.set(m.id, {
+          ...e,
+          zona: p ? { color: p.colorZona, nombre: nombrePersona(p) } : undefined,
+          apagada: e.apagada || (!!objetivo && !consulta && quien !== objetivo),
+        });
+      }
+    }
+    // Mapa de calor: cada mesa según lo que vendió o cuántas veces se ocupó en los últimos días.
+    if (pref.calor && calor.datos) {
+      const valor = (id: string) => {
+        const d = calor.datos!.get(id);
+        return pref.calorMide === "ventas" ? (d?.ventas ?? 0) : (d?.visitas ?? 0);
+      };
+      const max = Math.max(1, ...mesas.map((m) => valor(m.id)));
+      for (const m of mesas) {
+        const v = valor(m.id);
+        const d = calor.datos.get(m.id);
+        const porDia = (d?.visitas ?? 0) / pref.calorDias;
+        mapa.set(m.id, {
+          ...(mapa.get(m.id) ?? { ocupada: false }),
+          calor: {
+            t: v / max,
+            color: colorCalor(v / max),
+            texto:
+              pref.calorMide === "ventas"
+                ? formatoPrecio(Math.round(v), restaurante.moneda)
+                : `${d?.visitas ?? 0} ${d?.visitas === 1 ? "vez" : "veces"}${porDia >= 1 ? ` · ${porDia.toFixed(1)}/día` : ""}`,
+          },
+        });
+      }
     }
     if (consulta) {
       for (const m of mesas) {
@@ -221,7 +314,23 @@ export function Salon({
       }
     }
     return mapa;
-  }, [cuentas, pedidos, ahora, mesas, coincidencias, consulta, ajustes.avatares, equipo]);
+  }, [
+    cuentas,
+    pedidos,
+    ahora,
+    mesas,
+    coincidencias,
+    consulta,
+    ajustes.avatares,
+    equipo,
+    pref,
+    limiteAtraso,
+    porLimpiar.lista,
+    meseros,
+    yo,
+    calor.datos,
+    restaurante.moneda,
+  ]);
 
   // Suena cuando una mesa llama al mesero o pide la cuenta (no al abrir la pantalla). Cada aviso suena distinto.
   useEffect(() => {
@@ -271,6 +380,27 @@ export function Salon({
   // Personas sentadas: los comensales de cada cuenta (las mesas unidas no suman de nuevo).
   const personasEn = (lista: Mesa[]) => lista.reduce((t, m) => t + (estados.get(m.id)?.comensales ?? 0), 0);
   const personas = personasEn(mesasLocal);
+  // Total en vivo: lo consumido en las mesas abiertas de este local y lo cobrado en el turno.
+  const enMesas = mesasLocal.reduce((t, m) => t + (estados.get(m.id)?.total ?? 0), 0);
+  const cobrado = useCobradoTurno(
+    supabase,
+    restaurante.id,
+    sucursalId,
+    conLocales,
+    pref.totales,
+    servicioVivo.pagos.length * 1000 + cuentas.length,
+  );
+  const limpiarLocal = mesasLocal.filter((m) => estados.get(m.id)?.limpiar !== undefined);
+
+  // Repartir: tocar una mesa se la asigna al mesero elegido (o se la quita si ya era suya).
+  async function asignarMesa(id: string) {
+    const mesa = mesas.find((m) => m.id === id);
+    if (!mesa || !repartiendo) return;
+    const nuevo = mesa.mesero_id === repartiendo ? null : repartiendo;
+    const ok = await actualizarMesa(id, { mesero_id: nuevo });
+    if (ok) avisar(nuevo ? `${nombreMesa(mesa.numero)} → ${nombrePersona(meseros.find((x) => x.user_id === nuevo))}` : `${nombreMesa(mesa.numero)} sin mesero a cargo`);
+  }
+  const abrirMesa = (id: string) => (repartiendo ? asignarMesa(id) : abrirFicha(id));
   const avisos = mesasLocal.filter((m) => estados.get(m.id)?.aviso || estados.get(m.id)?.pendiente);
 
   // ── Edición del plano (solo administrador) ─────────────
@@ -556,6 +686,18 @@ export function Salon({
             <span className={`inline-block h-2 w-2 rounded-full ${servicioVivo.enVivo ? "bg-emerald-500" : "bg-stone-300"}`} />
             {ocupadas} de {mesasLocal.length} mesas ocupadas · {personas} {personas === 1 ? "persona" : "personas"}
           </p>
+          {pref.totales && (
+            <p className="text-sm" suppressHydrationWarning>
+              <span className="text-suave">En mesas </span>
+              <strong className="tabular-nums">{formato(enMesas)}</strong>
+              {cobrado !== null && (
+                <>
+                  <span className="text-suave"> · Cobrado en el turno </span>
+                  <strong className="tabular-nums">{formato(cobrado)}</strong>
+                </>
+              )}
+            </p>
+          )}
         </div>
         {fijo && (
           <span className="rounded-full bg-stone-100 px-3 py-1.5 text-sm font-medium" title="Tu local asignado en Equipo">
@@ -608,6 +750,36 @@ export function Salon({
           </div>
         )}
         {!editando && (
+          <div className="relative">
+            <button
+              type="button"
+              data-boton-indicadores
+              onClick={() => setMenuIndicadores((v) => !v)}
+              aria-expanded={menuIndicadores}
+              className={menuIndicadores ? "boton" : "boton-secundario"}
+              title="Tiempo en mesa, platos atrasados, totales, zonas, mesas por limpiar y mapa de calor"
+            >
+              <Icono nombre="estadisticas" className="h-4 w-4" />
+              Indicadores
+            </button>
+            {menuIndicadores && (
+              <PanelIndicadores
+                pref={pref}
+                onCambiar={cambiarPref}
+                atrasoBase={ajustes.alertas.rojo}
+                meseros={meseros}
+                yo={yo}
+                admin={admin}
+                onRepartir={() => {
+                  setRepartiendo(meseros[0]?.user_id ?? null);
+                  setMenuIndicadores(false);
+                }}
+                onCerrar={cerrarIndicadores}
+              />
+            )}
+          </div>
+        )}
+        {!editando && (
           <button
             type="button"
             onClick={() => setPantalla(true)}
@@ -632,6 +804,54 @@ export function Salon({
           </button>
         )}
       </div>
+
+      {repartiendo && !editando && (
+        <div className="tarjeta flex flex-wrap items-center gap-2 border-marca p-3 text-sm">
+          <span className="font-semibold">Repartir mesas:</span>
+          {meseros.map((p) => (
+            <button
+              key={p.user_id}
+              type="button"
+              onClick={() => setRepartiendo(p.user_id)}
+              className={`inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1 font-medium ${repartiendo === p.user_id ? "text-white" : "bg-superficie"}`}
+              style={{ borderColor: p.colorZona, background: repartiendo === p.user_id ? p.colorZona : undefined }}
+            >
+              {nombrePersona(p)}
+              <span className="text-xs opacity-80">{mesasLocal.filter((m) => m.mesero_id === p.user_id).length}</span>
+            </button>
+          ))}
+          <span className="text-suave">Toca las mesas para dárselas o quitárselas.</span>
+          <button type="button" onClick={() => setRepartiendo(null)} className="boton ml-auto py-1.5">
+            Listo
+          </button>
+        </div>
+      )}
+
+      {porLimpiar.faltaSql && !editando && (
+        <p className="rounded-xl bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          Para usar &quot;Mesa por limpiar&quot; falta ejecutar el SQL 0040 en Supabase.
+        </p>
+      )}
+
+      {limpiarLocal.length > 0 && !editando && (
+        <div className="flex flex-wrap items-center gap-2">
+          {limpiarLocal.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => {
+                const ids = porLimpiar.lista.filter((l) => l.mesas.includes(m.id)).map((l) => l.cuentaId);
+                porLimpiar.marcarLista(ids).then((e) => e && avisar(mensajeError(e), "error"));
+              }}
+              className="inline-flex items-center gap-2 rounded-full border-2 border-dashed border-stone-400 bg-stone-100 px-3 py-1.5 text-sm font-semibold text-stone-800 hover:border-stone-600"
+              title="Marcar como limpia y lista para sentar"
+            >
+              🧹 {nombreMesa(m.numero)} por limpiar
+              <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-xs text-white">Lista ✓</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {(avisos.length > 0 || llevarPorAceptar > 0) && !editando && (
         <div className="flex flex-wrap gap-2">
@@ -785,7 +1005,7 @@ export function Salon({
                   formato={formato}
                   estilo={estilo}
                 />
-                {!editando && <Leyenda />}
+                {!editando && <Leyenda pref={pref} calorError={calor.error} />}
               </div>
               {editando && (
                 <PanelEdicion
@@ -897,7 +1117,18 @@ export function Salon({
   );
 }
 
-function Leyenda() {
+function Leyenda({ pref, calorError }: { pref: PrefIndicadores; calorError: boolean }) {
+  if (pref.calor)
+    return (
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-suave">
+        <span className="font-semibold text-tinta">
+          Mapa de calor: {pref.calorMide === "ventas" ? "ventas" : "veces que se ocupó"} en los últimos {pref.calorDias} días
+        </span>
+        <EscalaCalor />
+        {calorError && <span className="text-red-600">No se pudo cargar el historial.</span>}
+        <span>Apágalo en Indicadores para volver a ver el servicio.</span>
+      </div>
+    );
   const items = [
     ["bg-superficie border-stone-300", "Libre"],
     ["bg-amber-50 border-amber-500", "Ocupada"],
@@ -918,6 +1149,28 @@ function Leyenda() {
         </span>
         Pedido del cliente por confirmar
       </span>
+      {pref.tiempo && (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="rounded-full bg-amber-500 px-1 text-[9px] font-bold text-white">⏱</span>
+          <span className="rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">⏱</span>
+          Sin pedir o esperando
+        </span>
+      )}
+      {pref.atrasados && (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="indicador-parpadeo inline-block h-3 w-3 rounded border-2 border-red-600" /> Pedido atrasado en cocina
+        </span>
+      )}
+      {pref.limpiar && (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block h-3 w-3 rounded border-2 border-dashed border-stone-500 bg-stone-200" /> Por limpiar
+        </span>
+      )}
+      {pref.zonas && (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block h-3 w-3 rounded outline outline-2 outline-offset-1 outline-blue-600" /> Color del mesero
+        </span>
+      )}
     </div>
   );
 }
@@ -935,7 +1188,11 @@ function BotonMesa({
   formato: (n: number) => string;
   grande?: boolean;
 }) {
-  const color = !estado?.ocupada
+  const color = estado?.calor
+    ? ""
+    : !estado?.ocupada && estado?.limpiar !== undefined
+      ? "border-dashed border-stone-500 bg-stone-100"
+      : !estado?.ocupada
     ? "border-stone-200 bg-superficie"
     : estado.aviso === "cuenta"
       ? "border-violet-500 bg-violet-50"
@@ -950,19 +1207,51 @@ function BotonMesa({
     <button
       type="button"
       onClick={onClick}
-      className={`relative rounded-xl border-2 px-3 text-left transition hover:shadow-md ${color} ${grande ? "py-3" : "py-1.5"}`}
+      className={`relative rounded-xl border-2 px-3 text-left transition hover:shadow-md ${color} ${grande ? "py-3" : "py-1.5"} ${estado?.apagada ? "opacity-35" : ""}`}
+      style={{
+        ...(estado?.calor
+          ? { background: `color-mix(in srgb, ${estado.calor.color} 30%, white)`, borderColor: estado.calor.color }
+          : {}),
+        ...(estado?.zona && !estado.calor ? { boxShadow: `inset 5px 0 0 ${estado.zona.color}` } : {}),
+      }}
+      title={estado?.zona ? `A cargo de ${estado.zona.nombre}` : undefined}
     >
+      {!!estado?.atrasado && !estado.calor && (
+        <span aria-hidden className="indicador-parpadeo pointer-events-none absolute -inset-0.5 rounded-xl border-4 border-red-600" />
+      )}
       <span className="block font-bold">
         {nombreMesa(mesa.numero)}
         {estado?.grupo && !estado.unida && <span className="ml-1.5 text-xs font-semibold text-marca">{estado.grupo}</span>}
       </span>
       <span className="block text-xs text-suave" suppressHydrationWarning>
-        {estado?.unida
-          ? `Unida · ${estado.grupo}`
-          : estado?.ocupada
-            ? `${estado.comensales} pers. · ${estado.minutos} min${estado.total ? ` · ${formato(estado.total)}` : ""}`
-            : `Libre · ${mesa.capacidad ?? 4} lugares`}
+        {estado?.calor
+          ? estado.calor.texto
+          : estado?.unida
+            ? `Unida · ${estado.grupo}`
+            : estado?.ocupada
+              ? `${estado.comensales} pers. · ${duracion(estado.minutos ?? 0)}${estado.total && !estado.sinTotal ? ` · ${formato(estado.total)}` : ""}`
+              : estado?.limpiar !== undefined
+                ? `🧹 Por limpiar · cobrada hace ${duracion(estado.limpiar)}`
+                : `Libre · ${mesa.capacidad ?? 4} lugares`}
       </span>
+      {!estado?.calor && (estado?.reloj || estado?.atrasado) && (
+        <span className="mt-1 flex flex-wrap gap-1 pr-6">
+          {estado.reloj && (
+            <span
+              className="rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
+              style={{ background: COLOR_RELOJ[estado.reloj.nivel] }}
+              title={estado.reloj.texto}
+            >
+              ⏱ {grande ? estado.reloj.texto : duracion(estado.reloj.min)}
+            </span>
+          )}
+          {estado.atrasado && (
+            <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+              🔥 {grande ? `En cocina hace ${duracion(estado.atrasado)}` : duracion(estado.atrasado)}
+            </span>
+          )}
+        </span>
+      )}
       {(estado?.aviso || estado?.pendiente) && (
         <span className="absolute right-2 top-2 h-2.5 w-2.5 animate-pulse rounded-full bg-red-600" />
       )}

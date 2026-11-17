@@ -11,8 +11,8 @@ export const PLANES = [
     para: "Para mostrar la carta con QR y olvidarte de reimprimir.",
     incluye: [
       "Carta QR ilimitada con fotos",
-      "21 diseños, tu logo y tus colores",
-      "7 idiomas para turistas",
+      "Decenas de diseños (y nuevos cada mes), tu logo y tus colores",
+      "Idiomas para turistas, y sumamos el que pidas",
       "QR por mesa listos para imprimir",
       "Platos destacados, agotados y promos por horario",
     ],
@@ -54,15 +54,17 @@ export const PERIODOS = [
   { id: "anual", nombre: "Anual", meses: 12, descuento: 0.15 },
 ] as const;
 
-// Armado de la carta: pago único opcional, en tres niveles. Cada nivel incluye lo del anterior.
+// Armado de la carta, en dos niveles. Cada nivel incluye lo del anterior.
+// Básico gratis como promo de lanzamiento (solo con un plan mensual contratado); Completo de pago único.
 export const ARMADOS = [
   {
     id: "basico",
     nombre: "Básico",
-    precio: 19990,
-    para: "Tu carta cargada y los QR listos.",
+    precio: 0,
+    nota: "Promo de lanzamiento, al contratar cualquier plan",
+    para: "Tu carta cargada y los QR listos, de regalo.",
     incluye: [
-      "Carga de hasta 40 platos con precios y descripciones",
+      "Carga de todos tus platos, sin límite, con precios y descripciones",
       "Elección del diseño de la carta",
       "QR por mesa en PDF, listos para imprimir",
     ],
@@ -70,11 +72,12 @@ export const ARMADOS = [
   {
     id: "completo",
     nombre: "Completo",
-    precio: 29990,
+    precio: 24990,
+    nota: "Pago único",
     destacado: true,
     para: "La carta con fotos y el equipo listo para usarla.",
     incluye: [
-      "Todo lo del Básico",
+      "Todo lo del Básico, sin límite de platos",
       "Fotos de los platos editadas",
       "Traducciones revisadas y platos destacados",
       "Ajustes del salón y cuentas del equipo",
@@ -88,8 +91,8 @@ export const ARMADOS = [
 export const DIAS_PRUEBA = 14;
 
 export const MODULOS: { icono: string; titulo: string; texto: string }[] = [
-  { icono: "carta", titulo: "Carta QR con 21 diseños", texto: "Del café de barrio al bar de cócteles. Cambias precios y fotos desde el celular y se actualiza al instante." },
-  { icono: "externo", titulo: "7 idiomas", texto: "Español, inglés, portugués, francés, italiano, alemán y chino. El turista elige el suyo con un toque." },
+  { icono: "carta", titulo: "Carta QR con decenas de diseños", texto: "Del café de barrio al bar de cócteles, con diseños nuevos cada mes. Cambias precios y fotos desde el celular y se actualiza al instante." },
+  { icono: "externo", titulo: "La carta en el idioma de cada turista", texto: "Español, inglés, portugués, francés, italiano, alemán, holandés y chino. ¿Necesitas otro? Pídelo y lo agregamos. El turista elige el suyo con un toque." },
   { icono: "whatsapp", titulo: "Pedidos por WhatsApp", texto: "El cliente arma su pedido y te llega con la mesa y el total. Sin comisiones por pedido." },
   { icono: "salon", titulo: "Salón y mapa de mesas", texto: "Dibuja tu local por pisos, ve qué mesa está libre, ocupada o pidiendo la cuenta." },
   { icono: "cocina", titulo: "Pantalla de cocina", texto: "Las comandas llegan en vivo por estación, se ordenan y avisan al mesero cuando están listas." },
@@ -164,7 +167,7 @@ export const RECORRIDO: { etiqueta: string; titulo: string; texto: string; punto
 ];
 
 export const SERVICIOS: [string, string][] = [
-  ["Armado de la carta", "Cargamos platos, precios, fotos y traducciones por ti, en dos niveles desde $19.990 + IVA."],
+  ["Armado de la carta", "Cargamos platos, precios, fotos y traducciones por ti, sin límite de platos. El armado básico va de regalo con tu plan."],
   ["QR impresos", "Te entregamos el PDF con un QR por mesa, listo para la imprenta."],
   ["Capacitación del equipo", "Una sesión para meseros, cocina y caja, en tu local o por videollamada."],
   ["Soporte por WhatsApp 24/7", "Hablas con una persona, no con un bot. Escríbenos a la hora que quieras, todos los días: siempre te respondemos."],
@@ -208,7 +211,10 @@ export const PREGUNTAS: [string, string][] = [
   ["¿Necesito comprar equipos?", "No. Funciona en el celular, tablet o computador que ya tienes. Para la cocina sirve cualquier tablet o un televisor con navegador."],
   ["¿El cliente tiene que bajar una app?", "No. Escanea el QR con la cámara y la carta se abre en el navegador."],
   ["¿Cobran comisión por pedido?", "No. Pagas el plan mensual y nada más. En el cobro online, Mercado Pago cobra su comisión habitual."],
+  ["¿Cuánto cuesta que ustedes carguen la carta?", "Por la promo de lanzamiento, el armado básico es gratis al contratar cualquier plan: cargamos todos tus platos, sin importar cuántos sean, y te dejamos los QR listos. El armado completo, con fotos, traducciones revisadas, plano del salón en 3D y capacitación, cuesta $24.990 + IVA, también sin límite de platos."],
   ["¿Hay permanencia?", "No. Es mes a mes y puedes cancelar cuando quieras. Si pagas cada 3, 6 o 12 meses, tienes descuento."],
+  ["¿Cuántos diseños de carta hay?", "Decenas, para cafés, restaurantes, bares y más, y sumamos diseños nuevos cada mes. Todos llevan tu logo y tus colores, y puedes cambiar de diseño cuando quieras."],
+  ["¿En qué idiomas se puede ver la carta?", "Hoy en español, inglés, portugués, francés, italiano, alemán, holandés y chino. Si tu local necesita otro idioma, solo pídelo y lo agregamos al sistema."],
   ["¿Sirve fuera de Chile?", "Sí. Cada local elige su país, moneda, zona horaria e idiomas."],
   ["¿Qué pasa si se cae internet en el local?", "La carta la ven tus clientes con sus propios datos móviles, así que sigue funcionando."],
 ];

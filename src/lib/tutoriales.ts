@@ -160,7 +160,7 @@ export const TUTORIALES: Tutorial[] = [
         id: "marca",
         titulo: "Elige el diseño y tus datos",
         resumen:
-          "En Marca eliges cómo se ve la carta (más de 20 diseños), subes tu logo, escribes tu WhatsApp y activas los idiomas para turistas.",
+          "En Marca eliges cómo se ve la carta (decenas de diseños, y nuevos cada mes), subes tu logo, escribes tu WhatsApp y activas los idiomas para turistas.",
         imagenes: [
           {
             src: "dueno-marca",

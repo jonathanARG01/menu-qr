@@ -33,6 +33,7 @@ export const TEMAS = [
   "libreta",
   "muro",
   "porteno",
+  "pintor",
 ] as const;
 export type Tema = (typeof TEMAS)[number];
 
