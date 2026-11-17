@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Marco } from "@/components/panel/Marco";
+import { DemoPendiente } from "@/components/panel/DemoPendiente";
 import { MARCA } from "@/lib/marca";
 import { cargarPanel } from "@/lib/panel";
 import { diasPrueba, vigente } from "@/lib/tipos";
@@ -29,6 +30,7 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
   return (
     <div className="panel-app min-h-dvh">
       <script dangerouslySetInnerHTML={{ __html: SCRIPT_INICIO }} />
+      {!soporte && <DemoPendiente negocio={{ id: negocio.id, slug: negocio.slug }} dueno={dueno} />}
       <Marco
         datos={{
           negocio: { id: negocio.id, nombre: negocio.nombre, logo_url: negocio.logo_url },
