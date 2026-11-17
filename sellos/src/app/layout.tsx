@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   applicationName: MARCA,
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#c43d22" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#0f9f80" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
