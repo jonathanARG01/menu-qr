@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./club.css";
 
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -214,7 +215,7 @@ html[data-tema="oscuro"] body:has(:is(.panel-app, .cliente-app)) {
 }
 
 /* Las tarjetas de sellos y los carteles conservan sus colores en cualquier tema. */
-:is(.panel-app, .cliente-app) .tema-fijo {
+:is(.panel-app, .cliente-app, .club) .tema-fijo {
   color-scheme: light;
   --color-tinta: #1f1a17;
   --color-suave: #78716c;

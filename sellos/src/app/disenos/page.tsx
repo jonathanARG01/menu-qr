@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Logo } from "@/components/Logo";
+import { Etiqueta, SitioClub, Titulo } from "@/components/sitio/Marco";
 import { Inclinable } from "@/components/Inclinable";
 import { TarjetaVisual } from "@/components/TarjetaVisual";
 import { DISENOS_SELLO, PROGRAMA_BASE, type DisenoSello } from "@/lib/tipos";
@@ -19,23 +19,24 @@ const EJEMPLOS: { color: string; icono: string; local: string; premio: string }[
 export default function PaginaDisenos() {
   const disenos = (Object.keys(DISENOS_SELLO) as DisenoSello[]).filter((d) => d !== "medida");
   return (
-    <div className="min-h-dvh bg-fondo">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-        <Link href="/">
-          <Logo className="text-xl" />
-        </Link>
-        <Link href="/registro" className="boton">
-          Pruébalo gratis
-        </Link>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 pb-16">
-        <h1 className="text-3xl font-extrabold tracking-tight">Diseños de tarjeta</h1>
-        <p className="mt-1 text-suave">Todos incluidos en todos los planes, con tu logo y tu color. Y si quieres, la hacemos a tu medida.</p>
-        <div className="mt-8 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+    <SitioClub>
+      <main className="mx-auto max-w-6xl px-5 pb-16 pt-14">
+        <div className="mx-auto max-w-2xl text-center">
+          <Etiqueta centro>Diseños de tarjeta</Etiqueta>
+          <h1 className="sr-only">Diseños de tarjeta</h1>
+          <Titulo centro acento="con tu logo y tu color.">
+            Todos incluidos,
+          </Titulo>
+          <p className="mt-4 text-suave">En todos los planes. Y si quieres, la hacemos a tu medida.</p>
+          <Link href="/registro" className="boton-jade mt-6">
+            Pruébalo gratis <span className="flecha">→</span>
+          </Link>
+        </div>
+        <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
           {disenos.map((d, i) => {
             const e = EJEMPLOS[i % EJEMPLOS.length];
             return (
-              <div key={d} className="flex flex-col items-center gap-3" data-diseno={d}>
+              <div key={d} className="flex flex-col items-center gap-3" data-diseno={d} data-revelar="zoom" style={{ "--retraso": `${(i % 3) * 110}ms` } as React.CSSProperties}>
                 <Inclinable>
                   <TarjetaVisual
                     local={e.local}
@@ -70,6 +71,6 @@ export default function PaginaDisenos() {
           </div>
         </div>
       </main>
-    </div>
+    </SitioClub>
   );
 }
