@@ -42,7 +42,7 @@ export default function PaginaDisenos() {
                     local={e.local}
                     programa={{ ...PROGRAMA_BASE, meta: 10, color: e.color, icono: e.icono as typeof PROGRAMA_BASE.icono, premio: e.premio, diseno: d, hitos: [{ sellos: 5, premio: "Un regalo chico" }] }}
                     sellos={6}
-                    nombre="Camila"
+                    nombre="Elizabeth"
                   />
                 </Inclinable>
                 <div className="text-center">
@@ -61,7 +61,7 @@ export default function PaginaDisenos() {
                 puntos={1350}
                 proximo={{ titulo: "Taza de la casa", puntos: 2000 }}
                 nivel="Oro"
-                nombre="Camila"
+                nombre="Elizabeth"
               />
             </Inclinable>
             <div className="text-center">
