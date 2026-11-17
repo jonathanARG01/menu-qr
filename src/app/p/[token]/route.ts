@@ -59,7 +59,7 @@ button{margin-top:12px;border:0;background:var(--ac);color:#1c1306;font-weight:6
 const enScript = (v: unknown) =>
   JSON.stringify(v).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 
-async function pantallaLista() {
+async function pantallaLista(token: string) {
   const db = createAdminClient();
   if (!db) return html("<p>Falta SUPABASE_SERVICE_ROLE_KEY en el servidor.</p>", 500);
   const [{ data: filas, error }, { data: textos }] = await Promise.all([
@@ -71,7 +71,8 @@ async function pantallaLista() {
   const anexo = textos?.find((t) => t.clave === "anexo")?.valor ?? "";
   const pagina = PLANTILLA_PROSPECTOS.replace("__ESTADOS__", () => enScript(ESTADOS))
     .replace("__DATOS__", () => enScript(datos))
-    .replace("__ANEXO__", () => anexo);
+    .replace("__ANEXO__", () => anexo)
+    .replace("__GUIA__", () => `/p/${token}/guia`);
   return html(pagina);
 }
 
@@ -82,7 +83,7 @@ export async function GET(_req: Request, { params }: Ctx) {
   if (!rutaValida(token)) return noExiste();
   const jar = await cookies();
   if (!sesionValida(jar.get(COOKIE_PROSPECTOS)?.value)) return html(pantallaClave());
-  return pantallaLista();
+  return pantallaLista(token);
 }
 
 export async function POST(req: Request, { params }: Ctx) {
