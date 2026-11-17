@@ -13,7 +13,7 @@ export function PaginaLegal({ titulo, bajada, secciones }: { titulo: string; baj
           {secciones.map((s, i) => (
             <li key={s.titulo}>
               <h2 className="text-lg font-bold">
-                <span className="texto-jade tabular-nums">{i + 1}.</span> {s.titulo}
+                <span className="texto-oro tabular-nums">{i + 1}.</span> {s.titulo}
               </h2>
               {s.parrafos.map((p) => (
                 <p key={p} className="mt-2 leading-relaxed text-suave">

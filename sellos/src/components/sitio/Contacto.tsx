@@ -29,14 +29,14 @@ export function FormContacto() {
   if (enviado) {
     return (
       <div className="tarjeta-club quieta aparecer-club flex min-h-[28rem] flex-col items-center justify-center rounded-[2rem] p-8 text-center">
-        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-club-jade/15 text-club-jade">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-club-oro/15 text-club-oro">
           <Icono nombre="check" className="h-8 w-8" />
         </span>
         <h3 className="mt-5 text-2xl font-semibold">¡Listo! Tu mensaje está escrito</h3>
         <p className="mt-2 max-w-sm text-suave">
           Se abrió {porWhatsapp ? "WhatsApp" : "tu correo"} con todo lo que pusiste. Solo falta tocar enviar y te respondemos pronto.
         </p>
-        <button type="button" onClick={() => setEnviado(false)} className="mt-6 text-sm font-medium text-club-jade-texto hover:underline">
+        <button type="button" onClick={() => setEnviado(false)} className="mt-6 text-sm font-medium text-club-oro-texto hover:underline">
           Volver al formulario
         </button>
       </div>
@@ -79,7 +79,7 @@ export function FormContacto() {
         </label>
       </div>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <button type="submit" className="boton-jade px-6 py-3.5 text-base">
+        <button type="submit" className="boton-oro px-6 py-3.5 text-base">
           {porWhatsapp ? "Enviar por WhatsApp" : "Enviar mensaje"} <span className="flecha">→</span>
         </button>
         <p className="text-xs text-suave">Respondemos todos los días.</p>

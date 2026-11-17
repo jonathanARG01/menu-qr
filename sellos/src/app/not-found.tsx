@@ -7,7 +7,7 @@ export default function NoEncontrada() {
       <Logo className="text-2xl" />
       <h1 className="text-xl font-semibold">No encontramos esta página</h1>
       <p className="max-w-sm text-sm text-suave">Revisa el enlace o el QR. Si es una tarjeta, pídele al negocio que te la envíe de nuevo.</p>
-      <Link href="/" className="boton-jade">
+      <Link href="/" className="boton-oro">
         Ir al inicio
       </Link>
     </main>
