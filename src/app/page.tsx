@@ -666,7 +666,7 @@ function Precios() {
         <div className="mt-20">
           <div data-revelar="" className="text-center">
             <h3 className="font-marca text-2xl font-bold">¿No tienes tiempo de cargar la carta? La armamos por ti</h3>
-            <p className="mt-2 text-sitio-suave">Pago único y opcional. Si prefieres hacerlo tú, la armas en minutos desde el panel.</p>
+            <p className="mt-2 text-sitio-suave">Sin límite de platos. El armado básico va de regalo con tu plan; si prefieres hacerlo tú, la armas en minutos desde el panel.</p>
           </div>
           <div className="mx-auto mt-8 grid max-w-4xl gap-4 md:grid-cols-2">
             {ARMADOS.map((a, i) => {
@@ -681,10 +681,11 @@ function Precios() {
                   <p className="flex items-baseline justify-between gap-3">
                     <span className="font-marca font-bold">Armado {a.nombre}</span>
                     <span className="font-marca text-xl font-bold tabular-nums texto-oro">
-                      {clp(a.precio)}
-                      <span className="text-sm font-normal text-sitio-suave"> + IVA</span>
+                      {a.precio === 0 ? "Gratis" : clp(a.precio)}
+                      {a.precio > 0 && <span className="text-sm font-normal text-sitio-suave"> + IVA</span>}
                     </span>
                   </p>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-sitio-oro">{a.nota}</p>
                   <p className="mt-1 text-sm text-sitio-suave">{a.para}</p>
                   <ul className="mt-4 space-y-2 border-t border-sitio-borde pt-4 text-sm">
                     {a.incluye.map((item) => (
