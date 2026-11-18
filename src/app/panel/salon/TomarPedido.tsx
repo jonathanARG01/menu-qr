@@ -5,7 +5,7 @@ import { precioConPromo, promoVigente } from "@/lib/promos";
 import { createClient } from "@/lib/supabase/client";
 import { extraOpciones, gruposDe } from "@/lib/opciones";
 import { nuevoId } from "@/lib/reintentos";
-import { textoOpciones, type OpcionElegida, type TipoCuenta } from "@/lib/salon";
+import { nombreComensal, textoOpciones, type OpcionElegida, type TipoCuenta } from "@/lib/salon";
 import type { Categoria, Plato, Promo } from "@/lib/types";
 import { ElegirOpciones } from "@/components/ElegirOpciones";
 
@@ -32,6 +32,7 @@ export function TomarPedido({
   platos: platosCarta,
   zona,
   comensales,
+  nombres,
   formato,
   tipo = "mesa",
   borrador,
@@ -43,6 +44,8 @@ export function TomarPedido({
   // Zona horaria del restaurante, para mostrar el precio con las promos en horario.
   zona: string;
   comensales: number;
+  // Nombre de cada comensal (migración 0041).
+  nombres?: string[];
   formato: (n: number) => string;
   // Para llevar o delivery: se muestra el precio para llevar de cada plato (si tiene).
   tipo?: TipoCuenta;
@@ -276,7 +279,7 @@ export function TomarPedido({
                     <option value="">Compartido</option>
                     {Array.from({ length: comensales }, (_, i) => (
                       <option key={i} value={i + 1}>
-                        Comensal {i + 1}
+                        {nombreComensal(nombres, i + 1)}
                       </option>
                     ))}
                   </select>

@@ -6,10 +6,12 @@ export const dynamic = "force-dynamic";
 
 export default async function PanelPromos() {
   const { supabase, restaurante, ajustes } = await requerirSeccion("promos");
-  const [promos, categorias, platos] = await Promise.all([
+  const [promos, categorias, platos, fechas] = await Promise.all([
     supabase.from("promos").select("*").eq("restaurante_id", restaurante.id).order("orden").order("created_at"),
     supabase.from("categorias").select("*").eq("restaurante_id", restaurante.id).order("orden"),
     supabase.from("platos").select("id, nombre, categoria_id, precio").eq("restaurante_id", restaurante.id).order("orden"),
+    // Migración 0041: promos por fecha.
+    supabase.from("promos").select("fechas").eq("restaurante_id", restaurante.id).limit(1),
   ]);
 
   if (promos.error) {
@@ -30,6 +32,7 @@ export default async function PanelPromos() {
       iniciales={(promos.data ?? []) as Promo[]}
       categorias={(categorias.data ?? []) as Categoria[]}
       platos={(platos.data ?? []) as Pick<Plato, "id" | "nombre" | "categoria_id" | "precio">[]}
+      conFechas={!fechas.error}
     />
   );
 }

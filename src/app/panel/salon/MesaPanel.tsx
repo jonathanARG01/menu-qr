@@ -14,6 +14,7 @@ import {
   type PedidoItem,
   type SolicitudCuenta,
   cuentaDeMesa,
+  nombreComensal,
   nombreMesa,
   regionDe,
   textoOpciones,
@@ -642,6 +643,7 @@ export function MesaPanel({
               platos={platos}
               zona={ajustes.zona_horaria}
               comensales={llevar ? 1 : cuenta.comensales}
+              nombres={cuenta.nombres_comensales}
               formato={formato}
               tipo={cuenta.tipo ?? "mesa"}
               borrador={cuenta.id}
@@ -654,6 +656,7 @@ export function MesaPanel({
               pagos={pagos}
               comensales={llevar ? 1 : cuenta.comensales}
               lineas={lineas}
+              nombres={cuenta.nombres_comensales}
               ajustes={ajustes}
               solicitud={cuenta.aviso?.tipo === "cuenta" ? (cuenta.aviso.detalle ?? null) : null}
               formato={formato}
@@ -677,6 +680,16 @@ export function MesaPanel({
                   </div>
                   {mesa && cuenta.comensales > (mesa.capacidad ?? 4) && (
                     <p className="-mt-2 text-xs text-amber-700">Más que los {mesa.capacidad} lugares de la mesa.</p>
+                  )}
+                  {"nombres_comensales" in cuenta && (
+                    <NombresComensales
+                      key={`${cuenta.id}-${cuenta.comensales}-${(cuenta.nombres_comensales ?? []).join("|")}`}
+                      cantidad={cuenta.comensales}
+                      nombres={cuenta.nombres_comensales ?? []}
+                      onGuardar={(lista) =>
+                        hacer(supabase.from("cuentas").update({ nombres_comensales: lista }).eq("id", cuenta.id), "Nombres guardados")
+                      }
+                    />
                   )}
                 </>
               )}
@@ -835,7 +848,7 @@ export function MesaPanel({
                               <option value="">Todos</option>
                               {Array.from({ length: llevar ? 0 : cuenta.comensales }, (_, k) => (
                                 <option key={k} value={k + 1}>
-                                  C{k + 1}
+                                  {nombreComensal(cuenta.nombres_comensales, k + 1, true)}
                                 </option>
                               ))}
                             </select>
@@ -1024,6 +1037,51 @@ export function MesaPanel({
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Nombre de cada comensal (en mesas grandes ayuda más "Ana" que "C4"). Se guarda al salir del campo.
+function NombresComensales({
+  cantidad,
+  nombres,
+  onGuardar,
+}: {
+  cantidad: number;
+  nombres: string[];
+  onGuardar: (lista: string[]) => void;
+}) {
+  const [abierto, setAbierto] = useState(nombres.some((n) => n?.trim()));
+  const [lista, setLista] = useState<string[]>(() => Array.from({ length: cantidad }, (_, i) => nombres[i] ?? ""));
+  const guardar = () => {
+    const limpia = Array.from({ length: cantidad }, (_, i) => (lista[i] ?? "").trim().slice(0, 20));
+    const antes = Array.from({ length: cantidad }, (_, i) => (nombres[i] ?? "").trim());
+    if (limpia.join("|") !== antes.join("|")) onGuardar(limpia);
+  };
+  if (!abierto)
+    return (
+      <button type="button" className="-mt-2 text-sm font-medium text-marca hover:underline" onClick={() => setAbierto(true)}>
+        + Ponerle nombre a cada comensal
+      </button>
+    );
+  return (
+    <div className="-mt-1 rounded-xl bg-stone-50 p-3">
+      <p className="mb-2 text-xs text-suave">Nombre de cada comensal (aparece al elegir de quién es cada plato y al cobrar)</p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {Array.from({ length: cantidad }, (_, i) => (
+          <input
+            key={i}
+            value={lista[i] ?? ""}
+            maxLength={20}
+            placeholder={`Comensal ${i + 1}`}
+            aria-label={`Nombre del comensal ${i + 1}`}
+            onChange={(e) => setLista((l) => Object.assign(Array.from({ length: cantidad }, (_, k) => l[k] ?? ""), { [i]: e.target.value }))}
+            onBlur={guardar}
+            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+            className="campo py-1.5 text-sm"
+          />
+        ))}
       </div>
     </div>
   );

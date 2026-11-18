@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { SelectorPropina } from "@/components/SelectorPropina";
-import { consumoPorComensal, describirPropina, montoPropina, partesIguales, type LineaCuenta, type Propina } from "@/lib/cuenta";
-import type { Ajustes, Pago, SolicitudCuenta } from "@/lib/salon";
+import { consumoPorComensal, describirPropina, montoPropina, partesIguales, totalLineas, type LineaCuenta, type Propina } from "@/lib/cuenta";
+import { nombreComensal, type Ajustes, type Pago, type SolicitudCuenta } from "@/lib/salon";
 import { esEfectivo } from "@/lib/caja";
 
 type Modo = "junto" | "iguales" | "consumo" | "libre";
-type Parte = { etiqueta: string; monto: number; metodo?: string };
+// En "cada uno lo suyo", el detalle de lo que consumió: sus platos y su parte de lo compartido.
+type Parte = { etiqueta: string; monto: number; metodo?: string; detalle?: { platos: LineaCuenta[]; compartido: number } };
 
 export type NuevoPago = { parte: string; monto: number; propina: number; metodo: string; propina_metodo: string | null };
 
@@ -24,6 +25,7 @@ export function Cobro({
   pagos,
   comensales,
   lineas,
+  nombres,
   ajustes,
   solicitud,
   formato,
@@ -36,6 +38,8 @@ export function Cobro({
   pagos: Pago[];
   comensales: number;
   lineas: LineaCuenta[];
+  // Nombre de cada comensal (migración 0041); si no, los que escribió la mesa al pedir la cuenta.
+  nombres?: string[];
   ajustes: Ajustes;
   solicitud?: SolicitudCuenta | null;
   formato: (n: number) => string;
@@ -53,22 +57,35 @@ export function Cobro({
   const [propinaFinal, setPropinaFinal] = useState(false);
 
   // Si la mesa pidió la cuenta con un medio de pago por persona, cada parte ya trae el suyo.
+  const nombresMesa = nombres?.some((n) => n?.trim()) ? nombres : solicitud?.nombres;
+  const nombreDe = (i: number) => nombreComensal(nombresMesa, i + 1);
   const metodoDe = (i: number) =>
     (solicitud?.modo === modo && solicitud.metodos?.[i]) || (solicitud?.modo === modo ? solicitud.metodo : undefined);
   const lista = useMemo<Parte[]>(() => {
     if (modo === "iguales")
       return partesIguales(total, partes).map((monto, i) => ({
-        etiqueta: `Parte ${i + 1} de ${partes}`,
+        etiqueta: nombresMesa?.[i]?.trim() ? `${nombresMesa[i].trim()} (parte ${i + 1} de ${partes})` : `Parte ${i + 1} de ${partes}`,
         monto,
         metodo: metodoDe(i),
       }));
-    if (modo === "consumo")
+    if (modo === "consumo") {
+      const n = Math.max(1, comensales);
+      const compartidas = lineas.filter((l) => !l.comensal || l.comensal > n);
       return consumoPorComensal(lineas, comensales)
-        .map((monto, i) => ({ etiqueta: `Comensal ${i + 1}`, monto, metodo: metodoDe(i) }))
+        .map((monto, i) => {
+          const platos = lineas.filter((l) => l.comensal === i + 1);
+          return {
+            etiqueta: nombreDe(i),
+            monto,
+            metodo: metodoDe(i),
+            detalle: { platos, compartido: compartidas.length ? monto - totalLineas(platos) : 0 },
+          };
+        })
         .filter((p) => p.monto > 0);
+    }
     if (modo === "libre") return [{ etiqueta: "Pago parcial", monto: falta }];
     return [{ etiqueta: "Cuenta completa", monto: falta }];
-  }, [modo, partes, total, lineas, comensales, falta]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [modo, partes, total, lineas, comensales, falta, nombresMesa]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pagadaParte = (p: Parte) => modo !== "libre" && modo !== "junto" && pagos.some((x) => x.parte === p.etiqueta);
   const asignadas = lineas.filter((l) => l.comensal).length;
@@ -116,7 +133,10 @@ export function Cobro({
           {solicitud.metodos?.some(Boolean) && (
             <span className="mt-1 block">
               {solicitud.metodos
-                .map((m, i) => `${solicitud.modo === "consumo" ? "Comensal" : "Persona"} ${i + 1}: ${m || "sin elegir"}`)
+                .map(
+                  (m, i) =>
+                    `${solicitud.nombres?.[i]?.trim() || `${solicitud.modo === "consumo" ? "Comensal" : "Persona"} ${i + 1}`}: ${m || "sin elegir"}`,
+                )
                 .join(" · ")}
             </span>
           )}
@@ -182,6 +202,24 @@ export function Cobro({
                     {p.etiqueta}
                     {p.metodo && (
                       <span className="ml-2 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-suave">{p.metodo}</span>
+                    )}
+                    {p.detalle && (p.detalle.platos.length > 0 || p.detalle.compartido > 0) && (
+                      <span className="mt-1 block space-y-0.5 text-xs text-suave">
+                        {p.detalle.platos.map((l, k) => (
+                          <span key={k} className="flex justify-between gap-3">
+                            <span className="min-w-0 truncate">
+                              {l.cantidad} × {l.nombre ?? "Plato"}
+                            </span>
+                            <span className="tabular-nums">{formato(Number(l.precio) * l.cantidad)}</span>
+                          </span>
+                        ))}
+                        {p.detalle.compartido > 0 && (
+                          <span className="flex justify-between gap-3">
+                            <span>Parte de lo compartido</span>
+                            <span className="tabular-nums">{formato(p.detalle.compartido)}</span>
+                          </span>
+                        )}
+                      </span>
                     )}
                   </span>
                   <span className={`font-semibold tabular-nums ${hecha ? "text-suave line-through" : ""}`}>

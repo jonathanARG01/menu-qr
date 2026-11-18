@@ -8,7 +8,7 @@ export type Propina =
   // La deja al final, cuando ya pagaron todos.
   | { tipo: "despues" };
 
-export type LineaCuenta = { precio: number; cantidad: number; comensal: number | null };
+export type LineaCuenta = { precio: number; cantidad: number; comensal: number | null; nombre?: string };
 
 const centavos = (n: number) => Math.round(Number(n) * 100);
 const pesos = (c: number) => c / 100;

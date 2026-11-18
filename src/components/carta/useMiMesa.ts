@@ -4,7 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { EstadoPedido, OpcionElegida } from "@/lib/salon";
 
-export type LineaMesa = { nombre: string; precio: number; cantidad: number; comensal: number | null; opciones?: OpcionElegida[] };
+export type LineaMesa = {
+  // Migración 0041: para que la mesa diga de quién es cada línea.
+  id?: string;
+  nombre: string;
+  precio: number;
+  cantidad: number;
+  comensal: number | null;
+  opciones?: OpcionElegida[];
+};
 export type PedidoMesa = {
   numero: number;
   estado: EstadoPedido;
@@ -17,7 +25,8 @@ export type PedidoMesa = {
 export type DatosMesa = {
   mesa: string;
   capacidad: number;
-  cuenta: null | { comensales: number; pagado: number; pedidos: PedidoMesa[] };
+  // nombres: migración 0041 (posición 0 = comensal 1).
+  cuenta: null | { comensales: number; nombres?: string[]; pagado: number; pedidos: PedidoMesa[] };
 };
 
 // Estados que se le avisan al comensal: la cocina empezó, terminó, o el mesero lo entregó.

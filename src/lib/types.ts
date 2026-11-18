@@ -128,6 +128,10 @@ export type Promo = {
   dias: number[];
   desde: string;
   hasta: string;
+  // Migración 0041: días puntuales ("2026-12-26") y rango de fechas. Vacío = sin límite.
+  fechas?: string[];
+  fecha_desde?: string | null;
+  fecha_hasta?: string | null;
   descuento: number;
   categorias: string[];
   platos: string[];
