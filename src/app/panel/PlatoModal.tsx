@@ -337,9 +337,6 @@ export function PlatoModal({
                 className="campo tabular-nums"
                 placeholder="0.00"
               />
-              {precio.trim() !== "" && Number(precio.replace(",", ".")) === 0 && (
-                <p className="mt-1 text-xs text-suave">Sin costo (ej. vaso de agua): en la carta dice «Gratis» y se puede pedir.</p>
-              )}
             </div>
             <div>
               <label htmlFor="plato-categoria" className="etiqueta-campo">
