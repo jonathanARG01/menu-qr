@@ -261,8 +261,6 @@ function PrecioPlato({ plato, moneda }: { plato: Plato; moneda: string }) {
       </span>
     );
   }
-  // Sin costo (vaso de agua, pan de cortesía): se puede pedir igual.
-  if (Number(plato.precio) === 0) return <>{t("gratis")}</>;
   return <>{formatoPrecio(plato.precio, moneda)}</>;
 }
 
