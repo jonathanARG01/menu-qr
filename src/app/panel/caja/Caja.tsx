@@ -5,7 +5,7 @@ import { Icono } from "@/components/Icono";
 import { useToast } from "@/components/Toast";
 import { CATEGORIAS_GASTO, esEfectivo, esRetiro, resumirCaja, type Gasto, type TotalesCaja } from "@/lib/caja";
 import { fechaCorta, imprimirTicket, type LineaTicket } from "@/lib/imprimir";
-import { leerAjustes, regionDe, type Pago } from "@/lib/salon";
+import { leerAjustes, NOMBRE_TIPO, nombreMesa, regionDe, type Pago, type TipoCuenta } from "@/lib/salon";
 import { createClient } from "@/lib/supabase/client";
 import type { Restaurante } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
@@ -14,7 +14,8 @@ type Cierre = {
   id: string;
   desde: string;
   hasta: string;
-  totales: TotalesCaja & { pendiente?: number };
+  // pendiente: lo que quedaba sin cobrar en mesas abiertas; fondo_siguiente: el efectivo que quedó para el turno nuevo.
+  totales: TotalesCaja & { pendiente?: number; pendientes?: number; fondo_siguiente?: number };
   efectivo_inicial: number;
   efectivo_contado: number | null;
   nota: string | null;
@@ -25,7 +26,9 @@ type Cierre = {
 
 const esParcial = (c: Pick<Cierre, "tipo">) => c.tipo === "parcial";
 
-type Abiertas = { cantidad: number; falta: number };
+// Cada cuenta abierta con lo que lleva consumido, lo pagado y lo que falta.
+type CuentaPendiente = { id: string; nombre: string; consumo: number; pagado: number; falta: number; desde: string };
+type Abiertas = { cantidad: number; falta: number; lista: CuentaPendiente[] };
 
 const inicioDeHoy = () => {
   const d = new Date();
@@ -57,7 +60,10 @@ export function Caja({
   const [cierres, setCierres] = useState<Cierre[]>([]);
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [cerradas, setCerradas] = useState<{ comensales: number }[]>([]);
-  const [abiertas, setAbiertas] = useState<Abiertas>({ cantidad: 0, falta: 0 });
+  const [abiertas, setAbiertas] = useState<Abiertas>({ cantidad: 0, falta: 0, lista: [] });
+  const [verPendientes, setVerPendientes] = useState(false);
+  // Efectivo que se deja en la caja para el turno siguiente (vacío = lo contado o, si no, lo esperado).
+  const [queda, setQueda] = useState("");
   const [nombres, setNombres] = useState<Map<string, string>>(new Map([[usuario.id, usuario.email.split("@")[0]]]));
   const [fondo, setFondo] = useState("");
   const [contado, setContado] = useState("");
@@ -97,7 +103,7 @@ export function Caja({
         .eq("estado", "cerrada")
         .gte("cerrada_at", inicio)
         .lte("cerrada_at", ahora),
-      supabase.from("cuentas").select("id").eq("restaurante_id", restaurante.id).eq("estado", "abierta"),
+      supabase.from("cuentas").select("*").eq("restaurante_id", restaurante.id).eq("estado", "abierta"),
       supabase
         .from("gastos")
         .select("*")
@@ -106,23 +112,46 @@ export function Caja({
         .lte("created_at", ahora)
         .order("created_at"),
     ]);
-    const idsAbiertas = (a.data ?? []).map((x) => x.id as string);
+    const cuentasAbiertas = (a.data ?? []) as {
+      id: string;
+      mesa_numero: string | null;
+      tipo?: TipoCuenta;
+      cliente_nombre?: string | null;
+      envio?: number;
+      abierta_at: string;
+    }[];
+    const idsAbiertas = cuentasAbiertas.map((x) => x.id);
     let falta = 0;
+    let pendientes: CuentaPendiente[] = [];
     if (idsAbiertas.length) {
       const [ped, pag] = await Promise.all([
-        supabase.from("pedidos").select("estado, pedido_items(precio, cantidad)").in("cuenta_id", idsAbiertas),
-        supabase.from("pagos").select("monto").in("cuenta_id", idsAbiertas),
+        supabase.from("pedidos").select("cuenta_id, estado, pedido_items(precio, cantidad)").in("cuenta_id", idsAbiertas),
+        supabase.from("pagos").select("cuenta_id, monto").in("cuenta_id", idsAbiertas),
       ]);
-      const consumo = (ped.data ?? [])
-        .filter((x) => x.estado !== "cancelado")
-        .flatMap((x) => (x.pedido_items ?? []) as { precio: number; cantidad: number }[])
-        .reduce((s, i) => s + Number(i.precio) * i.cantidad, 0);
-      falta = Math.max(0, consumo - (pag.data ?? []).reduce((s, x) => s + Number(x.monto), 0));
+      pendientes = cuentasAbiertas.map((c) => {
+        const consumo =
+          (ped.data ?? [])
+            .filter((x) => x.cuenta_id === c.id && x.estado !== "cancelado")
+            .flatMap((x) => (x.pedido_items ?? []) as { precio: number; cantidad: number }[])
+            .reduce((s, i) => s + Number(i.precio) * i.cantidad, 0) + Number(c.envio ?? 0);
+        const pagado = (pag.data ?? []).filter((x) => x.cuenta_id === c.id).reduce((s, x) => s + Number(x.monto), 0);
+        const tipo = c.tipo ?? "mesa";
+        const nombre =
+          tipo === "mesa"
+            ? nombreMesa(c.mesa_numero)
+            : `${NOMBRE_TIPO[tipo]}${c.cliente_nombre ? ` · ${c.cliente_nombre}` : ""}`;
+        return { id: c.id, nombre, consumo, pagado, falta: Math.max(0, consumo - pagado), desde: c.abierta_at };
+      });
+      pendientes.sort((x, y) => y.falta - x.falta);
+      falta = pendientes.reduce((s, c) => s + c.falta, 0);
     }
     setCierres(lista);
     setPagos((p.data ?? []) as Pago[]);
     setCerradas((c.data ?? []) as { comensales: number }[]);
-    setAbiertas({ cantidad: idsAbiertas.length, falta });
+    setAbiertas({ cantidad: idsAbiertas.length, falta, lista: pendientes });
+    // El turno nuevo parte con el efectivo que quedó en la caja al cerrar el anterior.
+    const heredado = lista.find((x) => !esParcial(x))?.totales?.fondo_siguiente;
+    if (typeof heredado === "number") setFondo((f) => (f.trim() ? f : String(heredado)));
     setGastos(g.error ? null : ((g.data ?? []) as Gasto[]));
     setHasta(ahora);
     setCargando(false);
@@ -143,6 +172,11 @@ export function Caja({
     [pagos, cerradas, nombres, fondo, gastos],
   );
   const diferencia = contado.trim() ? numero(contado) - totales.efectivo_esperado : null;
+  // Lo que pasa al turno siguiente: el efectivo que queda en la caja y lo que falta cobrar en mesas abiertas.
+  const fondoSiguiente = queda.trim()
+    ? numero(queda)
+    : Math.max(0, contado.trim() ? numero(contado) : totales.efectivo_esperado);
+  const fondoHeredado = ultimo?.totales.fondo_siguiente;
 
   async function cerrarCaja() {
     if (!totales.cobros && !confirm("No hay cobros en este turno. ¿Cerrar la caja igual?")) return;
@@ -158,7 +192,7 @@ export function Caja({
         restaurante_id: restaurante.id,
         desde,
         hasta,
-        totales: { ...totales, pendiente: abiertas.falta },
+        totales: { ...totales, pendiente: abiertas.falta, pendientes: abiertas.cantidad, fondo_siguiente: fondoSiguiente },
         efectivo_inicial: numero(fondo),
         efectivo_contado: contado.trim() ? numero(contado) : null,
         nota: nota.trim() || null,
@@ -168,8 +202,9 @@ export function Caja({
     setGuardando(false);
     if (error) return avisar(mensajeError(error), "error");
     avisar("Caja cerrada");
-    setFondo("");
+    setFondo(String(fondoSiguiente));
     setContado("");
+    setQueda("");
     setNota("");
     setViendo(data as Cierre);
     await cargar();
@@ -180,7 +215,7 @@ export function Caja({
     const foto = {
       desde,
       hasta: new Date().toISOString(),
-      totales: { ...totales, pendiente: abiertas.falta },
+      totales: { ...totales, pendiente: abiertas.falta, pendientes: abiertas.cantidad },
       efectivo_inicial: numero(fondo),
       efectivo_contado: contado.trim() ? numero(contado) : null,
       nota: nota.trim() || null,
@@ -247,8 +282,15 @@ export function Caja({
         { tipo: "fila", izq: dif < 0 ? "Falta" : dif > 0 ? "Sobra" : "Diferencia", der: formato(Math.abs(dif)), fuerte: true },
       );
     }
+    if (t.pendiente || t.fondo_siguiente !== undefined) lineas.push({ tipo: "separador" }, { tipo: "texto", texto: "Pasa al turno siguiente", fuerte: true });
     if (t.pendiente)
-      lineas.push({ tipo: "texto", texto: `Quedaba sin cobrar en mesas abiertas: ${formato(t.pendiente)}`, chico: true });
+      lineas.push({
+        tipo: "fila",
+        izq: `Por cobrar${t.pendientes ? ` (${t.pendientes} ${t.pendientes === 1 ? "cuenta" : "cuentas"})` : ""}`,
+        der: formato(t.pendiente),
+      });
+    if (t.fondo_siguiente !== undefined)
+      lineas.push({ tipo: "fila", izq: "Fondo del nuevo turno", der: formato(t.fondo_siguiente), fuerte: true });
     if (c.nota) lineas.push({ tipo: "separador" }, { tipo: "texto", texto: c.nota });
     imprimirTicket(lineas);
   }
@@ -296,6 +338,7 @@ export function Caja({
           <h1 className="text-2xl font-bold">Caja</h1>
           <p className="text-sm text-suave" suppressHydrationWarning>
             Turno desde {fechaCorta(desde, region)} {ultimo ? "(último cierre)" : "(inicio del día)"}
+            {typeof fondoHeredado === "number" && ` · empezó con ${formato(fondoHeredado)} en caja`}
           </p>
         </div>
         <button type="button" onClick={() => cargar()} className="boton-secundario">
@@ -329,11 +372,50 @@ export function Caja({
           </div>
 
           {abiertas.cantidad > 0 && (
-            <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              Hay {abiertas.cantidad} {abiertas.cantidad === 1 ? "mesa abierta" : "mesas abiertas"}
-              {abiertas.falta > 0 ? ` con ${formato(abiertas.falta)} sin cobrar` : ""}. Lo que se cobre después de cerrar la caja
-              entra en el turno siguiente.
-            </p>
+            <section className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="min-w-0 flex-1">
+                  <strong>Pendiente por cobrar: {formato(abiertas.falta)}</strong> en {abiertas.cantidad}{" "}
+                  {abiertas.cantidad === 1 ? "cuenta abierta" : "cuentas abiertas"}. Lo que se cobre después de cerrar la caja
+                  entra en el turno siguiente.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setVerPendientes((v) => !v)}
+                  aria-expanded={verPendientes}
+                  className="rounded-lg border border-amber-300 bg-white/60 px-3 py-1.5 text-sm font-semibold"
+                >
+                  {verPendientes ? "Ocultar detalle" : "Ver detalle"}
+                </button>
+              </div>
+              {verPendientes && (
+                <table className="mt-3 w-full text-sm">
+                  <thead className="text-left text-xs uppercase tracking-wide text-amber-800/80">
+                    <tr>
+                      <th className="pb-1 font-medium">Cuenta</th>
+                      <th className="pb-1 text-right font-medium">Consumo</th>
+                      <th className="pb-1 text-right font-medium">Pagado</th>
+                      <th className="pb-1 text-right font-medium">Falta</th>
+                    </tr>
+                  </thead>
+                  <tbody className="tabular-nums">
+                    {abiertas.lista.map((c) => (
+                      <tr key={c.id} className="border-t border-amber-200">
+                        <td className="py-1.5">
+                          {c.nombre}{" "}
+                          <span className="text-xs text-amber-800/70" suppressHydrationWarning>
+                            · desde {fechaCorta(c.desde, region)}
+                          </span>
+                        </td>
+                        <td className="py-1.5 text-right">{formato(c.consumo)}</td>
+                        <td className="py-1.5 text-right">{formato(c.pagado)}</td>
+                        <td className="py-1.5 text-right font-semibold">{formato(c.falta)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
           )}
 
           <div className="grid gap-5 lg:grid-cols-2">
@@ -485,6 +567,37 @@ export function Caja({
                 </p>
               </div>
             </div>
+            <div className="mt-4 rounded-xl bg-stone-50 p-4">
+              <p className="text-sm font-semibold">Nuevo turno</p>
+              <div className="mt-2 grid gap-4 sm:grid-cols-3">
+                <label className="block text-sm">
+                  <span className="mb-1 block text-suave">Queda en caja para el nuevo turno</span>
+                  <input
+                    inputMode="decimal"
+                    value={queda}
+                    onChange={(e) => setQueda(e.target.value)}
+                    placeholder={String(Math.max(0, contado.trim() ? numero(contado) : totales.efectivo_esperado))}
+                    className="campo w-full"
+                  />
+                </label>
+                <div className="text-sm">
+                  <span className="mb-1 block text-suave">Fondo del nuevo turno</span>
+                  <p className="py-2 text-lg font-semibold tabular-nums">{formato(fondoSiguiente)}</p>
+                </div>
+                <div className="text-sm">
+                  <span className="mb-1 block text-suave">Pendiente por cobrar que pasa</span>
+                  <p className="py-2 text-lg font-semibold tabular-nums">{formato(abiertas.falta)}</p>
+                  {abiertas.cantidad > 0 && (
+                    <p className="-mt-1 text-xs text-suave">
+                      en {abiertas.cantidad} {abiertas.cantidad === 1 ? "cuenta abierta" : "cuentas abiertas"}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-suave">
+                Si retiras parte del efectivo al cerrar, escribe cuánto queda. Sin escribir nada, queda lo contado (o lo esperado).
+              </p>
+            </div>
             <label className="mt-4 block text-sm">
               <span className="mb-1 block text-suave">Nota (opcional)</span>
               <input
@@ -577,6 +690,15 @@ export function Caja({
               ))}
               <Fila t="Efectivo esperado" v={formato(viendo.totales.efectivo_esperado)} />
               {viendo.efectivo_contado !== null && <Fila t="Efectivo contado" v={formato(Number(viendo.efectivo_contado))} />}
+              {!!viendo.totales.pendiente && (
+                <Fila
+                  t={`Quedó por cobrar${viendo.totales.pendientes ? ` (${viendo.totales.pendientes} cuentas)` : ""}`}
+                  v={formato(viendo.totales.pendiente)}
+                />
+              )}
+              {viendo.totales.fondo_siguiente !== undefined && (
+                <Fila t="Fondo del nuevo turno" v={formato(viendo.totales.fondo_siguiente)} fuerte />
+              )}
             </dl>
             {viendo.nota && <p className="mt-3 rounded-lg bg-stone-50 p-3 text-sm">{viendo.nota}</p>}
             <div className="mt-5 flex gap-2">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { montoPropina, partesIguales, totalLineas, type Propina } from "@/lib/cuenta";
+import { consumoPorComensal, montoPropina, partesIguales, totalLineas, type Propina } from "@/lib/cuenta";
 import type { ClaveTexto } from "@/lib/i18n";
 import { textoOpciones, type SolicitudCuenta } from "@/lib/salon";
 import type { Restaurante } from "@/lib/types";
@@ -66,6 +66,15 @@ export function MiMesa({
     if (comensales) setPartes((p) => (p === 2 ? Math.max(2, comensales) : p));
   }, [comensales]);
 
+  // Nombre de cada persona (los que puso el mesero o la mesa) y de quién es cada línea (null = compartido).
+  const [nombres, setNombres] = useState<string[]>([]);
+  const nombresGuardados = datos?.cuenta?.nombres;
+  useEffect(() => {
+    if (nombresGuardados?.length) setNombres((n) => (n.some((x) => x.trim()) ? n : nombresGuardados));
+  }, [nombresGuardados]);
+  const [reparto, setReparto] = useState<Record<string, number | null>>({});
+  const nombreDe = (i: number) => nombres[i]?.trim() || `${t("persona")} ${i + 1}`;
+
   useEffect(() => {
     recargar();
     const alTeclear = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
@@ -79,6 +88,18 @@ export function MiMesa({
 
   const lineas = datos?.cuenta?.pedidos.flatMap((p) => p.items) ?? [];
   const total = totalLineas(lineas);
+  // Cada línea con su dueño: lo que eligió la mesa acá o, si no, lo que anotó el mesero.
+  const claveLinea = (l: (typeof lineas)[number], k: number) => l.id ?? `linea-${k}`;
+  const duenoDe = (l: (typeof lineas)[number], k: number) => {
+    const clave = claveLinea(l, k);
+    const d = clave in reparto ? reparto[clave] : l.comensal;
+    return d && d <= partes ? d : null;
+  };
+  const repartibles = lineas.some((l) => l.id);
+  const lineasConDueno = lineas.map((l, k) => ({ ...l, comensal: duenoDe(l, k) }));
+  const porPersona = consumoPorComensal(lineasConDueno, partes);
+  const compartido = totalLineas(lineasConDueno.filter((l) => !l.comensal));
+  const iguales = partesIguales(total, partes);
   const falta = Math.max(0, total - Number(datos?.cuenta?.pagado ?? 0));
   // Cada parte se calcula sobre el total (si alguno ya pagó, la parte no se achica), sin pasarse de lo que falta.
   const porParte = modo === "iguales" ? Math.min(partesIguales(total, partes)[0], falta) : falta;
@@ -115,12 +136,36 @@ export function MiMesa({
 
   async function avisar(tipo: "mozo" | "cuenta") {
     setEnviando(true);
+    const conNombres = nombres.slice(0, partes).some((n) => n.trim());
+    // La mesa dejó dicho cuántos son, sus nombres y de quién es cada plato: lo ve el mesero al cobrar.
+    if (tipo === "cuenta" && (modo === "consumo" || (modo === "iguales" && conNombres))) {
+      await createClient()
+        .rpc("repartir_cuenta", {
+          p_restaurante: restaurante.id,
+          p_sucursal: sucursal?.id ?? null,
+          p_mesa: mesa,
+          p_comensales: partes,
+          p_nombres: Array.from({ length: partes }, (_, i) => nombres[i]?.trim() ?? ""),
+          p_reparto:
+            modo === "consumo"
+              ? lineas.flatMap((l, k) => (l.id ? [{ id: l.id, comensal: duenoDe(l, k) }] : []))
+              : [],
+        })
+        .then(
+          () => null,
+          () => null,
+        );
+    }
     const detalle: SolicitudCuenta | null =
       tipo === "cuenta"
         ? {
             modo,
             partes: modo === "iguales" ? partes : undefined,
             metodos: cobros && modo !== "junto" ? Array.from({ length: partes }, (_, i) => metodos[i] ?? "") : undefined,
+            nombres:
+              modo !== "junto" && nombres.slice(0, partes).some((n) => n.trim())
+                ? Array.from({ length: partes }, (_, i) => (nombres[i] ?? "").trim().slice(0, 20))
+                : undefined,
             propina: cobros ? propina : undefined,
             metodo: cobros && modo === "junto" ? metodo : undefined,
           }
@@ -255,35 +300,109 @@ export function MiMesa({
                       <span className="block font-semibold">{t("cadaUno")}</span>
                       <span className="block text-sm text-stone-500">{t("cadaUnoAyuda")}</span>
                     </button>
-                    {modo === "consumo" && cobros && ajustes.metodos_pago.length > 0 && contador(t("cuantosSon"))}
+                    {modo === "consumo" && contador(t("cuantosSon"))}
                   </div>
                 </div>
               </div>
 
-              {cobros && ajustes.metodos_pago.length > 0 && modo !== "junto" && (
+              {modo === "consumo" && lineas.length > 0 && (
                 <div>
-                  <p className="mb-2 text-sm font-semibold">{t("comoPagaCada")}</p>
-                  <ul className="space-y-2">
-                    {Array.from({ length: partes }, (_, i) => (
-                      <li key={i} className="flex items-center gap-3">
-                        <span className="w-24 shrink-0 text-sm text-stone-600">
-                          {t("persona")} {i + 1}
+                  <p className="text-sm font-semibold">{t("deQuien")}</p>
+                  <p className="mb-2 text-xs text-stone-500">{t("deQuienAyuda")}</p>
+                  <ul className="divide-y divide-stone-100 rounded-xl border border-stone-200">
+                    {lineas.map((l, k) => (
+                      <li key={claveLinea(l, k)} className="flex items-center gap-2 px-3 py-2 text-sm">
+                        <span className="min-w-0 flex-1">
+                          {l.cantidad} × {l.nombre}
+                          {l.opciones?.length ? (
+                            <span className="block text-xs text-stone-500">{textoOpciones(l.opciones)}</span>
+                          ) : null}
                         </span>
+                        <span className="tabular-nums text-stone-500">{precio(Number(l.precio) * l.cantidad)}</span>
                         <select
-                          value={metodos[i] ?? ""}
-                          onChange={(e) => setMetodos((m) => Object.assign([...m], { [i]: e.target.value }))}
-                          aria-label={`${t("medioPago")} · ${t("persona")} ${i + 1}`}
-                          className="min-w-0 flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-base"
+                          value={duenoDe(l, k) ?? ""}
+                          disabled={!l.id && repartibles}
+                          onChange={(e) =>
+                            setReparto((r) => ({ ...r, [claveLinea(l, k)]: e.target.value ? Number(e.target.value) : null }))
+                          }
+                          aria-label={`${t("deQuien")} · ${l.nombre}`}
+                          className="w-28 shrink-0 rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm"
                         >
-                          <option value="">{t("elegir")}</option>
-                          {ajustes.metodos_pago.map((m) => (
-                            <option key={m} value={m}>
-                              {m}
+                          <option value="">{t("compartido")}</option>
+                          {Array.from({ length: partes }, (_, i) => (
+                            <option key={i} value={i + 1}>
+                              {nombreDe(i)}
                             </option>
                           ))}
                         </select>
                       </li>
                     ))}
+                  </ul>
+                </div>
+              )}
+
+              {modo !== "junto" && (
+                <div>
+                  <p className="mb-2 text-sm font-semibold">
+                    {cobros && ajustes.metodos_pago.length > 0 ? t("comoPagaCada") : t("cadaParte")}
+                  </p>
+                  <ul className="space-y-2">
+                    {Array.from({ length: partes }, (_, i) => {
+                      const propias = lineasConDueno.filter((l) => l.comensal === i + 1);
+                      const monto = modo === "consumo" ? porPersona[i] : iguales[i];
+                      return (
+                        <li key={i} className="rounded-xl border border-stone-200 p-3">
+                          <div className="flex items-center gap-2">
+                            <input
+                              value={nombres[i] ?? ""}
+                              maxLength={20}
+                              onChange={(e) => setNombres((n) => Object.assign([...n], { [i]: e.target.value }))}
+                              placeholder={`${t("persona")} ${i + 1}`}
+                              aria-label={`${t("nombrePersona")} · ${t("persona")} ${i + 1}`}
+                              className="min-w-0 flex-1 rounded-lg border border-stone-200 px-2.5 py-1.5 text-base font-medium"
+                            />
+                            <span className="shrink-0 font-semibold tabular-nums">{precio(monto)}</span>
+                          </div>
+                          {modo === "consumo" && (propias.length > 0 || compartido > 0) && (
+                            <div className="mt-2 space-y-0.5 text-sm text-stone-600">
+                              {propias.map((l, k) => (
+                                <p key={k} className="flex justify-between gap-3">
+                                  <span className="min-w-0 truncate">
+                                    {l.cantidad} × {l.nombre}
+                                  </span>
+                                  <span className="tabular-nums">{precio(Number(l.precio) * l.cantidad)}</span>
+                                </p>
+                              ))}
+                              {compartido > 0 && (
+                                <p className="flex justify-between gap-3 text-stone-500">
+                                  <span>{t("parteCompartida")}</span>
+                                  <span className="tabular-nums">
+                                    {precio(monto - totalLineas(propias))}
+                                  </span>
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          {cobros && ajustes.metodos_pago.length > 0 && (
+                            <select
+                              value={metodos[i] ?? ""}
+                              onChange={(e) => setMetodos((m) => Object.assign([...m], { [i]: e.target.value }))}
+                              aria-label={`${t("medioPago")} · ${nombreDe(i)}`}
+                              className="mt-2 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-base"
+                            >
+                              <option value="">
+                                {t("medioPago")}: {t("elegir")}
+                              </option>
+                              {ajustes.metodos_pago.map((m) => (
+                                <option key={m} value={m}>
+                                  {m}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}

@@ -584,7 +584,15 @@ export type Cuenta = {
   // Migración 0019: otras mesas pegadas a esta que comparten la cuenta, y dónde quedaron en el plano mientras tanto.
   mesas_unidas?: string[];
   posiciones?: Record<string, { x: number; y: number }>;
+  // Migración 0041: nombre de cada comensal (posición 0 = comensal 1).
+  nombres_comensales?: string[];
 };
+
+// "Ana" si el comensal tiene nombre, si no "Comensal 2" (o "C2" en corto).
+export function nombreComensal(nombres: string[] | null | undefined, n: number, corto = false) {
+  const nombre = nombres?.[n - 1]?.trim();
+  return nombre || (corto ? `C${n}` : `Comensal ${n}`);
+}
 
 // La cuenta abierta que ocupa una mesa: la suya o aquella a la que está unida.
 export function cuentaDeMesa<C extends Pick<Cuenta, "estado" | "mesa_id" | "mesas_unidas">>(cuentas: C[], mesaId: string) {
@@ -663,6 +671,8 @@ export type SolicitudCuenta = {
   metodo?: string;
   // Al dividir, el medio de pago de cada persona (posición 0 = persona 1); vacío si no lo eligió.
   metodos?: string[];
+  // Nombre de cada persona que escribió la mesa (posición 0 = persona 1); vacío si no lo puso.
+  nombres?: string[];
   monto?: number;
 };
 

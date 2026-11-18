@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Icono } from "@/components/Icono";
 import { Interruptor } from "@/components/Interruptor";
 import { useToast } from "@/components/Toast";
-import { DIAS, describirDias, horaPromo, promoVigente } from "@/lib/promos";
+import { DIAS, describirDias, describirFechas, fechaPromo, horaPromo, promoVencida, promoVigente } from "@/lib/promos";
 import { createClient } from "@/lib/supabase/client";
 import type { Categoria, Plato, Promo, Restaurante } from "@/lib/types";
 import { formatoPrecio, mensajeError } from "@/lib/utils";
@@ -12,6 +12,22 @@ import { revalidarCarta } from "../actions";
 
 type PlatoCorto = Pick<Plato, "id" | "nombre" | "categoria_id" | "precio">;
 type Borrador = Omit<Promo, "id" | "restaurante_id" | "orden"> & { id?: string };
+// Siempre (todas las semanas), solo en días puntuales (26 de diciembre) o entre dos fechas.
+type ModoFechas = "siempre" | "puntuales" | "rango";
+
+const modoDe = (p: Partial<Borrador>): ModoFechas =>
+  p.fechas?.length ? "puntuales" : p.fecha_desde || p.fecha_hasta ? "rango" : "siempre";
+
+// Abre el calendario del navegador al tocar el campo (no solo el iconito).
+const abrirCalendario = (e: React.MouseEvent<HTMLInputElement>) => {
+  try {
+    e.currentTarget.showPicker?.();
+  } catch {
+    // Algunos navegadores no lo permiten: queda el calendario normal del campo.
+  }
+};
+
+const anio = new Date().getFullYear();
 
 const NUEVA: Borrador = {
   nombre: "",
@@ -34,6 +50,18 @@ const MODELOS: { texto: string; promo: Partial<Borrador> }[] = [
   },
   { texto: "Trasnoche", promo: { nombre: "Trasnoche", dias: [5, 6], desde: "23:00", hasta: "02:00", descuento: 20 } },
   {
+    texto: "Fiestas de fin de año",
+    promo: {
+      nombre: "Fiestas",
+      dias: [],
+      desde: "12:00",
+      hasta: "23:59",
+      descuento: 15,
+      fecha_desde: `${anio}-12-20`,
+      fecha_hasta: `${anio}-12-31`,
+    },
+  },
+  {
     texto: "Solo un aviso",
     promo: {
       nombre: "Música en vivo",
@@ -53,10 +81,13 @@ export function EditorPromos({
   iniciales,
   categorias,
   platos,
+  conFechas,
 }: {
   restaurante: Restaurante;
   zona: string;
   iniciales: Promo[];
+  // Migración 0041 ejecutada: se pueden elegir fechas puntuales o un rango.
+  conFechas: boolean;
   categorias: Categoria[];
   platos: PlatoCorto[];
 }) {
@@ -64,6 +95,11 @@ export function EditorPromos({
   const avisar = useToast();
   const [promos, setPromos] = useState(iniciales);
   const [editando, setEditando] = useState<Borrador | null>(null);
+  const [modoFechas, setModoFechas] = useState<ModoFechas>("siempre");
+  const abrir = (b: Borrador | null) => {
+    setEditando(b);
+    if (b) setModoFechas(modoDe(b));
+  };
   const [guardando, setGuardando] = useState(false);
   const formato = (n: number) => formatoPrecio(n, restaurante.moneda);
 
@@ -79,11 +115,19 @@ export function EditorPromos({
   async function guardar() {
     if (!editando) return;
     if (!editando.nombre.trim()) return avisar("Ponle un nombre a la promo", "error");
+    const fechas = modoFechas === "puntuales" ? [...new Set(editando.fechas ?? [])].sort() : [];
+    const fechaDesde = modoFechas === "rango" ? editando.fecha_desde || null : null;
+    const fechaHasta = modoFechas === "rango" ? editando.fecha_hasta || null : null;
+    if (modoFechas === "puntuales" && !fechas.length) return avisar("Elige al menos una fecha en el calendario", "error");
+    if (modoFechas === "rango" && !fechaDesde && !fechaHasta) return avisar("Elige desde y hasta qué fecha", "error");
+    if (fechaDesde && fechaHasta && fechaHasta < fechaDesde) return avisar("La fecha final es antes que la inicial", "error");
     setGuardando(true);
     const datos = {
       nombre: editando.nombre.trim(),
       descripcion: editando.descripcion?.trim() || null,
-      dias: editando.dias,
+      // En días puntuales manda la fecha: no se filtra por día de la semana.
+      dias: modoFechas === "puntuales" ? [] : editando.dias,
+      ...(conFechas ? { fechas, fecha_desde: fechaDesde, fecha_hasta: fechaHasta } : {}),
       desde: editando.desde,
       hasta: editando.hasta,
       descuento: Math.min(90, Math.max(0, Math.round(Number(editando.descuento) || 0))),
@@ -102,7 +146,7 @@ export function EditorPromos({
     if (error) return avisar(mensajeError(error), "error");
     const guardada = data as Promo;
     setPromos((ps) => (editando.id ? ps.map((p) => (p.id === guardada.id ? guardada : p)) : [...ps, guardada]));
-    setEditando(null);
+    abrir(null);
     avisar("Promo guardada");
     revalidarCarta();
   }
@@ -119,7 +163,7 @@ export function EditorPromos({
     const { error } = await supabase.from("promos").delete().eq("id", p.id);
     if (error) return avisar(mensajeError(error), "error");
     setPromos((ps) => ps.filter((x) => x.id !== p.id));
-    setEditando(null);
+    abrir(null);
     revalidarCarta();
   }
 
@@ -135,13 +179,13 @@ export function EditorPromos({
     <div className="mx-auto max-w-3xl space-y-5">
       <header className="flex flex-wrap items-end gap-3">
         <div className="mr-auto">
-          <h1 className="text-2xl font-bold">Promos por horario</h1>
+          <h1 className="text-2xl font-bold">Promos</h1>
           <p className="text-sm text-suave">
-            Se activan solas en los días y horas que elijas: la carta muestra el precio con descuento y la cocina cobra ese
-            precio.
+            Se activan solas en los días, fechas y horas que elijas: la carta muestra el precio con descuento y la cocina cobra
+            ese precio.
           </p>
         </div>
-        <button type="button" className="boton" onClick={() => setEditando({ ...NUEVA })}>
+        <button type="button" className="boton" onClick={() => abrir({ ...NUEVA })}>
           <Icono nombre="mas_simple" className="h-4 w-4" /> Nueva promo
         </button>
       </header>
@@ -151,12 +195,12 @@ export function EditorPromos({
           <p className="font-medium">Todavía no hay promos.</p>
           <p className="mt-1 text-sm text-suave">Empieza con una de estas ideas:</p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {MODELOS.map((m) => (
+            {MODELOS.filter((m) => conFechas || !m.promo.fecha_desde).map((m) => (
               <button
                 key={m.texto}
                 type="button"
                 className="boton-secundario"
-                onClick={() => setEditando({ ...NUEVA, ...m.promo })}
+                onClick={() => abrir({ ...NUEVA, ...m.promo })}
               >
                 {m.texto}
               </button>
@@ -167,6 +211,8 @@ export function EditorPromos({
         <ul className="space-y-3">
           {promos.map((p) => {
             const ahora = promoVigente(p, zona);
+            const vencida = promoVencida(p, zona);
+            const fechas = describirFechas(p);
             return (
               <li key={p.id} className={`tarjeta flex items-center gap-4 p-4 ${p.activa ? "" : "opacity-60"}`}>
                 <span
@@ -176,7 +222,7 @@ export function EditorPromos({
                 >
                   {p.descuento ? `-${p.descuento}%` : "Aviso"}
                 </span>
-                <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setEditando({ ...p })}>
+                <button type="button" className="min-w-0 flex-1 text-left" onClick={() => abrir({ ...p })}>
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold">{p.nombre}</span>
                     {ahora && (
@@ -184,9 +230,16 @@ export function EditorPromos({
                         En horario ahora
                       </span>
                     )}
+                    {vencida && (
+                      <span className="rounded-full bg-stone-200 px-2 py-0.5 text-xs font-semibold text-stone-600">
+                        Ya pasó su fecha
+                      </span>
+                    )}
                   </span>
                   <span className="block text-sm text-suave">
-                    {describirDias(p.dias)} · {horaPromo(p.desde)} a {horaPromo(p.hasta)} · {alcance(p)}
+                    {fechas ? `${fechas} · ` : ""}
+                    {p.fechas?.length ? "" : `${describirDias(p.dias)} · `}
+                    {horaPromo(p.desde)} a {horaPromo(p.hasta)} · {alcance(p)}
                   </span>
                 </button>
                 <Interruptor activo={p.activa} onChange={() => alternar(p)} etiqueta={p.activa ? "Activa" : "Pausada"} />
@@ -199,7 +252,7 @@ export function EditorPromos({
       {editando && (
         <div
           className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
-          onClick={() => setEditando(null)}
+          onClick={() => abrir(null)}
         >
           <div
             role="dialog"
@@ -212,7 +265,7 @@ export function EditorPromos({
               <h2 className="flex-1 text-lg font-semibold">{editando.id ? "Editar promo" : "Nueva promo"}</h2>
               <button
                 type="button"
-                onClick={() => setEditando(null)}
+                onClick={() => abrir(null)}
                 aria-label="Cerrar"
                 className="rounded-lg p-1 hover:bg-stone-100"
               >
@@ -240,6 +293,104 @@ export function EditorPromos({
                   className="campo"
                 />
               </label>
+              {conFechas ? (
+                <div>
+                  <p className="mb-1 text-sm font-medium">¿Qué fechas?</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(
+                      [
+                        ["siempre", "Todas las semanas"],
+                        ["puntuales", "Días puntuales"],
+                        ["rango", "Entre dos fechas"],
+                      ] as [ModoFechas, string][]
+                    ).map(([id, texto]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-pressed={modoFechas === id}
+                        onClick={() => setModoFechas(id)}
+                        className={`rounded-lg border px-2 py-2 text-sm font-medium ${modoFechas === id ? "border-marca bg-marca text-white" : "border-borde"}`}
+                      >
+                        {texto}
+                      </button>
+                    ))}
+                  </div>
+                  {modoFechas === "puntuales" && (
+                    <div className="mt-2 rounded-xl border border-borde p-3">
+                      <label className="block text-sm">
+                        <span className="mb-1 block text-suave">Toca para abrir el calendario y elige un día (puedes sumar varios)</span>
+                        <input
+                          type="date"
+                          value=""
+                          onClick={abrirCalendario}
+                          onChange={(e) => {
+                            const f = e.target.value;
+                            if (f && !(editando.fechas ?? []).includes(f))
+                              setEditando({ ...editando, fechas: [...(editando.fechas ?? []), f].sort() });
+                          }}
+                          className="campo"
+                        />
+                      </label>
+                      {(editando.fechas ?? []).length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {(editando.fechas ?? []).map((f) => (
+                            <span
+                              key={f}
+                              className="inline-flex items-center gap-1 rounded-full bg-marca/10 py-0.5 pl-2.5 pr-1 text-sm font-semibold text-marca"
+                            >
+                              {fechaPromo(f, true)}
+                              <button
+                                type="button"
+                                aria-label={`Quitar ${fechaPromo(f, true)}`}
+                                onClick={() => setEditando({ ...editando, fechas: (editando.fechas ?? []).filter((x) => x !== f) })}
+                                className="rounded-full px-1.5 text-base leading-none hover:bg-marca/20"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-xs text-suave">Todavía no elegiste ninguna fecha.</p>
+                      )}
+                    </div>
+                  )}
+                  {modoFechas === "rango" && (
+                    <div className="mt-2 grid grid-cols-2 gap-3">
+                      <label className="block text-sm">
+                        <span className="mb-1 block text-suave">Desde el</span>
+                        <input
+                          type="date"
+                          value={editando.fecha_desde ?? ""}
+                          onClick={abrirCalendario}
+                          onChange={(e) => setEditando({ ...editando, fecha_desde: e.target.value || null })}
+                          className="campo"
+                        />
+                      </label>
+                      <label className="block text-sm">
+                        <span className="mb-1 block text-suave">Hasta el</span>
+                        <input
+                          type="date"
+                          value={editando.fecha_hasta ?? ""}
+                          min={editando.fecha_desde ?? undefined}
+                          onClick={abrirCalendario}
+                          onChange={(e) => setEditando({ ...editando, fecha_hasta: e.target.value || null })}
+                          className="campo"
+                        />
+                      </label>
+                      <p className="col-span-2 -mt-1 text-xs text-suave">
+                        Ambas fechas incluidas. Abajo puedes limitarla además a ciertos días de la semana.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="rounded-xl bg-stone-50 px-3 py-2 text-xs text-suave">
+                  Para promos de un día puntual (ej. 26 de diciembre) o entre dos fechas, falta ejecutar el SQL{" "}
+                  <code>0041_comensales_y_promos_por_fecha.sql</code> en Supabase.
+                </p>
+              )}
+              {(!conFechas || modoFechas !== "puntuales") && (
               <div>
                 <p className="mb-1 text-sm font-medium">Días</p>
                 <div className="flex flex-wrap gap-1.5">
@@ -265,6 +416,7 @@ export function EditorPromos({
                 </div>
                 <p className="mt-1 text-xs text-suave">{describirDias(editando.dias)}</p>
               </div>
+              )}
               <div className="grid grid-cols-3 gap-3">
                 <label className="block text-sm">
                   <span className="mb-1 block font-medium">Desde</span>
