@@ -18,6 +18,7 @@ import { NOMBRE_PLAN, planDeSeccion, WHATSAPP_VENTAS, type Plan } from "@/lib/pl
 import { EditorPerfil, type Perfil } from "./equipo/EditorPerfil";
 import { tutorialDeRol, urlTutorial } from "@/lib/tutoriales";
 import { notificarAdmin } from "@/lib/notificacionesAdmin";
+import { textoAviso, useAvisosMenu, type AvisosMenu } from "./useAvisosMenu";
 
 type Props = {
   restaurante: {
@@ -42,6 +43,8 @@ type Props = {
   usuarioId: string;
   // Nombre, foto o emoji y color de quien entró (migración 0018). Sin la migración o sin fila en el equipo, null.
   perfil: Perfil | null;
+  // Local fijo de esta persona (ver obtenerContexto): los avisos del menú cuentan solo los de ese local.
+  localFijo?: string | null;
   children: React.ReactNode;
 };
 
@@ -69,6 +72,17 @@ export function MarcoPanel(props: Props) {
 
   const enLinea = useEnLinea();
   const instalar = useInstalar();
+  const avisos = useAvisosMenu({
+    restauranteId: props.restaurante.id,
+    usuarioId: props.usuarioId,
+    secciones: props.secciones.map((s) => s.id),
+    ruta,
+    localFijo: props.localFijo,
+  });
+  const avisosEnMas = props.secciones
+    .slice(accesos.length)
+    .some((s) => (avisos[s.id as keyof AvisosMenu] ?? 0) > 0);
+  const hayAvisos = Object.values(avisos).some((n) => (n ?? 0) > 0);
 
   // Se guarda en una cookie para que el servidor pinte el tema correcto desde el primer momento.
   function alternarTema() {
@@ -82,7 +96,7 @@ export function MarcoPanel(props: Props) {
     <div className={`panel-ui panel-fondo min-h-screen text-tinta ${tema === "oscuro" ? "tema-oscuro" : ""}`}>
       {/* Computadora: menú lateral flotante, como una tarjeta más */}
       <aside className="fixed inset-y-3 left-3 z-30 hidden w-60 overflow-hidden rounded-3xl border border-borde bg-superficie shadow-[0_20px_50px_-30px_rgb(0_0_0/0.5)] lg:flex">
-        <MenuLateral {...props} ruta={ruta} botonTema={botonTema} instalar={instalar} />
+        <MenuLateral {...props} ruta={ruta} botonTema={botonTema} instalar={instalar} avisos={avisos} />
       </aside>
 
       {/* Teléfono y tableta: barra superior */}
@@ -93,10 +107,11 @@ export function MarcoPanel(props: Props) {
         <button
           type="button"
           onClick={() => setMenuAbierto(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-suave hover:text-tinta"
-          aria-label="Abrir menú"
+          className="relative flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-suave hover:text-tinta"
+          aria-label={hayAvisos ? "Abrir menú (hay avisos nuevos)" : "Abrir menú"}
         >
           <Icono nombre="menu" className="h-5 w-5" />
+          {hayAvisos && <PuntoAviso />}
         </button>
       </header>
 
@@ -109,6 +124,7 @@ export function MarcoPanel(props: Props) {
               ruta={ruta}
               botonTema={botonTema}
               instalar={instalar}
+              avisos={avisos}
               onCerrar={() => setMenuAbierto(false)}
             />
           </div>
@@ -137,16 +153,21 @@ export function MarcoPanel(props: Props) {
       <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 flex gap-1 rounded-2xl border border-borde bg-superficie/95 p-1.5 shadow-[0_12px_40px_-12px_rgb(0_0_0/0.45)] backdrop-blur lg:hidden">
         {accesos.map((s) => {
           const actual = activa(ruta, s.href);
+          const n = actual ? 0 : (avisos[s.id as keyof AvisosMenu] ?? 0);
           return (
             <Link
               key={s.id}
               href={s.href}
               aria-current={actual ? "page" : undefined}
-              className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium transition ${
+              aria-label={n ? `${s.texto}, ${n} ${n === 1 ? "nuevo" : "nuevos"}` : undefined}
+              className={`relative flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium transition ${
                 actual ? "bg-marca-claro text-marca-tinta" : "text-suave"
               }`}
             >
-              <Icono nombre={s.id} className="h-5 w-5" />
+              <span className="relative">
+                <Icono nombre={s.id} className="h-5 w-5" />
+                {n > 0 && <ContadorAviso n={n} flotante />}
+              </span>
               {s.texto}
             </Link>
           );
@@ -157,7 +178,10 @@ export function MarcoPanel(props: Props) {
             onClick={() => setMenuAbierto(true)}
             className="flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium text-suave"
           >
-            <Icono nombre="mas" className="h-5 w-5" />
+            <span className="relative">
+              <Icono nombre="mas" className="h-5 w-5" />
+              {avisosEnMas && <PuntoAviso />}
+            </span>
             Más
           </button>
         )}
@@ -243,8 +267,15 @@ function MenuLateral({
   ruta,
   botonTema,
   instalar,
+  avisos,
   onCerrar,
-}: Props & { ruta: string; botonTema: React.ReactNode; instalar: (() => void) | null; onCerrar?: () => void }) {
+}: Props & {
+  ruta: string;
+  botonTema: React.ReactNode;
+  instalar: (() => void) | null;
+  avisos: AvisosMenu;
+  onCerrar?: () => void;
+}) {
   const grupos = ["Servicio", "Carta", "Negocio"] as const;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -304,11 +335,12 @@ function MenuLateral({
               <ul className="space-y-0.5">
                 {items.map((s) => {
                   const actual = activa(ruta, s.href);
+                  const n = actual ? 0 : (avisos[s.id as keyof AvisosMenu] ?? 0);
                   return (
                     <li key={s.id}>
                       <Link
                         href={s.href}
-                        title={s.ayuda}
+                        title={n ? `${s.ayuda} · ${n} ${n === 1 ? "nuevo" : "nuevos"}` : s.ayuda}
                         aria-current={actual ? "page" : undefined}
                         className={`group flex items-center gap-3 rounded-2xl px-2 py-1.5 text-sm transition ${
                           actual
@@ -327,6 +359,14 @@ function MenuLateral({
                         </span>
                         <span className="min-w-0 flex-1 truncate">{s.texto}</span>
                         {actual && <span className="mr-1 h-1.5 w-1.5 rounded-full bg-marca-claro" aria-hidden />}
+                        {n > 0 && (
+                          <>
+                            <ContadorAviso n={n} />
+                            <span className="sr-only">
+                              , {n} {n === 1 ? "nuevo" : "nuevos"}
+                            </span>
+                          </>
+                        )}
                       </Link>
                     </li>
                   );
@@ -466,6 +506,31 @@ function MenuLateral({
           document.body,
         )}
     </div>
+  );
+}
+
+// Contador naranja de lo nuevo en una sección (mismo color que el punto de la sección abierta), con un pulso suave.
+function ContadorAviso({ n, flotante }: { n: number; flotante?: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={`relative flex h-5 min-w-5 items-center justify-center rounded-full bg-marca-claro px-1.5 text-[11px] font-bold leading-none text-marca-tinta tabular-nums shadow-[0_4px_12px_-4px_rgb(242_163_58/0.9)] ${
+        flotante ? "absolute -top-1.5 -right-2.5 h-4 min-w-4 px-1 text-[10px] ring-2 ring-superficie" : "mr-0.5"
+      }`}
+    >
+      <span className="absolute inset-0 animate-ping rounded-full bg-marca-claro opacity-30 [animation-iteration-count:3]" />
+      <span className="relative">{textoAviso(n)}</span>
+    </span>
+  );
+}
+
+// Punto sin número (botón del menú en el teléfono, cuando lo nuevo está en una sección escondida).
+function PuntoAviso() {
+  return (
+    <span
+      aria-hidden
+      className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-marca-claro ring-2 ring-superficie"
+    />
   );
 }
 

@@ -18,7 +18,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: "#172033" };
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
-  const { user, restaurante, restaurantes, esSuperadmin, rol, secciones, bloqueadas, admin } = await obtenerContexto();
+  const { user, restaurante, restaurantes, esSuperadmin, rol, secciones, bloqueadas, admin, localFijo } =
+    await obtenerContexto();
 
   if (!restaurante) {
     // El superadmin no es dueño de ningún restaurante: sin uno elegido va a /admin (no a crear un restaurante).
@@ -62,6 +63,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       esSuperadmin={esSuperadmin}
       usuarioId={user.id}
       perfil={(perfil as Perfil | null) ?? null}
+      localFijo={localFijo}
     >
       <ToastProvider>{children}</ToastProvider>
     </MarcoPanel>
