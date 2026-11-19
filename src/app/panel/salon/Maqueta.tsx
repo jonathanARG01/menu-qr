@@ -981,12 +981,9 @@ function construir(piso: Piso, mesas: Mesa[]): Mundo {
   };
 }
 
-// Minutos abiertos, corto: "40′", "3 h 5′", "9 d".
+// Minutos abiertos, corto: "40′", "3 h 5′", "9 d 2 h".
 function tiempo(min?: number) {
-  const m = Math.max(0, Math.round(min ?? 0));
-  if (m < 60) return `${m}′`;
-  if (m < 60 * 24) return `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60}′` : ""}`;
-  return `${Math.floor(m / 1440)} d`;
+  return duracion(min ?? 0);
 }
 
 // ── Componente ─────────────────────────────────────────────────

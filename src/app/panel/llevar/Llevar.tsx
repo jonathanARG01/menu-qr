@@ -17,6 +17,7 @@ import { sonar } from "@/lib/sonidos";
 import { minutosDesde, useAhora, useServicio, type DatosServicio } from "@/lib/useServicio";
 import { MesaPanel } from "../salon/MesaPanel";
 import type { ClienteResumen } from "../salon/ClienteCuenta";
+import { duracion } from "@/lib/tiempo";
 
 type Props = {
   restaurante: Restaurante;
@@ -415,7 +416,7 @@ function Tarjeta({
               </span>
             </span>
             <span className="mt-1 block text-xs text-suave" suppressHydrationWarning>
-              Hace {minutos} min
+              Hace {duracion(minutos)}
               {x.pedidos[0] ? ` · Comanda #${x.pedidos.map((p) => p.numero).join(", #")}` : ""}
               {enCocina > 0 && x.pedidos.length > 1 ? ` · ${x.pedidos.length - enCocina} de ${x.pedidos.length} listas` : ""}
             </span>

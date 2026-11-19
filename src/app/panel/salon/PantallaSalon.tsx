@@ -9,6 +9,7 @@ import { minutosDesde } from "@/lib/useServicio";
 import { ESTILOS_PLANO, Plano, type EstadoMesa, type EstiloPlano } from "./Plano";
 import { formatoHora, type Region } from "@/lib/region";
 import { guardarAgruparAvisos, guardarSeguirAvisos, leerAgruparAvisos, leerSeguirAvisos, useAvisoNuevo } from "./avisos";
+import { duracion } from "@/lib/tiempo";
 
 type Aviso = {
   id: string;
@@ -335,7 +336,7 @@ export function PantallaSalon({
                       )}
                     </span>
                     <span className="text-sm font-semibold tabular-nums" suppressHydrationWarning>
-                      {min}′
+                      {duracion(min)}
                     </span>
                   </button>
                 </li>

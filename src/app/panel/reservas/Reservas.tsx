@@ -11,6 +11,7 @@ import { mensajeError } from "@/lib/utils";
 import { useAhora } from "@/lib/useServicio";
 import { useRecordatorios } from "@/lib/push";
 import { urlSitio } from "@/lib/utils";
+import { duracion } from "@/lib/tiempo";
 
 type Estado = "pendiente" | "confirmada" | "avisada" | "sentada" | "cancelada" | "no_vino";
 export type Reserva = {
@@ -317,9 +318,9 @@ export function Reservas({ restaurante, ajustes }: { restaurante: Restaurante; a
                     {r.nombre} · {r.personas} {r.personas === 1 ? "persona" : "personas"}
                   </p>
                   <p className="text-sm text-suave">
-                    Esperando hace {minutos(r.created_at)} min
+                    Esperando hace {duracion(minutos(r.created_at))}
                     {r.telefono ? ` · ${r.telefono}` : ""}
-                    {r.estado === "avisada" && r.avisada_at ? ` · avisado hace ${minutos(r.avisada_at)} min` : ""}
+                    {r.estado === "avisada" && r.avisada_at ? ` · avisado hace ${duracion(minutos(r.avisada_at))}` : ""}
                   </p>
                 </div>
                 <Chip estado={r.estado} espera />
