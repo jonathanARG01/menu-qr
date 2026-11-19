@@ -26,6 +26,7 @@ import { mensajeError } from "@/lib/utils";
 import { minutosDesde, useAhora, useServicio } from "@/lib/useServicio";
 import { anchoGuardado, guardarAncho, horaCorta, imprimirTicket, type AnchoTicket, type LineaTicket } from "@/lib/imprimir";
 import { Agotados, estaAgotado, type PlatoAgotable } from "./Agotados";
+import { duracion } from "@/lib/tiempo";
 
 type Props = {
   restaurante: Restaurante;
@@ -589,7 +590,7 @@ export function Cocina({
                       <span className="text-lg font-bold">{mesa}</span>
                       <span className="flex items-center gap-1 text-sm font-semibold tabular-nums" suppressHydrationWarning>
                         <Icono nombre="reloj" className="h-4 w-4" />
-                        {min}′
+                        {duracion(min)}
                       </span>
                     </span>
                     <span className="flex justify-between text-xs opacity-90">
@@ -662,7 +663,7 @@ export function Cocina({
                       </span>
                       <span className="flex items-center gap-1 text-sm font-semibold tabular-nums" suppressHydrationWarning>
                         <Icono nombre="reloj" className="h-4 w-4" />
-                        {min}′
+                        {duracion(min)}
                       </span>
                     </span>
                     <span className="flex justify-between text-xs opacity-90">
@@ -811,7 +812,7 @@ export function Cocina({
                   {lugar(elegido).piso ? ` · ${lugar(elegido).piso}` : ""}
                 </p>
                 <p className="text-sm text-stone-500" suppressHydrationWarning>
-                  Pedido a las {horaCorta(elegido.created_at, regionDe(ajustes))} ({minutosDesde(elegido.created_at, ahora)} min)
+                  Pedido a las {horaCorta(elegido.created_at, regionDe(ajustes))} (hace {duracion(minutosDesde(elegido.created_at, ahora))})
                   · {quienPidio(elegido)}
                   {elegido.nombre ? ` · ${elegido.nombre}` : ""}
                 </p>

@@ -852,7 +852,7 @@ export function Plano({
                 ) : !editando && est?.unida ? (
                   <span className="text-[10px] font-semibold opacity-80">unida</span>
                 ) : !editando && !est?.ocupada && est?.limpiar !== undefined ? (
-                  <span className="text-[10px] font-semibold" title={`Cobrada hace ${est.limpiar} min`}>
+                  <span className="text-[10px] font-semibold" title={`Cobrada hace ${duracion(est.limpiar)}`}>
                     🧹 limpiar
                   </span>
                 ) : !editando && est?.ocupada ? (

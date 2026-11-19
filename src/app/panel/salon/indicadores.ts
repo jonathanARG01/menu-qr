@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Cuenta, Pedido } from "@/lib/salon";
 import { minutosDesde } from "@/lib/useServicio";
+import { duracion } from "@/lib/tiempo";
 
 // Indicadores que se pueden prender o apagar desde el salón (botón "Indicadores"). Se guardan en cada dispositivo:
 // la pantalla del salón puede llevar el mapa de calor y el teléfono del mesero solo sus mesas y los relojes.
@@ -68,14 +69,8 @@ export function guardarPrefIndicadores(p: PrefIndicadores) {
 }
 
 // corto: lo que cabe sobre la mesa en el plano ("pedir", "postre?", "cuenta", "mesero").
-// Minutos para mostrar corto: "45′", "5 h 25′", "11 d 21 h".
-export function duracion(min: number) {
-  const m = Math.max(0, Math.round(min));
-  if (m < 60) return `${m}′`;
-  if (m < 1440) return `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60}′` : ""}`;
-  const h = Math.floor((m % 1440) / 60);
-  return `${Math.floor(m / 1440)} d${h ? ` ${h} h` : ""}`;
-}
+// Minutos para mostrar corto: "45′", "5 h 25′", "11 d 21 h" (vive en lib/tiempo).
+export { duracion };
 
 export type Reloj = {
   nivel: "ambar" | "rojo";
