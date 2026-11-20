@@ -70,8 +70,8 @@ export const TUTORIALES: Tutorial[] = [
     titulo: "Administrador del local",
     bajada: "Deja el restaurante listo para atender: carta, QR, plano de mesas, equipo, cobros y reportes.",
     icono: "personalizar",
-    puntos: ["Carta, precios y diseño", "Plano, QR y equipo", "Caja, reportes y ajustes"],
-    duracion: "25 min",
+    puntos: ["Carta, precios y diseño", "Plano, QR, equipo y promos", "Caja, Loyalty y reportes"],
+    duracion: "30 min",
     pasos: [
       ENTRAR,
       {
@@ -136,6 +136,10 @@ export const TUTORIALES: Tutorial[] = [
               7: "Guardar: queda publicado al instante.",
             },
           },
+        ],
+        pasos: [
+          "¿Algo sin costo, como un vaso de agua? Ponle precio 0: el cliente lo puede pedir igual y llega a la comanda.",
+          "Si el plato no tiene foto, elige un ícono para que la carta no quede con un espacio vacío.",
         ],
         consejo: "¿Se acabó un plato en pleno servicio? La cocina lo marca como agotado y vuelve solo al día siguiente.",
       },
@@ -279,8 +283,9 @@ export const TUTORIALES: Tutorial[] = [
       },
       {
         id: "promos",
-        titulo: "Crea promos por horario",
-        resumen: "Happy hour, menú del mediodía o trasnoche: se activan solas los días y horas que elijas.",
+        titulo: "Crea promos por horario o por fecha",
+        resumen:
+          "Happy hour, menú del mediodía o trasnoche: se activan solas los días y horas que elijas. También puedes elegir fechas puntuales (por ejemplo solo el 24 y 31 de diciembre) o un rango de fechas en el calendario.",
         imagenes: [
           {
             src: "dueno-promo",
@@ -293,11 +298,18 @@ export const TUTORIALES: Tutorial[] = [
             },
           },
         ],
+        pasos: [
+          "Entra a Promos y toca Nueva promo.",
+          "Elige Todas las semanas, Días puntuales o Entre dos fechas.",
+          "Con fechas, toca los días en el calendario (o el primero y el último del rango).",
+          "Pon la hora, el descuento y los platos, y guarda.",
+        ],
       },
       {
         id: "reservas",
         titulo: "Reservas y lista de espera",
-        resumen: "Anota reservas, recibe las que llegan desde la carta y maneja la fila de la puerta con aviso por WhatsApp.",
+        resumen:
+          "Anota reservas, recibe las que llegan desde la carta y maneja la fila de la puerta con aviso por WhatsApp. Si trabajas por turnos (almuerzo y cena), el cliente elige el turno y no se pasa del cupo.",
         imagenes: [
           {
             src: "dueno-reservas",
@@ -335,6 +347,12 @@ export const TUTORIALES: Tutorial[] = [
             marcas: { 1: "Cerrar caja." },
           },
         ],
+        pasos: [
+          "Antes de cerrar, revisa Pendiente por cobrar: muestra cada mesa o pedido abierto con lo consumido, lo pagado y lo que falta.",
+          "Cuenta el efectivo y escríbelo en el arqueo.",
+          "Indica el fondo del nuevo turno: el efectivo que queda en caja para el turno siguiente. El turno nuevo parte con ese monto.",
+          "Toca Cerrar caja.",
+        ],
         consejo: "Si quedan mesas abiertas al cerrar, lo que se cobre después entra en el turno siguiente.",
       },
       {
@@ -359,6 +377,21 @@ export const TUTORIALES: Tutorial[] = [
         ],
       },
       {
+        id: "loyalty",
+        titulo: "Haz que vuelvan con Platovi Loyalty",
+        resumen:
+          "Platovi Loyalty es la tarjeta de sellos digital (se contrata aparte). El cliente escanea el QR de su precuenta, suma un sello y al completar la tarjeta gana el premio que tú elijas.",
+        imagenes: [],
+        pasos: [
+          "Con el módulo activo, entra a Loyalty Cards en el menú del panel.",
+          "Elige el diseño de la tarjeta, cuántos sellos se necesitan y el premio. También puedes dar sellos de regalo al unirse o en su cumpleaños.",
+          "Pon el QR para unirse en la caja y en un cartel en cada mesa.",
+          "La cuenta trae un QR: el cliente lo escanea y suma su sello solo.",
+          "Para canjear un premio, toca Escanear tarjeta y escanea la del cliente.",
+        ],
+        consejo: "¿No lo tienes? Pídelo por WhatsApp y lo activamos en tu local.",
+      },
+      {
         id: "cliente",
         titulo: "Lo que ve tu cliente",
         resumen:
@@ -376,8 +409,8 @@ export const TUTORIALES: Tutorial[] = [
     titulo: "Mesero o garzón",
     bajada: "Atiende las mesas desde el celular: abre la mesa, toma el pedido, responde los avisos y cobra.",
     icono: "salon",
-    puntos: ["Abrir mesas y tomar pedidos", "Avisos del cliente", "Cobrar y dividir la cuenta"],
-    duracion: "15 min",
+    puntos: ["Vistas del salón e indicadores", "Pedidos y avisos del cliente", "Cobrar por comensal"],
+    duracion: "20 min",
     pasos: [
       ENTRAR,
       {
@@ -402,6 +435,45 @@ export const TUTORIALES: Tutorial[] = [
           },
         ],
         consejo: "Una mesa con un punto rojo en la esquina tiene un aviso sin atender.",
+      },
+      {
+        id: "vistas",
+        titulo: "Elige cómo ver el salón",
+        resumen:
+          "Arriba del plano eliges la vista: Simple, Color, 3D o Maqueta. Todas muestran lo mismo (mesas, avisos y estado); usa la que te resulte más clara.",
+        imagenes: [
+          { src: "salon-simple", alt: "Salón en vista Simple", pie: "Simple: el plano limpio, ideal para el celular." },
+          { src: "salon-color", alt: "Salón en vista Color", pie: "Color: cada zona (salón, barra, terraza) con su color." },
+          { src: "salon-3d", alt: "Salón en vista 3D", pie: "3D: el plano inclinado, con volumen." },
+          { src: "salon-maqueta", alt: "Salón en vista Maqueta", pie: "Maqueta: el local como una maqueta que puedes girar." },
+          {
+            src: "salon-comensales",
+            alt: "Maqueta con los comensales sentados",
+            pie: "En la Maqueta, el botón de personas muestra a los comensales sentados en cada mesa y al mesero que la atiende.",
+          },
+        ],
+        pasos: ["Toca Simple, Color, 3D o Maqueta arriba del plano.", "Pantalla completa deja el salón solo, para un monitor en el mostrador."],
+      },
+      {
+        id: "indicadores",
+        titulo: "Prende los indicadores",
+        resumen:
+          "El botón Indicadores suma información sobre el plano. Cada uno se prende y se apaga, y la elección queda guardada en tu teléfono.",
+        imagenes: [
+          {
+            src: "mesero-indicadores",
+            alt: "Panel de indicadores del salón",
+            pie: "Tiempo en mesa, platos atrasados, total en vivo, zonas por mesero, mesa por limpiar y mapa de calor.",
+          },
+        ],
+        pasos: [
+          "Tiempo en mesa: un reloj ámbar y luego rojo cuando una mesa lleva rato sin pedir o esperando la cuenta.",
+          "Platos atrasados: la mesa parpadea si un pedido lleva mucho en cocina.",
+          "Total en vivo: lo consumido en cada mesa y lo cobrado en el turno.",
+          "Zonas por mesero: cada mesa con el color de quien la atiende. Con Repartir mesas asignas mesas tocando el plano.",
+          "Mesa por limpiar: al cobrar, la mesa queda marcada hasta que tocas Lista.",
+          "Mapa de calor: qué mesas venden más.",
+        ],
       },
       {
         id: "abrir",
@@ -465,6 +537,10 @@ export const TUTORIALES: Tutorial[] = [
             },
           },
         ],
+        pasos: [
+          "En mesas grandes, ponle nombre a cada comensal (Ana, Pedro…) en la ficha de la mesa.",
+          "Al tomar el pedido, elige para quién es cada plato: así al cobrar ves cuánto le toca a cada uno.",
+        ],
         consejo: "El estado de cada comanda se ve a la derecha: Nuevo, Preparando, Listo o Entregado.",
       },
       {
@@ -512,7 +588,8 @@ export const TUTORIALES: Tutorial[] = [
       {
         id: "cobrar",
         titulo: "Cobra la cuenta",
-        resumen: "Elige cómo pagan, el medio de pago y la propina. La mesa se puede pagar en varias partes.",
+        resumen:
+          "Elige cómo pagan, el medio de pago y la propina. La mesa se puede pagar en varias partes. Si el cliente pidió la cuenta por separado desde su celular, ya viene marcado qué plato es de quién.",
         imagenes: [
           {
             src: "mesero-cobrar",
@@ -520,7 +597,7 @@ export const TUTORIALES: Tutorial[] = [
             marcas: {
               1: "Todo junto: una persona paga la cuenta.",
               2: "Partes iguales: se divide el total entre todos.",
-              3: "Cada uno lo suyo: según lo que consumió cada comensal.",
+              3: "Cada uno lo suyo: según lo que consumió cada comensal, con su nombre y el detalle de sus platos.",
               4: "Monto libre: alguien paga una parte cualquiera.",
               5: "Propina al final: si la dejan después de pagar.",
             },

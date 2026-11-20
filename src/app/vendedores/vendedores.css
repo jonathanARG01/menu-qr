@@ -1,0 +1,109 @@
+/* ── Guía para vendedores (/vendedores) ──
+   Grafito con dorado, como el sitio de venta. Una columna con índice fijo arriba; tarjetas solo donde se comparan
+   cosas (roles, planes). Siempre oscuro. Todo va dentro de .vend para no tocar el resto del sitio. */
+
+.vend {
+  --v-fondo: #0b0e14;
+  --v-fondo-2: #10141c;
+  --v-caja: #151a24;
+  --v-borde: rgb(255 255 255 / 0.1);
+  --v-tinta: #f5f1e8;
+  --v-suave: #a7a29a;
+  --v-oro: #f2a33a;
+  --v-oro-texto: #f4b860;
+  --v-ok: #5fd39b;
+  --v-alerta: #f0a06a;
+  color-scheme: dark;
+  min-height: 100vh;
+  background: var(--v-fondo);
+  color: var(--v-tinta);
+  line-height: 1.55;
+  overflow-x: clip;
+}
+.vend a { color: var(--v-oro-texto); text-underline-offset: 3px; }
+.vend :focus-visible { outline: 2px solid var(--v-oro); outline-offset: 2px; border-radius: 4px; }
+.vend h1, .vend h2, .vend h3 { line-height: 1.15; text-wrap: balance; font-family: var(--font-marca); }
+.vend h2 { font-size: clamp(1.5rem, 3.2vw, 2rem); font-weight: 700; letter-spacing: -0.01em; }
+.vend h3 { font-size: 1.1rem; font-weight: 700; }
+
+.vend-wrap { max-width: 980px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.vend-eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--v-oro-texto); }
+.vend-lead { font-size: 1.08rem; color: var(--v-suave); max-width: 62ch; }
+.vend-serif { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-weight: 600; color: var(--v-oro-texto); font-size: 1.15em; }
+
+.vend-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 20px; }
+.vend-top nav { display: flex; gap: 14px; align-items: center; font-size: 0.9rem; }
+.vend-top nav a { color: var(--v-suave); text-decoration: none; }
+.vend-top nav a:hover { color: var(--v-tinta); }
+
+.vend-hero { padding-block: 28px 40px; border-bottom: 1px solid var(--v-borde); }
+.vend-hero h1 { font-size: clamp(2rem, 5.5vw, 3.3rem); font-weight: 800; letter-spacing: -0.02em; max-width: 18ch; margin-top: 8px; }
+.vend-hero .vend-lead { margin-top: 16px; }
+.vend-pitch { margin-top: 28px; background: var(--v-caja); border: 1px solid var(--v-borde); border-left: 4px solid var(--v-oro); border-radius: 0 14px 14px 0; padding: 18px 20px; max-width: 70ch; font-size: 1.05rem; }
+.vend-pitch small { display: block; margin-top: 8px; color: var(--v-suave); font-size: 0.85rem; }
+
+.vend-indice { position: sticky; top: 0; z-index: 5; background: var(--v-fondo); border-bottom: 1px solid var(--v-borde); }
+.vend-indice .vend-wrap { display: flex; gap: 6px; overflow-x: auto; padding-block: 10px; scrollbar-width: none; }
+.vend-indice a { flex: none; text-decoration: none; color: var(--v-suave); font-size: 0.88rem; font-weight: 500; padding: 6px 12px; border-radius: 999px; border: 1px solid transparent; }
+.vend-indice a:hover { color: var(--v-tinta); border-color: var(--v-borde); }
+
+.vend-sec { padding-block: 44px; border-bottom: 1px solid var(--v-borde); scroll-margin-top: 52px; }
+.vend-sec.alt { background: var(--v-fondo-2); }
+.vend-cab { display: grid; gap: 8px; margin-bottom: 24px; }
+
+.vend-grid { display: grid; gap: 14px; }
+.vend-g2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+.vend-g3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); }
+.vend-g4 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); }
+.vend-card { background: var(--v-caja); border: 1px solid var(--v-borde); border-radius: 14px; padding: 18px 20px; min-width: 0; }
+.vend-card h3 { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.vend-ico { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; background: rgb(242 163 58 / 0.16); color: var(--v-oro-texto); }
+.vend-ico svg { width: 19px; height: 19px; }
+.vend-lista { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; list-style: disc; }
+.vend-lista li::marker { color: var(--v-oro); }
+.vend-nuevo { display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: var(--v-oro); color: #172033; border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: 2px; }
+
+.vend-plan.dest { border-color: var(--v-oro); box-shadow: 0 0 0 1px var(--v-oro); }
+.vend-precio { font-family: var(--font-marca); font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin: 4px 0 2px; }
+.vend-precio small { font-size: 0.9rem; font-weight: 500; color: var(--v-suave); }
+.vend-coniva { font-size: 0.85rem; color: var(--v-suave); font-variant-numeric: tabular-nums; margin-bottom: 12px; }
+.vend-para { color: var(--v-suave); font-size: 0.95rem; margin-bottom: 12px; }
+.vend-tabla { overflow-x: auto; margin-top: 18px; }
+.vend-tabla table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 0.95rem; }
+.vend-tabla th, .vend-tabla td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--v-borde); vertical-align: top; }
+.vend-tabla th { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--v-suave); font-weight: 600; }
+.vend-tabla td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
+.vend-gratis { color: var(--v-ok); font-weight: 700; }
+.vend-nota { font-size: 0.88rem; color: var(--v-suave); margin-top: 12px; max-width: 75ch; }
+
+.vend-demo { display: block; text-decoration: none; color: var(--v-tinta) !important; background: var(--v-caja); border: 1px solid var(--v-borde); border-radius: 12px; padding: 14px 16px; transition: border-color 0.15s; }
+.vend-demo:hover { border-color: var(--v-oro); }
+.vend-demo b { display: block; font-weight: 600; }
+.vend-demo span { font-size: 0.85rem; color: var(--v-suave); }
+.vend-demo code { display: block; margin-top: 6px; font-size: 0.8rem; color: var(--v-oro-texto); overflow-wrap: anywhere; }
+
+.vend-pasos { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: p; }
+.vend-pasos li { counter-increment: p; display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: start; background: var(--v-caja); border: 1px solid var(--v-borde); border-radius: 12px; padding: 12px 14px; }
+.vend-pasos li::before { content: counter(p); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: var(--v-oro); color: #172033; }
+
+.vend details { background: var(--v-caja); border: 1px solid var(--v-borde); border-radius: 12px; padding: 0 18px; }
+.vend details + details { margin-top: 8px; }
+.vend summary { cursor: pointer; padding: 14px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+.vend summary::-webkit-details-marker { display: none; }
+.vend summary::after { content: "+"; color: var(--v-oro-texto); font-weight: 700; font-size: 1.2rem; line-height: 1; }
+.vend details[open] summary::after { content: "–"; }
+.vend details p { padding-bottom: 16px; color: var(--v-suave); }
+.vend details p b { color: var(--v-tinta); }
+
+.vend-tuto { display: flex; gap: 14px; align-items: center; text-decoration: none; color: var(--v-tinta) !important; background: var(--v-caja); border: 1px solid var(--v-borde); border-radius: 14px; padding: 16px 18px; }
+.vend-tuto:hover { border-color: var(--v-oro); }
+.vend-tuto .vend-ico { width: 44px; height: 44px; }
+.vend-tuto b { display: block; }
+.vend-tuto span { font-size: 0.88rem; color: var(--v-suave); }
+
+.vend-no .vend-lista li::marker { color: var(--v-alerta); }
+.vend-contacto { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.vend-chip { display: flex; align-items: center; gap: 8px; background: var(--v-caja); border: 1px solid var(--v-borde); border-radius: 999px; padding: 8px 14px; font-weight: 500; text-decoration: none; color: var(--v-tinta) !important; }
+.vend-pie { padding-block: 28px 40px; color: var(--v-suave); font-size: 0.85rem; }
+
+@media (prefers-reduced-motion: reduce) { .vend * { transition: none !important; } }
